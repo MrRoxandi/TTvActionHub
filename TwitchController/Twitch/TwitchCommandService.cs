@@ -8,12 +8,12 @@ namespace TwitchController.Twitch
     public class TwitchCommandService
     {
         private readonly ConnectionCredentials Credentials;
-        private readonly Configuration Config;
+        private readonly Configuration _configuration;
         private readonly TwitchClient Client;
 
         public TwitchCommandService(Configuration config, string? onJoinMessage = null)
         {
-            Config = config;
+            _configuration = config;
 
             Client = new TwitchClient();
 
@@ -22,10 +22,10 @@ namespace TwitchController.Twitch
 
             Client.OnConnected += (sender, args) =>
             {
-                Console.WriteLine($"[INFO] {args.BotUsername} has connected to channel.");
+                Console.WriteLine($"[INFO] Commands service has connected to channel {_configuration.TwitchChannel}."); ;
             };
 
-            if (Config.ShowLogs)
+            if (_configuration.ShowLogs)
                 Client.OnLog += (sender, args) => { Console.WriteLine($"[LOG] {args.Data}"); };
 
             if (onJoinMessage is string msg)
@@ -37,7 +37,7 @@ namespace TwitchController.Twitch
             }
             Stuff.Chat.client = Client;
             Stuff.Chat.chat = config.TwitchChannel;
-
+           
             Client.OnChatCommandReceived += OnChatCommandReceived;
         }
 
@@ -50,12 +50,12 @@ namespace TwitchController.Twitch
 
             Console.WriteLine($"Received command: {cmd} from {cmdSender} with args: {cmdArgs}");
 
-            if (!Config.Commands.TryGetValue(cmd, out Command? value)) return;
+            if (!_configuration.Commands.TryGetValue(cmd, out Command? value)) return;
 
-            if (Config.OpeningBracket is not null && Config.ClosingBracket is not null)
+            if (_configuration.OpeningBracket is not null && _configuration.ClosingBracket is not null)
             {
-                var start = cmdArgs.IndexOf(Config.OpeningBracket, StringComparison.Ordinal);
-                var stop = cmdArgs.IndexOf(Config.ClosingBracket, StringComparison.Ordinal);
+                var start = cmdArgs.IndexOf(_configuration.OpeningBracket, StringComparison.Ordinal);
+                var stop = cmdArgs.IndexOf(_configuration.ClosingBracket, StringComparison.Ordinal);
                 if (start == -1 || stop == -1)
                     cmdArgs = "";
                 else
@@ -67,7 +67,7 @@ namespace TwitchController.Twitch
 
         public void Run()
         {
-            Client.Initialize(Credentials, Config.TwitchChannel);
+            Client.Initialize(Credentials, _configuration.TwitchChannel);
             Client.Connect();
         }
     }

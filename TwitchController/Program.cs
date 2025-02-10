@@ -34,10 +34,14 @@ namespace TwitchController
                 return;
             }
 
+            Console.WriteLine("[INFO] PRESS ENTER TO CLOSE PROGRAM");
+            
             var commandService = new TwitchCommandService(configuration);
             commandService.Run();
 
-            Console.WriteLine("[INFO] PRESS ENTER TO STOP");
+            var rewardService = new TwitchRewardService(configuration);
+            rewardService.Run();
+
             Console.ReadLine();
         }
     }

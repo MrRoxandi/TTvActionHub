@@ -11,12 +11,11 @@ function create(action, timer, desc)
 	r["timeout"] = timer
 	r["description"] = desc
 	return r
-end
+end -- Same for commands and rewards
 
 local res = {}
-res["botname"] = "Roxandi" -- Must exist
+
 res["channel"] = "Roxandi" -- Must exist
---res["token"] = "wudym3b72464z943c4ro9hzoymwxcx" -- Must exist
 
 res["timeout"] = 1000
 res["logs"] = false
@@ -37,10 +36,15 @@ commands["hello"] = create(function(sender, args)
 end, NO_TIMER, "")
 
 commands["press"] = create(function (sender, args)
-	Keyboard.PressKeyAsync(Keyboard.Keys.A)
+	Keyboard.PressKeyAsync(Keyboard.KeyCode.A)
+	Keyboard.PressKeyAsync(Keyboard.KeyCode.B)
+	Keyboard.PressKeyAsync(Keyboard.KeyCode.D)
+	Keyboard.PressKeyAsync(Keyboard.KeyCode.A)
 end, GLOBAL_TIMER, "")
 
-rewards["test"] = create(nil, nil, nil)
+rewards["test"] = create(function(sender, args)
+	TwitchChat.SendMessage(sender .. " -> " .. args[0])
+end, nil, nil)
 
 res["commands"] = commands
 res["rewards"] = rewards

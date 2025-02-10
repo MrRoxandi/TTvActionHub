@@ -5,30 +5,48 @@ using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using TwitchLib.Api;
+using TwitchLib.Api.Core;
+using TwitchLib.Api.Core.Enums;
+using TwitchLib.PubSub.Models.Responses.Messages.Redemption;
 
 namespace TwitchController.Twitch
 {
     public class TwitchApiService
     {
-        private readonly string clientId;
-        private readonly string clientSecret;
+        private readonly TwitchAPI API;
         private readonly string redirectUri;
         private static readonly HttpClient httpClient = new HttpClient();
 
         public TwitchApiService(string clientId, string clientSecret, string redirectUri)
         {
-            this.clientId = clientId;
-            this.clientSecret = clientSecret;
+            API = new();
+            API.Settings.ClientId = clientId;
+            API.Settings.Secret = clientSecret;
             this.redirectUri = redirectUri;
         }
-
+        
         public void OpenAuthorizationUrl()
         {
-            string url = $"https://id.twitch.tv/oauth2/authorize?client_id={clientId}&redirect_uri={Uri.EscapeDataString(redirectUri)}&response_type=code&scope=chat:read+chat:edit";
+            string url = $"https://id.twitch.tv/oauth2/authorize?client_id=" +
+                $"{API.Settings.ClientId}&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
+                $"&response_type=code&scope=" +
+                $"{string.Join("+", ["channel:read:redemptions",
+                "channel:manage:redemptions",
+                "user:edit",
+                "chat:edit",
+                "chat:read"])}";
+                        
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         }
 
-        public async Task<string?> StartAuthFlowAsync()
+        public async Task<String> GetTwitchIdAsync(string channelName)
+        {
+            var result = await API.Helix.Users.GetUsersAsync(logins: [channelName]);
+            return result.Users[0].Id;
+        }
+
+        public async Task<string?> RunAuthFlowAsync()
         {
             try
             {
@@ -65,8 +83,8 @@ namespace TwitchController.Twitch
             {
                 var content = new FormUrlEncodedContent(new[]
                 {
-                    new KeyValuePair<string, string>("client_id", clientId),
-                    new KeyValuePair<string, string>("client_secret", clientSecret),
+                    new KeyValuePair<string, string>("client_id", API.Settings.ClientId),
+                    new KeyValuePair<string, string>("client_secret", API.Settings.Secret),
                     new KeyValuePair<string, string>("code", authorizationCode),
                     new KeyValuePair<string, string>("grant_type", "authorization_code"),
                     new KeyValuePair<string, string>("redirect_uri", redirectUri)
@@ -75,7 +93,6 @@ namespace TwitchController.Twitch
                 var response = await httpClient.PostAsync("https://id.twitch.tv/oauth2/token", content);
 
                 var responseString = await response.Content.ReadAsStringAsync();
-                //Console.WriteLine($"[DEBUG] Full response: {responseString}");
 
                 if (!response.IsSuccessStatusCode)
                 {

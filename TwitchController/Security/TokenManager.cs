@@ -7,16 +7,14 @@ namespace TwitchController.Security
 {
     public static class TokenManager 
     {
-        private static readonly string TokenDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), 
-            "TwitchController", "Tokens");
+        private static readonly string TokenDir = "Tokens";
 
         public static void SaveToken(string channel, string token) 
         {
+            Directory.CreateDirectory(TokenDir);
+
             try 
             {
-                Directory.CreateDirectory(TokenDir);
-                
                 string channelHash = ComputeHash(channel);
                 string path = Path.Combine(TokenDir, $"{channelHash}.token");
                 
@@ -35,10 +33,17 @@ namespace TwitchController.Security
             {
                 string channelHash = ComputeHash(channel);
                 string path = Path.Combine(TokenDir, $"{channelHash}.token");
-                
-                return File.Exists(path) 
-                    ? Decrypt(File.ReadAllText(path), channel) 
-                    : null;
+
+                if (File.Exists(path))
+                {
+                    if((DateTime.Now.Date - File.GetCreationTime(path).Date).TotalDays >= 28)
+                    {
+                        File.Delete(path);
+                        return null;
+                    }
+                    return Decrypt(File.ReadAllText(path), channel);
+                }
+                return null;
             }
             catch (Exception ex)
             {

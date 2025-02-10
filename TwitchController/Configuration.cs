@@ -10,12 +10,13 @@ namespace TwitchController
 {
     public class Configuration
     {
-        private readonly string _clientId = "hd9kavndkos83ujswrqhuffa90kcb6";
-        private readonly string _clientSecret = "nv5bgx5a4321lopr6knf0acek8b2e1";
-        private readonly string _redirectUri = @"http://localhost:3000/";
+        private static string ClientId { get => "hd9kavndkos83ujswrqhuffa90kcb6"; }
+        private static string ClientSecret { get => "nv5bgx5a4321lopr6knf0acek8b2e1"; }
+        private static string RedirectUrl { get => @"http://localhost:3000/"; }
 
+        public readonly TwitchApiService TwitchApi;
         public readonly string TwitchChannel;
-        public readonly string TwitchBotName;
+        public readonly string TwitchID;
         public readonly string Token;
 
         public readonly long GlobalTimeOut;
@@ -40,20 +41,27 @@ namespace TwitchController
                 throw new Exception("Failed to load controller configuration");
             }
 
-            if (luaConfig["botname"] is not string botName)
-            {
-                throw new Exception($"Unable to get botname from file: {path}");
-            }
-            TwitchBotName = botName;
-
             if (luaConfig["channel"] is not string channel)
             {
                 throw new Exception($"Unable to get channel from file: {path}");
             }
             TwitchChannel = channel;
             
-            Token = TokenManager.LoadToken(botName) ?? GetNewTokenAsync().Result;
-            TokenManager.SaveToken(botName, Token);
+            TwitchApi = new TwitchApiService(ClientId, ClientSecret, RedirectUrl);
+
+            TwitchID = TwitchApi.GetTwitchIdAsync(TwitchChannel).Result;
+            if (TokenManager.LoadToken(TwitchID) is not string token)
+            {
+                var tmp = TwitchApi.RunAuthFlowAsync().Result;
+                if (string.IsNullOrEmpty(tmp))
+                {
+                    throw new Exception($"Failed to get token for channel: {TwitchChannel}");
+                }
+                Token = tmp;
+            }
+            else Token = token;
+
+            TokenManager.SaveToken(TwitchID, Token);
             
             Console.WriteLine($"[INFO]\n-- TwitchChannel: {TwitchChannel}\n-- Token: Found");
             OpeningBracket = luaConfig["opening-bracket"] as string;
@@ -83,18 +91,6 @@ namespace TwitchController
             LoadRewards(luaConfig["rewards"] as LuaTable);
 
             Console.WriteLine($"[INFO] Configuration loaded successfully!");
-        }
-
-        private async Task<string> GetNewTokenAsync()
-        {
-            var twitchService = new TwitchApiService(_clientId, _clientSecret, _redirectUri);
-            string? token = await twitchService.StartAuthFlowAsync();
-
-            if (string.IsNullOrEmpty(token))
-            {
-                throw new Exception("Failed to authenticate with Twitch API");
-            }
-            return token;
         }
 
         private void LoadCommands(LuaTable? cmds) {
@@ -144,19 +140,14 @@ namespace TwitchController
                 if (rewards[keyObj] is not LuaTable table)
                     throw new Exception($"Failed to load reward: {keyObj}");
 
-                var timeout = GlobalTimeOut;
-
-                //Setting timeout for reward
-                if (table["timeout"] is long timer)
-                    timeout = timer;
-
-                //Setting description for reward
+               //Setting description for reward
                 var desc = table["description"] as string;
 
                 //Setting action for rewards. Must be presented
-                var action = table["action"] as LuaFunction;
+                if(table["action"] is not LuaFunction action)
+                    throw new Exception($"Failed to load action for reward: {keyObj}");
 
-                Rewards.Add(keyObj.ToString()!, new Reward { Function = action, TimeOut = timeout, Description = desc });
+                Rewards.Add(keyObj.ToString()!, new Reward { Function = action, Description = desc });
                 Console.WriteLine($"  -- Loaded reward: {keyObj}");
             }
         }

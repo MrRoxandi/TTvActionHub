@@ -11,7 +11,7 @@ namespace TwitchController.Items
         public string? Description;
         public long? TimeOut;
 
-        public object[]? Execute(string sender, object[]? args)
+        public object[]? Execute(string sender, params object[]? args)
         {
             try
             {
