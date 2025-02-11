@@ -9,7 +9,8 @@ namespace TwitchController
     {
         static void Main(string[] args)
         {
-            var path = @"config.lua";
+            //var path = @"config.lua";
+            var path = @"F:\Repos\TwitchController\TwitchController\config.lua";
             if (!File.Exists(path) && args.Length == 0){
                 Console.WriteLine($"Cannot find {path} in main directory");
                 Console.WriteLine($"Specify input .lua file path as the first argument");

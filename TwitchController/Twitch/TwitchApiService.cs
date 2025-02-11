@@ -15,28 +15,25 @@ namespace TwitchController.Twitch
     public class TwitchApiService
     {
         private readonly TwitchAPI API;
-        private readonly string redirectUri;
-        private static readonly HttpClient httpClient = new HttpClient();
+        private readonly string redirectUrl;
+        private static readonly HttpClient httpClient = new();
 
         public TwitchApiService(string clientId, string clientSecret, string redirectUri)
         {
             API = new();
             API.Settings.ClientId = clientId;
             API.Settings.Secret = clientSecret;
-            this.redirectUri = redirectUri;
+            this.redirectUrl = redirectUri;
         }
         
         public void OpenAuthorizationUrl()
         {
             string url = $"https://id.twitch.tv/oauth2/authorize?client_id=" +
-                $"{API.Settings.ClientId}&redirect_uri={Uri.EscapeDataString(redirectUri)}" +
+                $"{API.Settings.ClientId}&redirect_uri={Uri.EscapeDataString(redirectUrl)}" +
                 $"&response_type=code&scope=" +
-                $"{string.Join("+", ["channel:read:redemptions",
-                "channel:manage:redemptions",
-                "user:edit",
-                "chat:edit",
-                "chat:read"])}";
-                        
+                $"{string.Join("+", [
+                    "channel:read:redemptions", "channel:manage:redemptions",
+                    "user:edit","chat:edit", "chat:read"])}";
             Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
         }
 
@@ -51,7 +48,7 @@ namespace TwitchController.Twitch
             try
             {
                 using var listener = new HttpListener();
-                listener.Prefixes.Add(redirectUri);
+                listener.Prefixes.Add(redirectUrl);
                 listener.Start();
                 OpenAuthorizationUrl();
 
@@ -81,14 +78,14 @@ namespace TwitchController.Twitch
         {
             try
             {
-                var content = new FormUrlEncodedContent(new[]
-                {
+                var content = new FormUrlEncodedContent(
+                [
                     new KeyValuePair<string, string>("client_id", API.Settings.ClientId),
                     new KeyValuePair<string, string>("client_secret", API.Settings.Secret),
                     new KeyValuePair<string, string>("code", authorizationCode),
                     new KeyValuePair<string, string>("grant_type", "authorization_code"),
-                    new KeyValuePair<string, string>("redirect_uri", redirectUri)
-                });
+                    new KeyValuePair<string, string>("redirect_uri", redirectUrl)
+                ]);
 
                 var response = await httpClient.PostAsync("https://id.twitch.tv/oauth2/token", content);
 

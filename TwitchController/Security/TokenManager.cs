@@ -36,7 +36,7 @@ namespace TwitchController.Security
 
                 if (File.Exists(path))
                 {
-                    if((DateTime.Now.Date - File.GetCreationTime(path).Date).TotalDays >= 28)
+                    if((DateTime.Now - File.GetCreationTime(path)).TotalDays >= 2)
                     {
                         File.Delete(path);
                         return null;

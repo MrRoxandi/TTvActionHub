@@ -12,7 +12,7 @@ namespace TwitchController.Stuff
         // Существующий метод
         public static int RandomNumber(int min, int max)
         {
-            return rng.Next(min, max);
+            return rng.Next(min, max + 1);
         }
 
         public static double RandomDouble(double min, double max)
@@ -73,27 +73,7 @@ namespace TwitchController.Stuff
             await Task.Delay(RandomNumber(minMs, maxMs));
         }
 
-        // Повторение действия случайное количество раз
-        public static async Task RepeatRandomTimesAsync(int minTimes, int maxTimes, Func<Task> action)
-        {
-            int times = RandomNumber(minTimes, maxTimes);
-            for (int i = 0; i < times; i++)
-            {
-                await action();
-            }
-        }
-
-        // Выполнение действия с вероятностью
-        public static async Task<bool> TryWithProbabilityAsync(double probability, Func<Task> action)
-        {
-            if (rng.NextDouble() < probability)
-            {
-                await action();
-                return true;
-            }
-            return false;
-        }
-
+        
         // Генерация случайных координат в пределах прямоугольника
         public static async Task<(int x, int y)> RandomPositionAsync(int minX, int maxX, int minY, int maxY)
         {

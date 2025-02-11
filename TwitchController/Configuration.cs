@@ -62,7 +62,7 @@ namespace TwitchController
             else Token = token;
 
             TokenManager.SaveToken(TwitchID, Token);
-            
+
             Console.WriteLine($"[INFO]\n-- TwitchChannel: {TwitchChannel}\n-- Token: Found");
             OpeningBracket = luaConfig["opening-bracket"] as string;
             ClosingBracket = luaConfig["closing-bracket"] as string;
