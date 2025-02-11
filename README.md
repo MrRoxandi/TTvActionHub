@@ -25,7 +25,7 @@ This project lets you create custom Twitch chat commands that trigger keyboard a
 
 ## LUA Scripting
 
-This project allows you to customize chat commands using LUA scripts. The `example.lua` file provides an example configuration. For a detailed description of the available API, please refer to the [API_ENG](TwitchController\API_ENG.md)/[API_RU](TwitchController\API_RU.md) .
+This project allows you to customize chat commands using LUA scripts. The `example.lua` file provides an example configuration. For a detailed description of the available API, please refer to the [API_ENG](TwitchController/API_ENG.md)/[API_RU](TwitchController/API_ENG.md) .
 
 ## License
 
