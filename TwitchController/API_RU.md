@@ -7,13 +7,13 @@
 
 ### Управление вводом с помощью (`TwitchController.Hardware`)
 
-- Интерфейс импорта: ([Methods](API\RU\KeyboardMethods.md))
+- Интерфейс импорта: ([Methods](API/RU/KeyboardMethods.md))
 
 ```lua
 local Keyboard = import('TwitchController', 'TwitchController.Hardware').Keyboard
 ```
 
-- Импорт интерфейса: ([Methods](API\RU\MouseMethods.md))
+- Импорт интерфейса: ([Methods](API/RU/MouseMethods.md))
 
 ```lua
 local Mouse = import('TwitchController', 'TwitchController.Hardware').Mouse
@@ -21,7 +21,7 @@ local Mouse = import('TwitchController', 'TwitchController.Hardware').Mouse
 
 ### Взаимодействие с чатом Twitch с помощью (`TwitchChatController.Stuff.Twitch`)
 
-- Импорт интерфейса: ([Methods](API\RU\ChatMethods.md))
+- Импорт интерфейса: ([Methods](API/RU/ChatMethods.md))
 
 ```lua
 local TwitchChat = import('TwitchController', 'TwitchController.Stuff').Chat
@@ -29,7 +29,7 @@ local TwitchChat = import('TwitchController', 'TwitchController.Stuff').Chat
 
 ### Некоторые инструменты для создания скриптов (`TwitchChatController.Stuff.Tools`)
 
-- Импорт интерфейса: ([Методы](API\RU\ToolsMethods.md))
+- Импорт интерфейса: ([Методы](API/RU/ToolsMethods.md))
 
 ```lua
 local Tools = import('TwitchController', 'TwitchController.Stuff').Tools

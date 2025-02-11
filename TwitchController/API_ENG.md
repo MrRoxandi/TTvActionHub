@@ -7,13 +7,13 @@ The following C# classes are available for import into your LUA scripts using th
 
 ### Input control with (`TwitchController.Hardware`)
 
-- Import interface: ([Methods](API\ENG\KeyboardMethods.md))
+- Import interface: ([Methods](API/ENG/KeyboardMethods.md))
 
 ```lua
 local Keyboard = import('TwitchController', 'TwitchController.Hardware').Keyboard
 ```
 
-- Import interface: ([Methods](API\ENG\MouseMethods.md))
+- Import interface: ([Methods](API/ENG/MouseMethods.md))
 
 ```lua
 local Mouse = import('TwitchController', 'TwitchController.Hardware').Mouse
@@ -21,7 +21,7 @@ local Mouse = import('TwitchController', 'TwitchController.Hardware').Mouse
 
 ### Twitch chat interaction with (`TwitchChatController.Stuff.Twitch`)
 
-- Import interface: ([Methods](API\ENG\ChatMethods.md))
+- Import interface: ([Methods](API/ENG/ChatMethods.md))
 
 ```lua
 local TwitchChat = import('TwitchController', 'TwitchController.Stuff').Chat
@@ -29,7 +29,7 @@ local TwitchChat = import('TwitchController', 'TwitchController.Stuff').Chat
 
 ### Some tools for creating scripts with (`TwitchChatController.Stuff.Tools`)
 
-- Import interface: ([Methods](API\ENG\ToolsMethods.md))
+- Import interface: ([Methods](API/ENG/ToolsMethods.md))
 
 ```lua
 local Tools = import('TwitchController', 'TwitchController.Stuff').Tools
