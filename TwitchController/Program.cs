@@ -9,19 +9,21 @@ namespace TwitchController
     {
         static void Main(string[] args)
         {
-            //var path = @"config.lua";
-            var path = @"F:\Repos\TwitchController\TwitchController\config.lua";
+
+            var path = @"config.lua";
             if (!File.Exists(path) && args.Length == 0){
                 Console.WriteLine($"Cannot find {path} in main directory");
-                Console.WriteLine($"Specify input .lua file path as the first argument");
+                var fullPath = Directory.GetCurrentDirectory() + "/" + path;
+                Console.WriteLine($"It will be generated at {fullPath}.");
+                Configuration.GenerateConfig(fullPath);
                 return;
-            } 
+            }
 
             if (args.Length > 0) path = args[0];
 
             if (!File.Exists(path))
             {
-                Console.WriteLine($"Cannot find lua config file in {path}");
+                Console.WriteLine($"Cannot find config.lua file in {path}");
                 return;
             }
 

@@ -10,14 +10,13 @@ namespace TwitchController
 {
     public class Configuration
     {
-        private static string ClientId { get => "hd9kavndkos83ujswrqhuffa90kcb6"; }
-        private static string ClientSecret { get => "nv5bgx5a4321lopr6knf0acek8b2e1"; }
+        private static string ClientId { get => "--"; }
+        private static string ClientSecret { get => "--"; }
         private static string RedirectUrl { get => @"http://localhost:3000/"; }
 
+        public readonly (string TwitchChannel, string TwitchID, string Token) AuthorizationInfo;
         public readonly TwitchApiService TwitchApi;
-        public readonly string TwitchChannel;
-        public readonly string TwitchID;
-        public readonly string Token;
+
 
         public readonly long GlobalTimeOut;
         public readonly bool ShowLogs;
@@ -41,29 +40,24 @@ namespace TwitchController
                 throw new Exception("Failed to load controller configuration");
             }
 
-            if (luaConfig["channel"] is not string channel)
-            {
-                throw new Exception($"Unable to get channel from file: {path}");
-            }
-            TwitchChannel = channel;
-            
             TwitchApi = new TwitchApiService(ClientId, ClientSecret, RedirectUrl);
 
-            TwitchID = TwitchApi.GetTwitchIdAsync(TwitchChannel).Result;
-            if (TokenManager.LoadToken(TwitchID) is not string token)
+            var authInfo = AuthorizationManager.LoadInfo(ClientSecret);
+            if (authInfo.Login == null || authInfo.ID == null || authInfo.Token == null)
             {
-                var tmp = TwitchApi.RunAuthFlowAsync().Result;
-                if (string.IsNullOrEmpty(tmp))
-                {
-                    throw new Exception($"Failed to get token for channel: {TwitchChannel}");
-                }
-                Token = tmp;
+                authInfo = TwitchApi.GetAuthorizationInfo().Result;
             }
-            else Token = token;
+            
+            if(authInfo.Login == null || authInfo.ID == null || authInfo.Token == null)
+            {
+                throw new Exception("Unable to get authorizationinfo. Aborting");
+            }
+            AuthorizationInfo = new() { TwitchChannel = authInfo.Login, TwitchID = authInfo.ID, Token = authInfo.Token };
 
-            TokenManager.SaveToken(TwitchID, Token);
-
-            Console.WriteLine($"[INFO]\n-- TwitchChannel: {TwitchChannel}\n-- Token: Found");
+            AuthorizationManager.SaveInfo(ClientSecret, AuthorizationInfo.TwitchChannel, AuthorizationInfo.TwitchID, AuthorizationInfo.Token);
+            
+            Console.WriteLine($"[INFO]\n-- TwitchChannel: {AuthorizationInfo.TwitchChannel}\n-- Token: Found");
+           
             OpeningBracket = luaConfig["opening-bracket"] as string;
             ClosingBracket = luaConfig["closing-bracket"] as string;
 
@@ -151,6 +145,25 @@ namespace TwitchController
                 Console.WriteLine($"  -- Loaded reward: {keyObj}");
             }
         }
-        
+
+        public static void GenerateConfig(string path) => File.WriteAllText(path,
+@"local Keyboard = import('TwitchController', 'TwitchController.Hardware').Keyboard
+local Mouse = import('TwitchController', 'TwitchController.Hardware').Mouse
+local TwitchChat = import('TwitchController', 'TwitchController.Stuff').Chat
+
+local res = {}
+
+res[""timeout""] = 1000 -- may be changed
+res[""logs""] = false -- may be changed
+--res[""opening-bracket""] = '<' -- uncomment if you like !command <arg> more than !command (arg)
+--res[""closing-bracket""] = '>' -- bracket may be any symbol, but to work they must be not identical
+
+local commands = {}
+local rewards = {}
+
+res[""commands""] = commands
+res[""rewards""] = rewards
+return res"
+                );
     }
 }
