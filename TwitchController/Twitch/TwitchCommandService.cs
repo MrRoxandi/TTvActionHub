@@ -18,11 +18,11 @@ namespace TwitchController.Twitch
             Client = new TwitchClient();
 
 
-            Credentials = new ConnectionCredentials(config.TwitchChannel, config.Token);
+            Credentials = new ConnectionCredentials(config.AuthorizationInfo.TwitchChannel, config.AuthorizationInfo.Token);
 
             Client.OnConnected += (sender, args) =>
             {
-                Console.WriteLine($"[INFO] Commands service has connected to channel {_configuration.TwitchChannel}."); ;
+                Console.WriteLine($"[INFO] Commands service has connected to channel {_configuration.AuthorizationInfo.TwitchChannel}."); ;
             };
 
             if (_configuration.ShowLogs)
@@ -36,7 +36,7 @@ namespace TwitchController.Twitch
                 };
             }
             Stuff.Chat.client = Client;
-            Stuff.Chat.chat = config.TwitchChannel;
+            Stuff.Chat.chat = config.AuthorizationInfo.TwitchChannel;
            
             Client.OnChatCommandReceived += OnChatCommandReceived;
         }
@@ -67,7 +67,7 @@ namespace TwitchController.Twitch
 
         public void Run()
         {
-            Client.Initialize(Credentials, _configuration.TwitchChannel);
+            Client.Initialize(Credentials, _configuration.AuthorizationInfo.TwitchChannel);
             Client.Connect();
         }
     }

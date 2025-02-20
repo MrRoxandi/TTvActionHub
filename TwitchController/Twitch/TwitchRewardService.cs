@@ -22,8 +22,8 @@ namespace TwitchController.Twitch
             Client = new TwitchPubSub();
             Client.OnPubSubServiceConnected += (sender, args) =>
             {
-                Client.SendTopics(_configuration.Token);
-                Console.WriteLine($"[INFO] Rewards service has connected to channel {_configuration.TwitchChannel}.");
+                Client.SendTopics(_configuration.AuthorizationInfo.Token);
+                Console.WriteLine($"[INFO] Rewards service has connected to channel {_configuration.AuthorizationInfo.TwitchChannel}.");
             };
             
             Client.OnListenResponse += (sender, args) =>
@@ -57,14 +57,14 @@ namespace TwitchController.Twitch
                 var executionResult = value.Execute(rewardResiever, rewardArgs.Split(' '));
                 if(executionResult == null)
                 {
-                    Chat.SendMessage($"@{_configuration.TwitchChannel} for some reason reward {rewardTitle} was not executed");
+                    Chat.SendMessage($"@{_configuration.AuthorizationInfo.TwitchChannel} for some reason reward {rewardTitle} was not executed");
                 }
             };
         }
 
         public void Run()
         {
-            Client.ListenToChannelPoints(_configuration.TwitchID);
+            Client.ListenToChannelPoints(_configuration.AuthorizationInfo.TwitchID);
             Client.Connect();
         }
     }

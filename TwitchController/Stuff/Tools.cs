@@ -7,7 +7,7 @@ namespace TwitchController.Stuff
 {
     public static class Tools
     {
-        private static readonly Random rng = new Random();
+        private static readonly Random rng = new();
 
         // Существующий метод
         public static int RandomNumber(int min, int max)
