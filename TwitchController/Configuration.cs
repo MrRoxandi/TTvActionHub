@@ -14,7 +14,7 @@ namespace TwitchController
         private static string ClientSecret { get => "--"; }
         private static string RedirectUrl { get => @"http://localhost:3000/"; }
 
-        public readonly (string TwitchChannel, string TwitchID, string Token) AuthorizationInfo;
+        public readonly (string Login, string ID, string Token) TwitchInfo;
         public readonly TwitchApiService TwitchApi;
 
 
@@ -41,8 +41,14 @@ namespace TwitchController
             }
 
             TwitchApi = new TwitchApiService(ClientId, ClientSecret, RedirectUrl);
+            if (luaConfig["force-relog"] is not bool isForceRelog) isForceRelog = false;
+            (string? Login, string? ID, string? Token) authInfo = (null, null, null);
 
-            var authInfo = AuthorizationManager.LoadInfo(ClientSecret);
+            if (!isForceRelog)
+            {
+                authInfo = AuthorizationManager.LoadInfo(ClientSecret);
+            }
+            
             if (authInfo.Login == null || authInfo.ID == null || authInfo.Token == null)
             {
                 authInfo = TwitchApi.GetAuthorizationInfo().Result;
@@ -52,11 +58,12 @@ namespace TwitchController
             {
                 throw new Exception("Unable to get authorizationinfo. Aborting");
             }
-            AuthorizationInfo = new() { TwitchChannel = authInfo.Login, TwitchID = authInfo.ID, Token = authInfo.Token };
 
-            AuthorizationManager.SaveInfo(ClientSecret, AuthorizationInfo.TwitchChannel, AuthorizationInfo.TwitchID, AuthorizationInfo.Token);
+            TwitchInfo = new() { Login = authInfo.Login, ID = authInfo.ID, Token = authInfo.Token };
+
+            AuthorizationManager.SaveInfo(ClientSecret, TwitchInfo.Login, TwitchInfo.ID, TwitchInfo.Token);
             
-            Console.WriteLine($"[INFO]\n-- TwitchChannel: {AuthorizationInfo.TwitchChannel}\n-- Token: Found");
+            Console.WriteLine($"[INFO]\n-- TwitchChannel: {TwitchInfo.Login}\n-- Token: Found");
            
             OpeningBracket = luaConfig["opening-bracket"] as string;
             ClosingBracket = luaConfig["closing-bracket"] as string;
@@ -152,7 +159,7 @@ local Mouse = import('TwitchController', 'TwitchController.Hardware').Mouse
 local TwitchChat = import('TwitchController', 'TwitchController.Stuff').Chat
 
 local res = {}
-
+res[""force-relog""] = false -- may be changed to relogin with new account by force 
 res[""timeout""] = 1000 -- may be changed
 res[""logs""] = false -- may be changed
 --res[""opening-bracket""] = '<' -- uncomment if you like !command <arg> more than !command (arg)

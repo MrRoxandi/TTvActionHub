@@ -13,9 +13,10 @@ namespace TwitchController
             var path = @"config.lua";
             if (!File.Exists(path) && args.Length == 0){
                 Console.WriteLine($"Cannot find {path} in main directory");
-                var fullPath = Directory.GetCurrentDirectory() + "/" + path;
+                var fullPath = Directory.GetCurrentDirectory() + "\\" + path;
                 Console.WriteLine($"It will be generated at {fullPath}.");
                 Configuration.GenerateConfig(fullPath);
+                Console.ReadLine();
                 return;
             }
 
