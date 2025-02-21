@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace TwitchController.Hardware
+namespace TwitchController.LuaTools.Hardware
 {
     public static class Mouse
     {
@@ -39,7 +39,7 @@ namespace TwitchController.Hardware
             public uint mouseData;
             public uint dwFlags;
             public uint time;
-            public IntPtr dwExtraInfo;
+            public nint dwExtraInfo;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -141,7 +141,7 @@ namespace TwitchController.Hardware
                     mouseData = (uint)data,
                     dwFlags = flags,
                     time = 0,
-                    dwExtraInfo = IntPtr.Zero
+                    dwExtraInfo = nint.Zero
                 }
             };
 

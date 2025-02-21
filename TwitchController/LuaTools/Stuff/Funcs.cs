@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace TwitchController.Stuff
+namespace TwitchController.LuaTools.Stuff
 {
-    public static class Tools
+    public static class Funcs
     {
         private static readonly Random rng = new();
 
@@ -31,7 +31,7 @@ namespace TwitchController.Stuff
         // Случайное число с плавающей точкой
         public static async Task<double> RandomDoubleAsync(double min, double max)
         {
-            return await Task.Run(() => min + (rng.NextDouble() * (max - min)));
+            return await Task.Run(() => min + rng.NextDouble() * (max - min));
         }
 
         // Случайный элемент из списка
@@ -69,7 +69,7 @@ namespace TwitchController.Stuff
             public int X { get; set; } = x;
             public int Y { get; set; } = y;
         }
-        
+
         public static async Task<Point> RandomPositionAsync(int minX, int maxX, int minY, int maxY)
         {
             return await Task.Run(() => new Point(RandomNumber(minX, maxX), RandomNumber(minY, maxY)));

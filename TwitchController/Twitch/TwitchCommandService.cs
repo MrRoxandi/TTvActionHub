@@ -2,6 +2,7 @@
 using TwitchLib.Client.Models;
 using TwitchLib.Client;
 using TwitchController.Items;
+using TwitchController.LuaTools.Stuff;
 
 namespace TwitchController.Twitch
 {
@@ -35,8 +36,8 @@ namespace TwitchController.Twitch
                     Client.SendMessage(args.Channel, msg);
                 };
             }
-            Stuff.Chat.client = Client;
-            Stuff.Chat.chat = config.TwitchInfo.Login;
+            Chat.client = Client;
+            Chat.chat = config.TwitchInfo.Login;
            
             Client.OnChatCommandReceived += OnChatCommandReceived;
         }

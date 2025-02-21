@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.X86;
 using System.Threading.Tasks;
 
-namespace TwitchController.Hardware
+namespace TwitchController.LuaTools.Hardware
 {
     public static class Keyboard
     {
@@ -37,16 +37,16 @@ namespace TwitchController.Hardware
         private const int KEYEVENTF_KEYUP = 0x2;
 
         [DllImport("user32.dll", SetLastError = true)]
-        private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+        private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, nuint dwExtraInfo);
 
         public static void PressKey(KeyCode k)
         {
-            keybd_event((byte)k, 0, KEYEVENTF_EXTENDEDKEY, UIntPtr.Zero);
+            keybd_event((byte)k, 0, KEYEVENTF_EXTENDEDKEY, nuint.Zero);
         }
 
         public static void ReleaseKey(KeyCode k)
         {
-            keybd_event((byte)k, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            keybd_event((byte)k, 0, KEYEVENTF_KEYUP, nuint.Zero);
         }
 
         public static async Task TypeKeyAsync(KeyCode key)

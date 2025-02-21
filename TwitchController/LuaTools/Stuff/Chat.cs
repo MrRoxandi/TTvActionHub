@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TwitchLib.Client;
 
-namespace TwitchController.Stuff
+namespace TwitchController.LuaTools.Stuff
 {
     public static class Chat
     {
