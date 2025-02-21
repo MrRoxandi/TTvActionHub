@@ -35,27 +35,19 @@ namespace TwitchController.Stuff
         }
 
         // Случайный элемент из списка
-        public static async Task<T> RandomElementAsync<T>(IEnumerable<T> collection)
+        public static async Task<string> RandomElementAsync(IEnumerable<string> collection)
         {
             return await Task.Run(() => collection.ElementAt(rng.Next(collection.Count())));
         }
 
         // Перемешивание списка
-        public static async Task<List<T>> ShuffleAsync<T>(IEnumerable<T> collection)
+        public static async Task<List<string>> ShuffleAsync(IEnumerable<string> collection)
         {
             return await Task.Run(() =>
             {
-                var list = collection.ToList();
-                int n = list.Count;
-                while (n > 1)
-                {
-                    n--;
-                    int k = rng.Next(n + 1);
-                    T value = list[k];
-                    list[k] = list[n];
-                    list[n] = value;
-                }
-                return list;
+                Span<string> span = new(collection.ToArray());
+                rng.Shuffle(span);
+                return span.ToArray().ToList();
             });
         }
 
@@ -67,20 +59,20 @@ namespace TwitchController.Stuff
                 .Select(s => s[rng.Next(s.Length)]).ToArray()));
         }
 
-        // Случайная задержка между выполнением действий
         public static async Task RandomDelayAsync(int minMs, int maxMs)
         {
             await Task.Delay(RandomNumber(minMs, maxMs));
         }
 
-        
-        // Генерация случайных координат в пределах прямоугольника
-        public static async Task<(int x, int y)> RandomPositionAsync(int minX, int maxX, int minY, int maxY)
+        public struct Point(int x, int y)
         {
-            return await Task.Run(() => (
-                RandomNumber(minX, maxX),
-                RandomNumber(minY, maxY)
-            ));
+            public int X { get; set; } = x;
+            public int Y { get; set; } = y;
+        }
+        
+        public static async Task<Point> RandomPositionAsync(int minX, int maxX, int minY, int maxY)
+        {
+            return await Task.Run(() => new Point(RandomNumber(minX, maxX), RandomNumber(minY, maxY)));
         }
     }
 }

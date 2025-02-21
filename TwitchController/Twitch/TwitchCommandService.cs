@@ -62,7 +62,7 @@ namespace TwitchController.Twitch
                     cmdArgs = cmdArgs.Substring(start + 1, stop - start - 1);
             }
 
-            value.Execute(cmdSender, cmdArgs.Split(' '));
+            value.Execute(cmdSender, cmdArgs.Replace("\U000e0000", "").Trim().Split(' '));
         }
 
         public void Run()

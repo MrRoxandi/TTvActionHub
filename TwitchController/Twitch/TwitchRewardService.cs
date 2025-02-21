@@ -40,7 +40,7 @@ namespace TwitchController.Twitch
                 var rewardResiever = args.RewardRedeemed.Redemption.User.DisplayName;
                 var rewardArgs = args.RewardRedeemed.Redemption.UserInput;
 
-                Console.WriteLine($"Received command: {rewardTitle} from {rewardResiever} with args: {rewardArgs}");
+                Console.WriteLine($"Received reward: {rewardTitle} from {rewardResiever} with args: {rewardArgs}");
                 
                 if (!_configuration.Rewards.TryGetValue(rewardTitle, out Reward? value)) return;
 
@@ -54,11 +54,7 @@ namespace TwitchController.Twitch
                         rewardArgs = rewardArgs.Substring(start + 1, stop - start - 1);
                 }
 
-                var executionResult = value.Execute(rewardResiever, rewardArgs.Split(' '));
-                if(executionResult == null)
-                {
-                    Chat.SendMessage($"@{_configuration.TwitchInfo.Login} for some reason reward {rewardTitle} was not executed");
-                }
+                value.Execute(rewardResiever, rewardArgs.Replace("\U000e0000", "").Trim().Split(' '));
             };
         }
 

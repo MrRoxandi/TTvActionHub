@@ -9,17 +9,17 @@ namespace TwitchController.Items
         public required LuaFunction Function;
         public string? Description;
 
-        public object[]? Execute(string sender, params object[]? args)
+        public void Execute(string sender, string[]? args)
         {
 
             try
             {
-                return Function.Call(sender, args);
+                Function.Call(sender, args);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[ERR] Unable to run reward.\n{ex.Message}");
-                return null;
+                return;
             }
         }
     }

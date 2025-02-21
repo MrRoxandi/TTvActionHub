@@ -11,19 +11,19 @@ namespace TwitchController.Items
         public string? Description;
         public long? TimeOut;
 
-        public object[]? Execute(string sender, params object[]? args)
+        public void Execute(string sender, string[]? args)
         {
             try
             {
                 if (_coolDownTimer.IsRunning && _coolDownTimer.ElapsedMilliseconds < TimeOut)
-                    return null;
+                    return;
                 _coolDownTimer.Restart();
-                return Function.Call(sender, args);
+                Function.Call(sender, args);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"[ERR] Unable to run command.\n{ex.Message}");
-                return null;
+                return;
             }
         }
     }
