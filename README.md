@@ -1,4 +1,8 @@
-# Twitch Controller
+# **DEV BRANCH README AND API DOCS DEPRECATED!!!!!!**
+
+# **ДЛЯ ДЕВ ВЕТКИ РЕДМИ И АПИ ДОКИ НЕ АКТУАЛЬНЫ!!!!!!**
+
+# Twitch Controller ()
 
 > Spice up your Twitch streams by letting your chat control your keyboard and mouse with custom LUA scripts!
 
