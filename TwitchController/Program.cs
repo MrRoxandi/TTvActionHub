@@ -45,7 +45,7 @@ namespace TwitchController
             RegisterServices([
                 new TwitchCommandService(configuration),
                 new TwitchRewardService(configuration),
-                new Services.Http.Service("http://localhost", "8888"),
+                // new Services.Http.Service("http://localhost", "8888"), // Пока не придумаем что делать, всё равно не нужен будет
             ]);
             
             Console.ReadLine();

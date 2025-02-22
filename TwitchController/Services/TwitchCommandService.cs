@@ -53,7 +53,7 @@ namespace TwitchController.Services
 
             if (!_configuration.Commands.TryGetValue(cmd, out Command? value)) return;
 
-            if (_configuration.OpeningBracket is not null && _configuration.ClosingBracket is not null)
+            if (!string.IsNullOrEmpty(_configuration.OpeningBracket) && !string.IsNullOrEmpty(_configuration.ClosingBracket))
             {
                 var start = cmdArgs.IndexOf(_configuration.OpeningBracket, StringComparison.Ordinal);
                 var stop = cmdArgs.IndexOf(_configuration.ClosingBracket, StringComparison.Ordinal);
