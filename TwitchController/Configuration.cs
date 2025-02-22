@@ -1,14 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text;
 using NLua;
 using TwitchController.Items;
+using TwitchController.Logger;
 using TwitchController.Security;
 using TwitchController.Twitch;
 
 namespace TwitchController
 {
-    public class Configuration
+    internal class Configuration
     {
         private static string ClientId { get => "--"; }
         private static string ClientSecret { get => "--"; }
@@ -24,9 +26,14 @@ namespace TwitchController
         public readonly Dictionary<string, Command> Commands;
         public readonly Dictionary<string, Reward> Rewards;
 
-        public readonly string? OpeningBracket;
-        public readonly string? ClosingBracket;
+        public readonly string OpeningBracket;
+        public readonly string ClosingBracket;
 
+        public readonly string ConfigPath;
+
+        public string FieldAdress(string field) => $"In [{ConfigPath}] field [{field}]";
+        public string ParamAdress(string field, string param) => $"In [{ConfigPath}] parameter [{param} in field [{field}]";
+        
         public Configuration(string path)
         {
 
@@ -37,13 +44,20 @@ namespace TwitchController
             var state = lua.DoFile(path);
             if (state[0] is not LuaTable luaConfig)
             {
-                throw new Exception("Failed to load controller configuration");
+                throw new Exception($"Failed to load controller configuration. Check the [{path}] config");
             }
+            ConfigPath = path;
 
             TwitchApi = new TwitchApiService(ClientId, ClientSecret, RedirectUrl);
-            if (luaConfig["force-relog"] is not bool isForceRelog) isForceRelog = false;
-            (string? Login, string? ID, string? Token) authInfo = (null, null, null);
 
+            if (luaConfig["force-relog"] is not bool isForceRelog)
+            {
+                ConsoleLogger.Warn($"{FieldAdress("force-relog")} is not presented. Will be used default value: [{false}].");
+                isForceRelog = false;
+            }
+
+            (string? Login, string? ID, string? Token) authInfo = (null, null, null);
+            
             if (!isForceRelog)
             {
                 authInfo = AuthorizationManager.LoadInfo(ClientSecret);
@@ -56,34 +70,39 @@ namespace TwitchController
             
             if(authInfo.Login == null || authInfo.ID == null || authInfo.Token == null)
             {
-                throw new Exception("Unable to get authorizationinfo. Aborting");
+                throw new Exception("Unable to get authorization info. Aborting");
             }
 
             TwitchInfo = new() { Login = authInfo.Login, ID = authInfo.ID, Token = authInfo.Token };
 
             AuthorizationManager.SaveInfo(ClientSecret, TwitchInfo.Login, TwitchInfo.ID, TwitchInfo.Token);
             
-            Console.WriteLine($"[INFO]\n-- TwitchChannel: {TwitchInfo.Login}\n-- Token: Found");
-           
-            OpeningBracket = luaConfig["opening-bracket"] as string;
-            ClosingBracket = luaConfig["closing-bracket"] as string;
-
-            if (luaConfig["logs"] is not bool)
+            if (luaConfig["opening-bracket"] is not string obracket || luaConfig["closing-bracket"] is not string cbracket)
             {
-                Console.WriteLine($"[WARN] Parameter {{logs}} in {path} not specified. Using default state: {true}");
-                ShowLogs = true;
+                //TODO: FIX
+                //ConsoleLogger.Warn($"{FieldAdress("[opening-bracket] or [closing-bracket]")} is not presented. Ignoring...");
+                obracket = String.Empty;
+                cbracket = String.Empty;
             }
-            else ShowLogs = false;
 
-            Console.WriteLine($"[INFO] Logs state: {ShowLogs}");
+            OpeningBracket = obracket;
+            ClosingBracket = cbracket;
+
+            if (luaConfig["logs"] is not bool logState)
+            {
+                ConsoleLogger.Warn($"{FieldAdress("logs")} is not presented. Will be used default value: [{true}].");
+                logState = true;
+            }
+            
+            ShowLogs = logState;
+            
             if (luaConfig["timeout"] is not long timeOut)
             {
-                GlobalTimeOut = 30 * 1000; // 30 seconds in milliseconds
-                Console.WriteLine($"[WARN] Parameter {{timeout}} in {path} not specified. Using default state: {GlobalTimeOut}ms");
+                timeOut = 30 * 1000; // 30 seconds in milliseconds
+                ConsoleLogger.Warn($"{FieldAdress("[timeout]")} is not presented. Will be used default value: {timeOut}");
             }
-            else GlobalTimeOut = timeOut;
-
-            Console.WriteLine($"[INFO] Timeout state: {GlobalTimeOut} ms");
+            
+            GlobalTimeOut = timeOut;
 
             Commands = [];
             Rewards = [];
@@ -97,33 +116,28 @@ namespace TwitchController
         private void LoadCommands(LuaTable? cmds) {
             
             if (cmds is null) {
-                Console.WriteLine($"[WARN] Parameter {{commands}} in not specified. Skipping...");
+                ConsoleLogger.Warn($"{FieldAdress("commands")} is not presented. Ignoring...");
                 return;
             }
 
-            Console.WriteLine($"[INFO] Started loading commands: ");
-            
             foreach (var keyObj in cmds.Keys)
             {
 
                 if (cmds[keyObj] is not LuaTable table)
-                    throw new Exception($"Failed to load command: {keyObj}");
+                    throw new Exception($"{ParamAdress("commands", $"{keyObj}")} is not a command. Check syntax.");
 
-                var timeout = GlobalTimeOut;
-
-                //Setting timeout for command
-                if (table["timeout"] is long timer)
-                    timeout = timer;
-
-                //Setting description for commands
-                var desc = table["description"] as string;
-
-                //Setting action for command. Must be presented
                 if (table["action"] is not LuaFunction action)
-                    throw new Exception($"Unable to find field {{action}} for command {keyObj}");
+                    throw new Exception($"{ParamAdress($"{keyObj}", "action")} is not a action. Check syntax.");
 
-                Commands.Add(keyObj.ToString()!, new Command { Function = action, TimeOut = timeout, Description = desc });
-                Console.WriteLine($"  -- Loaded command: {keyObj}");
+                if (table["timeout"] is not long timer)
+                {
+                    ConsoleLogger.Warn($"{ParamAdress($"{keyObj}", "timeout")} is not presented. Will be used default value: {GlobalTimeOut} ms");
+                    timer = GlobalTimeOut;
+                }
+
+            
+                Commands.Add(keyObj.ToString()!, new Command { Function = action, TimeOut = timer});
+                ConsoleLogger.Info($"Loaded comand: {keyObj}");
             }
         }
 
@@ -131,37 +145,35 @@ namespace TwitchController
         {
             if (rewards is null)
             {
-                Console.WriteLine($"[WARN] Parameter {{rewards}} in not specified. Skipping...");
+                ConsoleLogger.Warn($"{FieldAdress("rewards")} is not presented. Ignoring...");
                 return;
             }
-            Console.WriteLine($"[INFO] Started loading rewards: ");
-
+            
             foreach (var keyObj in rewards.Keys)
             {
                 if (rewards[keyObj] is not LuaTable table)
-                    throw new Exception($"Failed to load reward: {keyObj}");
+                    throw new Exception($"{ParamAdress("rewards", $"{keyObj}")} is not a command. Check syntax.");
 
-               //Setting description for reward
-                var desc = table["description"] as string;
+                if (table["action"] is not LuaFunction action)
+                    throw new Exception($"{ParamAdress($"{keyObj}", "action")} is not a action. Check syntax.");
+                
+                Rewards.Add(keyObj.ToString()!, new Reward { Function = action });
 
-                //Setting action for rewards. Must be presented
-                if(table["action"] is not LuaFunction action)
-                    throw new Exception($"Failed to load action for reward: {keyObj}");
-
-                Rewards.Add(keyObj.ToString()!, new Reward { Function = action, Description = desc });
-                Console.WriteLine($"  -- Loaded reward: {keyObj}");
+                ConsoleLogger.Info($"Loaded reward: {keyObj}");
             }
         }
 
         public static void GenerateConfig(string path) => File.WriteAllText(path,
-@"local Keyboard = import('TwitchController', 'TwitchController.Hardware').Keyboard
-local Mouse = import('TwitchController', 'TwitchController.Hardware').Mouse
-local TwitchChat = import('TwitchController', 'TwitchController.Stuff').Chat
+@"local Keyboard = import('TwitchController', 'TwitchController.LuaTools.Hardware').Keyboard
+local Mouse = import('TwitchController', 'TwitchController.LuaTools.Hardware').Mouse
+local TwitchChat = import('TwitchController', 'TwitchController.LuaTools.Stuff').Chat
+local Funcs = import('TwitchController', 'TwitchController.LuaTools.Stuff').Funcs
 
 local res = {}
 res[""force-relog""] = false -- may be changed to relogin with new account by force 
 res[""timeout""] = 1000 -- may be changed
 res[""logs""] = false -- may be changed
+
 --res[""opening-bracket""] = '<' -- uncomment if you like !command <arg> more than !command (arg)
 --res[""closing-bracket""] = '>' -- bracket may be any symbol, but to work they must be not identical
 

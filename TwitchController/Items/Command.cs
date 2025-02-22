@@ -4,11 +4,10 @@ using NLua;
 
 namespace TwitchController.Items
 {
-    public class Command
+    internal class Command
     {
         private readonly Stopwatch _coolDownTimer = new();
         public required LuaFunction Function;
-        public string? Description;
         public long? TimeOut;
 
         public void Execute(string sender, string[]? args)
@@ -17,8 +16,8 @@ namespace TwitchController.Items
             {
                 if (_coolDownTimer.IsRunning && _coolDownTimer.ElapsedMilliseconds < TimeOut)
                     return;
-                _coolDownTimer.Restart();
                 Function.Call(sender, args);
+                _coolDownTimer.Restart();
             }
             catch (Exception ex)
             {

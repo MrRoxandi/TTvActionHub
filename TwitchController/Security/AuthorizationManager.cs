@@ -5,7 +5,7 @@ using System.Text;
 
 namespace TwitchController.Security 
 {
-    public static class AuthorizationManager 
+    internal static class AuthorizationManager 
     {
         private static string TokenDir => "Users";
 
@@ -35,7 +35,7 @@ namespace TwitchController.Security
 
                 if (File.Exists(path))
                 {
-                    if ((DateTime.Now - File.GetCreationTime(path)).TotalDays >= 2)
+                    if ((DateTime.Now - File.GetCreationTime(path)).TotalDays >= 14)
                     {
                         File.Delete(path);
                         return (null, null, null);

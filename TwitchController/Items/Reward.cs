@@ -4,10 +4,9 @@ using NLua;
 
 namespace TwitchController.Items
 {
-    public class Reward
+    internal class Reward
     {
         public required LuaFunction Function;
-        public string? Description;
 
         public void Execute(string sender, string[]? args)
         {

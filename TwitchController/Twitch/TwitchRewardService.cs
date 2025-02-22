@@ -1,17 +1,9 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TwitchLib.PubSub;
-using TwitchLib.Api;
-using TwitchLib.Api.Helix.Models.Users.GetUsers;
+﻿using TwitchLib.PubSub;
 using TwitchController.Items;
-using TwitchController.Stuff;
 
 namespace TwitchController.Twitch
 {
-    public class TwitchRewardService
+    internal class TwitchRewardService
     {
         private readonly Configuration _configuration;
         private readonly TwitchPubSub Client;

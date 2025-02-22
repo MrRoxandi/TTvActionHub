@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using TwitchController.Twitch;
+using TwitchController.Logger;
 
 namespace TwitchController
 {
@@ -10,11 +11,13 @@ namespace TwitchController
         static void Main(string[] args)
         {
 
-            var path = @"config.lua";
+            //var path = @"config.lua";
+            var path = @"H:\repos\TwitchController\TwitchController\config.lua";
             if (!File.Exists(path) && args.Length == 0){
-                Console.WriteLine($"Cannot find {path} in main directory");
                 var fullPath = Directory.GetCurrentDirectory() + "\\" + path;
-                Console.WriteLine($"It will be generated at {fullPath}.");
+                ConsoleLogger.Error($"Cannot find {path} in main directory.");
+                ConsoleLogger.Info($"It will be generated at {fullPath}.");
+                
                 Configuration.GenerateConfig(fullPath);
                 Console.ReadLine();
                 return;
@@ -24,20 +27,21 @@ namespace TwitchController
 
             if (!File.Exists(path))
             {
-                Console.WriteLine($"Cannot find config.lua file in {path}");
+                ConsoleLogger.Error($"Cannot find config.lua file in {path}");
+                Console.ReadLine();
                 return;
             }
 
             Configuration configuration;
             try { configuration = new Configuration(path); }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine($"[ERR] {e.Message}");
+                ConsoleLogger.Error($"While creating configuration occured an error: {ex.Message}.");
                 Console.ReadLine();
                 return;
             }
 
-            Console.WriteLine("[INFO] PRESS ENTER TO CLOSE PROGRAM");
+            ConsoleLogger.Info("To close the program press enter.");
             
             var commandService = new TwitchCommandService(configuration);
             commandService.Run();

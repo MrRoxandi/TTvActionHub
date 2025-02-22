@@ -74,5 +74,10 @@ namespace TwitchController.LuaTools.Stuff
         {
             return await Task.Run(() => new Point(RandomNumber(minX, maxX), RandomNumber(minY, maxY)));
         }
+
+        public static async Task<string> CollectionToString(IEnumerable<string> collection, string sep = " ")
+        {
+            return await Task.Run(() => string.Join(sep, collection));
+        }
     }
 }

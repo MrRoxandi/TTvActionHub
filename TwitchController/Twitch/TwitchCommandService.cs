@@ -6,7 +6,7 @@ using TwitchController.LuaTools.Stuff;
 
 namespace TwitchController.Twitch
 {
-    public class TwitchCommandService
+    internal class TwitchCommandService
     {
         private readonly ConnectionCredentials Credentials;
         private readonly Configuration _configuration;
