@@ -4,9 +4,9 @@ using TwitchLib.Client;
 using TwitchController.Items;
 using TwitchController.LuaTools.Stuff;
 
-namespace TwitchController.Twitch
+namespace TwitchController.Services
 {
-    public class TwitchCommandService
+    public class TwitchCommandService : IService
     {
         private readonly ConnectionCredentials Credentials;
         private readonly Configuration _configuration;
@@ -38,7 +38,7 @@ namespace TwitchController.Twitch
             }
             Chat.client = Client;
             Chat.chat = config.TwitchInfo.Login;
-           
+
             Client.OnChatCommandReceived += OnChatCommandReceived;
         }
 
@@ -70,6 +70,10 @@ namespace TwitchController.Twitch
         {
             Client.Initialize(Credentials, _configuration.TwitchInfo.Login);
             Client.Connect();
+        }
+
+        public void Stop() {
+            Client.Disconnect();
         }
     }
 }

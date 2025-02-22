@@ -1,24 +1,17 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Net;
-using System.Net.Http;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using TwitchLib.Api;
-using TwitchLib.Api.Core;
-using TwitchLib.Api.Core.Enums;
-using TwitchLib.PubSub.Models.Responses.Messages.Redemption;
 
 namespace TwitchController.Twitch
 {
-    public class TwitchApiService
+    public class TwitchApi
     {
         private readonly TwitchAPI API;
         private readonly string RedirectUrl;
         private static readonly HttpClient httpClient = new();
 
-        public TwitchApiService(string clientId, string clientSecret, string redirectUri)
+        public TwitchApi(string clientId, string clientSecret, string redirectUri)
         {
             API = new();
             API.Settings.ClientId = clientId;
