@@ -22,7 +22,7 @@ namespace TwitchController.Items
             }
             catch (Exception ex)
             {
-                Logger.Error($"Unable to run command: {ex.Message}");
+                Logger.Error("Unable to run command", ex.Message);
                 
                 return;
             }

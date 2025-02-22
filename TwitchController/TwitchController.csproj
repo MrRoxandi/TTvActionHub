@@ -10,7 +10,10 @@
 
   <ItemGroup>
     <PackageReference Include="KeraLua" Version="1.4.3" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
     <PackageReference Include="NLua" Version="1.7.4" />
+    <PackageReference Include="NVorbis" Version="0.10.4" />
     <PackageReference Include="TwitchLib" Version="3.5.3" />
   </ItemGroup>
 
