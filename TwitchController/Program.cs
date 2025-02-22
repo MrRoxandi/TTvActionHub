@@ -1,6 +1,5 @@
-﻿using System;
-using System.Diagnostics;
-using System.IO;
+﻿using System.Runtime.CompilerServices;
+using TwitchController.Services;
 using TwitchController.Twitch;
 using TwitchController.Logger;
 
@@ -8,11 +7,11 @@ namespace TwitchController
 {
     internal abstract class Program
     {
+        static IEnumerable<IService> Services;
+
         static void Main(string[] args)
         {
-
-            //var path = @"config.lua";
-            var path = @"H:\repos\TwitchController\TwitchController\config.lua";
+            var path = @"config.lua";
             if (!File.Exists(path) && args.Length == 0){
                 var fullPath = Directory.GetCurrentDirectory() + "\\" + path;
                 ConsoleLogger.Error($"Cannot find {path} in main directory.");
@@ -41,15 +40,30 @@ namespace TwitchController
                 return;
             }
 
-            ConsoleLogger.Info("To close the program press enter.");
+            Console.WriteLine("[INFO] PRESS ENTER TO CLOSE PROGRAM");
+
+            RegisterServices([
+                new TwitchCommandService(configuration),
+                new TwitchRewardService(configuration),
+                new Services.Http.Service("http://localhost", "8888"),
+            ]);
             
-            var commandService = new TwitchCommandService(configuration);
-            commandService.Run();
-
-            var rewardService = new TwitchRewardService(configuration);
-            rewardService.Run();
-
             Console.ReadLine();
+
+            StopServices();
+        }
+
+        private static void RegisterServices(IEnumerable<IService> services)
+        {
+            Services = services;
+            foreach (var service in services)
+                service.Run();
+        }
+
+        private static void StopServices()
+        {
+            foreach(var service in Services)
+                service.Stop();
         }
     }
 }

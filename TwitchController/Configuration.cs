@@ -17,7 +17,7 @@ namespace TwitchController
         private static string RedirectUrl { get => @"http://localhost:3000/"; }
 
         public readonly (string Login, string ID, string Token) TwitchInfo;
-        public readonly TwitchApiService TwitchApi;
+        public readonly TwitchApi TwitchApi;
 
 
         public readonly long GlobalTimeOut;

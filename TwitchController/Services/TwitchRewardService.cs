@@ -1,9 +1,9 @@
 ﻿using TwitchLib.PubSub;
 using TwitchController.Items;
 
-namespace TwitchController.Twitch
+namespace TwitchController.Services
 {
-    internal class TwitchRewardService
+    public class TwitchRewardService : IService
     {
         private readonly Configuration _configuration;
         private readonly TwitchPubSub Client;
@@ -17,7 +17,7 @@ namespace TwitchController.Twitch
                 Client.SendTopics(_configuration.TwitchInfo.Token);
                 Console.WriteLine($"[INFO] Rewards service has connected to channel {_configuration.TwitchInfo.Login}.");
             };
-            
+
             Client.OnListenResponse += (sender, args) =>
             {
                 if (!args.Successful)
@@ -33,7 +33,7 @@ namespace TwitchController.Twitch
                 var rewardArgs = args.RewardRedeemed.Redemption.UserInput;
 
                 Console.WriteLine($"Received reward: {rewardTitle} from {rewardResiever} with args: {rewardArgs}");
-                
+
                 if (!_configuration.Rewards.TryGetValue(rewardTitle, out Reward? value)) return;
 
                 if (_configuration.OpeningBracket is not null && _configuration.ClosingBracket is not null)
@@ -54,6 +54,10 @@ namespace TwitchController.Twitch
         {
             Client.ListenToChannelPoints(_configuration.TwitchInfo.ID);
             Client.Connect();
+        }
+
+        public void Stop() {
+            Client.Disconnect();
         }
     }
 }
