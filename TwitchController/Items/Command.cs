@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using NLua;
+using TwitchController.Logs;
 
 namespace TwitchController.Items
 {
@@ -9,7 +10,7 @@ namespace TwitchController.Items
         private readonly Stopwatch _coolDownTimer = new();
         public required LuaFunction Function;
         public long? TimeOut;
-
+        
         public void Execute(string sender, string[]? args)
         {
             try
@@ -21,7 +22,8 @@ namespace TwitchController.Items
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ERR] Unable to run command.\n{ex.Message}");
+                Logger.Error($"Unable to run command: {ex.Message}");
+                
                 return;
             }
         }

@@ -9,7 +9,6 @@ namespace TwitchController.LuaTools.Stuff
     {
         private static readonly Random rng = new();
 
-        // Существующий метод
         public static int RandomNumber(int min, int max)
         {
             return rng.Next(min, max + 1);
@@ -20,7 +19,6 @@ namespace TwitchController.LuaTools.Stuff
             return rng.NextDouble() * (max - min) + min;
         }
 
-        // Асинхронный вариант RandomNumber с возможной задержкой
         public static async Task<int> RandomNumberAsync(int min, int max, int delay = 0)
         {
             if (delay > 0)
@@ -28,19 +26,16 @@ namespace TwitchController.LuaTools.Stuff
             return rng.Next(min, max);
         }
 
-        // Случайное число с плавающей точкой
         public static async Task<double> RandomDoubleAsync(double min, double max)
         {
             return await Task.Run(() => min + rng.NextDouble() * (max - min));
         }
 
-        // Случайный элемент из списка
         public static async Task<string> RandomElementAsync(IEnumerable<string> collection)
         {
             return await Task.Run(() => collection.ElementAt(rng.Next(collection.Count())));
         }
 
-        // Перемешивание списка
         public static async Task<List<string>> ShuffleAsync(IEnumerable<string> collection)
         {
             return await Task.Run(() =>
@@ -51,7 +46,6 @@ namespace TwitchController.LuaTools.Stuff
             });
         }
 
-        // Генерация случайной строки
         public static async Task<string> RandomStringAsync(int length)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -75,8 +69,10 @@ namespace TwitchController.LuaTools.Stuff
             return await Task.Run(() => new Point(RandomNumber(minX, maxX), RandomNumber(minY, maxY)));
         }
 
-        public static async Task<string> CollectionToString(IEnumerable<string> collection, string sep = " ")
+        public static async Task<string> CollectionToStringAsync(IEnumerable<string> collection, string sep = " ")
         {
+            if(collection == null) return await Task.Run(() => string.Empty);
+            if (!collection.Any()) return await Task.Run(() => string.Empty);
             return await Task.Run(() => string.Join(sep, collection));
         }
     }

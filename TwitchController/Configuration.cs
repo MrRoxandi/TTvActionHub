@@ -4,7 +4,7 @@ using System.IO;
 using System.Text;
 using NLua;
 using TwitchController.Items;
-using TwitchController.Logger;
+using TwitchController.Logs;
 using TwitchController.Security;
 using TwitchController.Twitch;
 
@@ -20,7 +20,7 @@ namespace TwitchController
         public readonly TwitchApi TwitchApi;
 
 
-        public readonly long GlobalTimeOut;
+        public readonly long StandartCooldown;
         public readonly bool ShowLogs;
 
         public readonly Dictionary<string, Command> Commands;
@@ -52,7 +52,7 @@ namespace TwitchController
 
             if (luaConfig["force-relog"] is not bool isForceRelog)
             {
-                ConsoleLogger.Warn($"{FieldAdress("force-relog")} is not presented. Will be used default value: [{false}].");
+                Logger.Warn($"{FieldAdress("force-relog")} is not presented. Will be used default value: [{false}].");
                 isForceRelog = false;
             }
 
@@ -90,7 +90,7 @@ namespace TwitchController
 
             if (luaConfig["logs"] is not bool logState)
             {
-                ConsoleLogger.Warn($"{FieldAdress("logs")} is not presented. Will be used default value: [{true}].");
+                Logger.Warn($"{FieldAdress("logs")} is not presented. Will be used default value: [{true}].");
                 logState = true;
             }
             
@@ -99,10 +99,10 @@ namespace TwitchController
             if (luaConfig["timeout"] is not long timeOut)
             {
                 timeOut = 30 * 1000; // 30 seconds in milliseconds
-                ConsoleLogger.Warn($"{FieldAdress("[timeout]")} is not presented. Will be used default value: {timeOut}");
+                Logger.Warn($"{FieldAdress("timeout")} is not presented. Will be used default value: {timeOut}");
             }
             
-            GlobalTimeOut = timeOut;
+            StandartCooldown = timeOut;
 
             Commands = [];
             Rewards = [];
@@ -110,13 +110,15 @@ namespace TwitchController
             LoadCommands(luaConfig["commands"] as LuaTable);
             LoadRewards(luaConfig["rewards"] as LuaTable);
 
-            Console.WriteLine($"[INFO] Configuration loaded successfully!");
+            ShowConfigInfo();
+
+            Logger.Info($"Configuration loaded successfully");
         }
 
         private void LoadCommands(LuaTable? cmds) {
             
             if (cmds is null) {
-                ConsoleLogger.Warn($"{FieldAdress("commands")} is not presented. Ignoring...");
+                Logger.Warn($"{FieldAdress("commands")} is not presented. Ignoring...");
                 return;
             }
 
@@ -131,13 +133,12 @@ namespace TwitchController
 
                 if (table["timeout"] is not long timer)
                 {
-                    ConsoleLogger.Warn($"{ParamAdress($"{keyObj}", "timeout")} is not presented. Will be used default value: {GlobalTimeOut} ms");
-                    timer = GlobalTimeOut;
+                    Logger.Warn($"{ParamAdress($"{keyObj}", "timeout")} is not presented. Will be used default value: {StandartCooldown} ms");
+                    timer = StandartCooldown;
                 }
-
-            
+                            
                 Commands.Add(keyObj.ToString()!, new Command { Function = action, TimeOut = timer});
-                ConsoleLogger.Info($"Loaded comand: {keyObj}");
+                Logger.Info($"Loaded comand: {keyObj}");
             }
         }
 
@@ -145,7 +146,7 @@ namespace TwitchController
         {
             if (rewards is null)
             {
-                ConsoleLogger.Warn($"{FieldAdress("rewards")} is not presented. Ignoring...");
+                Logger.Warn($"{FieldAdress("rewards")} is not presented. Ignoring...");
                 return;
             }
             
@@ -159,8 +160,21 @@ namespace TwitchController
                 
                 Rewards.Add(keyObj.ToString()!, new Reward { Function = action });
 
-                ConsoleLogger.Info($"Loaded reward: {keyObj}");
+                Logger.Info($"Loaded reward: {keyObj}");
             }
+        }
+
+        private void ShowConfigInfo()
+        {
+            Logger.Info($"Config file stored at: {ConfigPath}");
+            Logger.Info($"Login: {TwitchInfo.Login}");
+            Logger.Info($"ID: {TwitchInfo.ID}");
+            Logger.Info($"Token: found");
+            Logger.Info($"Standart cooldown: {StandartCooldown}");
+            Logger.Info($"Services logs state: {ShowLogs}");
+            if (!string.IsNullOrEmpty(OpeningBracket) && !string.IsNullOrEmpty(ClosingBracket))
+                Logger.Info($"Brackets: {OpeningBracket} and {ClosingBracket}");
+
         }
 
         public static void GenerateConfig(string path) => File.WriteAllText(path,

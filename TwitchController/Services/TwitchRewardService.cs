@@ -1,5 +1,6 @@
 ﻿using TwitchLib.PubSub;
 using TwitchController.Items;
+using TwitchController.Logs;
 
 namespace TwitchController.Services
 {
@@ -15,14 +16,14 @@ namespace TwitchController.Services
             Client.OnPubSubServiceConnected += (sender, args) =>
             {
                 Client.SendTopics(_configuration.TwitchInfo.Token);
-                Console.WriteLine($"[INFO] Rewards service has connected to channel {_configuration.TwitchInfo.Login}.");
+                Logger.Info($"Rewards service has connected to channel {_configuration.TwitchInfo.Login}.");
             };
 
             Client.OnListenResponse += (sender, args) =>
             {
                 if (!args.Successful)
                 {
-                    Console.WriteLine($"Failed to listen! Response: {args.Response.Error}");
+                    Logger.Error($"Failed to listen! Response: {args.Response.Error}");
                 }
             };
 
@@ -32,9 +33,10 @@ namespace TwitchController.Services
                 var rewardResiever = args.RewardRedeemed.Redemption.User.DisplayName;
                 var rewardArgs = args.RewardRedeemed.Redemption.UserInput;
 
-                Console.WriteLine($"Received reward: {rewardTitle} from {rewardResiever} with args: {rewardArgs}");
 
                 if (!_configuration.Rewards.TryGetValue(rewardTitle, out Reward? value)) return;
+
+                Logger.Info($"Received reward: {rewardTitle} from {rewardResiever} with args: {rewardArgs}");
 
                 if (_configuration.OpeningBracket is not null && _configuration.ClosingBracket is not null)
                 {
