@@ -2,6 +2,7 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using TwitchController.Logs;
 
 namespace TwitchController.Security 
 {
@@ -19,10 +20,11 @@ namespace TwitchController.Security
                 string encrypted = Encrypt(data, secret);
 
                 File.WriteAllText(path, encrypted);
+                Logger.Info($"Authorization info saved successfully in: {path}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ERR] Token save failed: {ex.Message}");
+                Logger.Warn($"Token save failed: {ex.Message}");
             }
 
         }
@@ -46,8 +48,8 @@ namespace TwitchController.Security
                 }
                 else { return (null, null, null); }
             }
-            catch (Exception ex) { 
-                Console.WriteLine($"[ERR] Load token failed: {ex.Message}");
+            catch (Exception ex) {
+                Logger.Error($"Failed to load Authorization info: {ex.Message}");
                 return (null, null, null);
             }
         }

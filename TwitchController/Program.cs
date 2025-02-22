@@ -1,21 +1,22 @@
 ﻿using System.Runtime.CompilerServices;
 using TwitchController.Services;
 using TwitchController.Twitch;
-using TwitchController.Logger;
+using TwitchController.Logs;
 
 namespace TwitchController
 {
     internal abstract class Program
     {
-        static IEnumerable<IService> Services;
+        static IEnumerable<IService> Services = [];
 
         static void Main(string[] args)
         {
-            var path = @"config.lua";
+            //var path = @"config.lua";
+            var path = @"H:\repos\TwitchController\TwitchController\config.lua";
             if (!File.Exists(path) && args.Length == 0){
                 var fullPath = Directory.GetCurrentDirectory() + "\\" + path;
-                ConsoleLogger.Error($"Cannot find {path} in main directory.");
-                ConsoleLogger.Info($"It will be generated at {fullPath}.");
+                Logger.Error($"Cannot find {path} in main directory.");
+                Logger.Info($"It will be generated at {fullPath}.");
                 
                 Configuration.GenerateConfig(fullPath);
                 Console.ReadLine();
@@ -26,7 +27,7 @@ namespace TwitchController
 
             if (!File.Exists(path))
             {
-                ConsoleLogger.Error($"Cannot find config.lua file in {path}");
+                Logger.Error($"Cannot find config.lua file in {path}");
                 Console.ReadLine();
                 return;
             }
@@ -35,12 +36,12 @@ namespace TwitchController
             try { configuration = new Configuration(path); }
             catch (Exception ex)
             {
-                ConsoleLogger.Error($"While creating configuration occured an error: {ex.Message}.");
+                Logger.Error($"While creating configuration occured an error: {ex.Message}.");
                 Console.ReadLine();
                 return;
             }
 
-            Console.WriteLine("[INFO] PRESS ENTER TO CLOSE PROGRAM");
+            Logger.Info("To close program press enter");
 
             RegisterServices([
                 new TwitchCommandService(configuration),

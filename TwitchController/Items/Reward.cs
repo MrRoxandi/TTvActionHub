@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using NLua;
+using TwitchController.Logs;
 
 namespace TwitchController.Items
 {
@@ -17,7 +18,7 @@ namespace TwitchController.Items
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[ERR] Unable to run reward.\n{ex.Message}");
+                Logger.Error($"Unable to run reward: {ex.Message}");
                 return;
             }
         }
