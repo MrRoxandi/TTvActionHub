@@ -48,7 +48,7 @@ namespace TwitchController
             }
             ConfigPath = path;
 
-            TwitchApi = new TwitchApiService(ClientId, ClientSecret, RedirectUrl);
+            TwitchApi = new TwitchApi(ClientId, ClientSecret, RedirectUrl);
 
             if (luaConfig["force-relog"] is not bool isForceRelog)
             {

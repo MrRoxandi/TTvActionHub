@@ -3,7 +3,7 @@ using TwitchController.Items;
 
 namespace TwitchController.Services
 {
-    public class TwitchRewardService : IService
+    internal class TwitchRewardService : IService
     {
         private readonly Configuration _configuration;
         private readonly TwitchPubSub Client;
