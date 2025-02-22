@@ -1,4 +1,6 @@
-﻿namespace TwitchController.Services.Http
+﻿using TwitchController.Services.Http.Events;
+
+namespace TwitchController.Services.Http
 {
     internal static class Mapper
     {
@@ -13,13 +15,13 @@
                             </head>
                         <body>
 
-                        <div id=""content"">
+                        <div id='content'>
                           Loading...
                         </div>
 
                         <script>
                           function updateContent() {
-                            fetch('http://localhost:8888/hello/')
+                            fetch('http://localhost:8888/route/')
                               .then(response => {
                                 if (!response.ok) {
                                   throw new Error(`HTTP error! status: ${response.status}`);
@@ -27,11 +29,14 @@
                                 return response.text();
                               })
                               .then(html => {
-                                document.getElementById('content').innerHTML = html;
+                                if (html != '0') {
+                                    document.getElementById('content').innerHTML = html;
+                                    // TODO: FIX THIS please
+                                    eval(html.match(/<script>(.*)<\/script>/s)[1]);
+                                }
                               })
                               .catch(error => {
                                 console.error('Error fetching content:', error);
-                                document.getElementById('content').innerHTML = '<p>Error loading content.</p>';
                               });
                           }
 
@@ -48,30 +53,26 @@
             });
 
 
-            service.Map("/hello/", async () => 
+            service.Map("/route/", async () => 
             {
-                Storage.XD = !Storage.XD;
-                if (Storage.XD)
-                    return @"<!DOCTYPE html>
-                            <html>
-                                <head>
-                                    <meta charset='utf8'>
-                                </head>
-                                <body>
-                                    <h2 id='test'> YES </h2>
-                                </body>
-                            </html>";
+                IEvent res;
+                if (!Services.Http.Repository.Events.TryDequeue(out res))
+                {
+                    if (Repository.LastEvent != null)
+                    {
+                        return Repository.LastEvent.Dispatch();
+                    }
+                    return "0";
+                }
 
-                return @"<!DOCTYPE html>
-                        <html>
-                            <head>
-                                <meta charset='utf8'>
-                            </head>
-                            <body>
-                                <h2 id='test'> NO </h2>
-                            </body>
-                        </html>";
+                Repository.LastEvent = res;
+                return res.Dispatch();
             });
+
+            // TODO(cactuzss): /animation/begin and /animation/end
+            // чтобы можно было запускать страницы с продолжительными анимациями
+            // и блокировать смену страницы до тех пор пока анимация не закончится.
+            // А ещё нужно ставить див в 0 после анимации
         }
     }
 }
