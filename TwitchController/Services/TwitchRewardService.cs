@@ -16,14 +16,14 @@ namespace TwitchController.Services
             Client.OnPubSubServiceConnected += (sender, args) =>
             {
                 Client.SendTopics(_configuration.TwitchInfo.Token);
-                Logger.External(LOGTYPE.INFO, "RewardService", $"Rewards service has connected to channel {_configuration.TwitchInfo.Login}.");
+                Logger.External(LOGTYPE.INFO, ServiceName(), $"Rewards service has connected to channel {_configuration.TwitchInfo.Login}.");
             };
 
             Client.OnListenResponse += (sender, args) =>
             {
                 if (!args.Successful)
                 {
-                    Logger.External(LOGTYPE.ERROR, "RewardService", $"Failed to listen!, {args.Response.Error}");
+                    Logger.External(LOGTYPE.ERROR, ServiceName(), $"Failed to listen!, {args.Response.Error}");
                 }
             };
 
@@ -36,7 +36,7 @@ namespace TwitchController.Services
 
                 if (!_configuration.Rewards.TryGetValue(rewardTitle, out Reward? value)) return;
 
-                Logger.External(LOGTYPE.ERROR, "RewardService", $"Received reward: {rewardTitle} from {rewardResiever} with args: {rewardArgs}");
+                Logger.External(LOGTYPE.ERROR, ServiceName(), $"Received reward: {rewardTitle} from {rewardResiever} with args: {rewardArgs}");
 
                 if (_configuration.OpeningBracket is not null && _configuration.ClosingBracket is not null)
                 {
@@ -61,5 +61,7 @@ namespace TwitchController.Services
         public void Stop() {
             Client.Disconnect();
         }
+
+        public string ServiceName() => "RewardService";
     }
 }

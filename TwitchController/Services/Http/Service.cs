@@ -71,5 +71,10 @@ namespace TwitchController.Services.Http
             await output.FlushAsync();
             response.Close();
         }
+
+        public string ServiceName()
+        {
+            throw new NotImplementedException();
+        }
     }
 }

@@ -21,15 +21,19 @@ namespace TwitchController.Services
 
 
             Credentials = new ConnectionCredentials(config.TwitchInfo.Login, config.TwitchInfo.Token);
+            Client.OnDisconnected += (sender, args) =>
+            {
+                Logger.External(LOGTYPE.INFO, ServiceName(), $"Coomand service has disconnected.");
+            };
 
             Client.OnConnected += (sender, args) =>
             {
-                Logger.External(LOGTYPE.INFO, "CommandService", $"Commands service has connected to channel {_configuration.TwitchInfo.Login}."); ;
+                Logger.External(LOGTYPE.INFO, ServiceName(), $"Commands service has connected to channel {_configuration.TwitchInfo.Login}."); ;
             };
 
             if (_configuration.ShowLogs)
                 Client.OnLog += (sender, args) => {
-                    Logger.External(LOGTYPE.INFO, "TwitchCommandService", args.Data);
+                    Logger.External(LOGTYPE.INFO, ServiceName(), args.Data);
                 };
 
             if (onJoinMessage is string msg)
@@ -54,7 +58,7 @@ namespace TwitchController.Services
             
             if (!_configuration.Commands.TryGetValue(cmd, out Command? value)) return;
 
-            Logger.Info($"Received command: {cmd} from {cmdSender} with args: {cmdArgStr}");
+            Logger.External(LOGTYPE.INFO, ServiceName(), $"Received command: {cmd} from {cmdSender} with args: {cmdArgStr}");
 
             if (!string.IsNullOrEmpty(_configuration.OpeningBracket) && !string.IsNullOrEmpty(_configuration.ClosingBracket))
             {
@@ -79,5 +83,7 @@ namespace TwitchController.Services
         public void Stop() {
             Client.Disconnect();
         }
+
+        public string ServiceName() => "CommandService";
     }
 }

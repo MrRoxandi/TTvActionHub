@@ -4,5 +4,6 @@
     {
         public void Run();
         public void Stop();
+        public string ServiceName();
     }
 }

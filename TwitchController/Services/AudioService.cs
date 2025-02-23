@@ -8,30 +8,32 @@ namespace TwitchController.Services
     public class AudioService : IService, IDisposable
     {
         private readonly HttpClient _httpClient = new();
-        private readonly ConcurrentBag<WaveOutEvent> _waveOutPool = [];
+        private readonly WaveOutEvent _waveOut = new();
         private readonly ConcurrentQueue<(string? url, string? path)> _soundQueue = new();
         private readonly CancellationTokenSource _cts = new();
         private Task _workerTask;
-        private const int MaxSimultaneousSounds = 5;
+
+        private static IWaveProvider GetAudioReader(Stream stream, string fileExtension) => fileExtension switch
+        {
+            ".mp3" => new Mp3FileReader(stream),
+            ".wav" => new WaveFileReader(stream),
+            ".ogg" => new VorbisWaveReader(stream),
+            _ => throw new Exception("Format of this audio file is not supporting")
+        };
 
         public AudioService()
         {
-            for (int i = 0; i < MaxSimultaneousSounds; i++)
-            {
-                _waveOutPool.Add(new WaveOutEvent());
-            }
-
             _workerTask = Task.Run(ProcessSoundQueueAsync, _cts.Token);
         }
 
         public void Run()
         {
-            Logger.External(LOGTYPE.INFO, "AudioService", "Sound service is running");
+            Logger.External(LOGTYPE.INFO, ServiceName(), "Sound service is running");
         }
 
         public void Stop()
         {
-            Logger.External(LOGTYPE.INFO, "AudioService", "Sound service is stopping");
+            Logger.External(LOGTYPE.INFO, ServiceName(), "Sound service is stopping");
             _cts.Cancel();
 
             // Wait for worker task to complete
@@ -44,35 +46,20 @@ namespace TwitchController.Services
                 // Log exceptions from the worker task
                 foreach (var innerEx in ex.InnerExceptions)
                 {
-                    Logger.External(LOGTYPE.ERROR, "AudioService", "Exception during sound processing:", innerEx.Message);
+                    Logger.External(LOGTYPE.ERROR, ServiceName(), "Exception during sound processing:", innerEx.Message);
                 }
             }
 
-            // Stop all WaveOutEvent instances in the pool
-            foreach (var waveOut in _waveOutPool)
-            {
-                waveOut.Stop();
-                waveOut.Dispose();
-            }
 
+            _waveOut.Stop();
+            _waveOut.Dispose();
             _httpClient.Dispose();
         }
 
         public void StopPlaying()
         {
-            foreach (var waveOut in _waveOutPool)
-            {
-                waveOut.Stop();
-            }
+            _waveOut.Stop();
         }
-
-        private static IWaveProvider GetAudioReader(Stream stream, string fileExtension) => fileExtension switch
-        {
-            ".mp3" => new Mp3FileReader(stream),
-            ".wav" => new WaveFileReader(stream),
-            ".ogg" => new VorbisWaveReader(stream),
-            _ => throw new Exception("Format of this audio file is not supporting")
-        };
 
         public Task PlaySoundFromDiskAsync(string path)
         {
@@ -124,7 +111,7 @@ namespace TwitchController.Services
                     }
                     catch (Exception ex)
                     {
-                        Logger.External(LOGTYPE.ERROR, "AudioService", "Error processing sound request.", ex.Message);
+                        Logger.External(LOGTYPE.ERROR, ServiceName(), "Error processing sound request.", ex.Message);
                     }
                 }
                 else
@@ -147,7 +134,7 @@ namespace TwitchController.Services
             }
             catch (Exception ex)
             {
-                Logger.External(LOGTYPE.ERROR, "AudioService", $"Error playing sound from disk: {path}", ex.Message);
+                Logger.External(LOGTYPE.ERROR, ServiceName(), $"Error playing sound from disk: {path}", ex.Message);
                 throw; // Re-throw to allow handling higher up.
             }
         }
@@ -159,7 +146,7 @@ namespace TwitchController.Services
 
             try
             {
-                Logger.External(LOGTYPE.INFO, "AudioService", $"Downloading audio from: {url}");
+                Logger.External(LOGTYPE.INFO, ServiceName(), $"Downloading audio from: {url}");
                 using (var response = await _httpClient.GetAsync(url, _cts.Token))
                 {
                     response.EnsureSuccessStatusCode();
@@ -178,16 +165,16 @@ namespace TwitchController.Services
             }
             catch (HttpRequestException ex)
             {
-                Logger.External(LOGTYPE.ERROR, "AudioService", $"Error downloading audio from: {url}", ex.Message);
+                Logger.External(LOGTYPE.ERROR, ServiceName(), $"Error downloading audio from: {url}", ex.Message);
                 throw;
             }
             catch (OperationCanceledException)
             {
-                Logger.External(LOGTYPE.INFO, "AudioService", "Download cancelled.");
+                Logger.External(LOGTYPE.INFO, ServiceName(), "Download cancelled.");
             }
             catch (Exception ex)
             {
-                Logger.External(LOGTYPE.ERROR, "AudioService", $"Error playing sound from URL: {url}", ex.Message);
+                Logger.External(LOGTYPE.ERROR, ServiceName(), $"Error playing sound from URL: {url}", ex.Message);
                 throw;
             }
             finally
@@ -197,12 +184,12 @@ namespace TwitchController.Services
                     if (File.Exists(tempFilePath))
                     {
                         File.Delete(tempFilePath);
-                        Logger.External(LOGTYPE.INFO, "AudioService", $"Deleted temporary file: {tempFilePath}");
+                        Logger.External(LOGTYPE.INFO, ServiceName(), $"Deleted temporary file: {tempFilePath}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Logger.External(LOGTYPE.ERROR, "AudioService", $"Error deleting temporary file: {tempFilePath}", ex.Message);
+                    Logger.External(LOGTYPE.ERROR, ServiceName(), $"Error deleting temporary file: {tempFilePath}", ex.Message);
                 }
             }
         }
@@ -216,38 +203,31 @@ namespace TwitchController.Services
             }
 
             // Get WaveOutEvent from the pool
-            if (!_waveOutPool.TryTake(out var waveOut))
-            {
-                Logger.External(LOGTYPE.WARNING, "AudioService", "Maximum simultaneous sounds reached. Sound request dropped.");
-                return;
-            }
-
             IWaveProvider? reader = null;
             try
             {
                 reader = GetAudioReader(audioStream, fileExtension);
-                waveOut.Init(reader);
-                waveOut.Play();
-                Logger.External(LOGTYPE.INFO, "AudioService", "Playback started.");
+                _waveOut.Init(reader);
+                _waveOut.Play();
+                Logger.External(LOGTYPE.INFO, ServiceName(), "Playback started");
 
-                // Use a TaskCompletionSource to signal when playback is complete.
                 var tcs = new TaskCompletionSource<object>();
                 bool isCompleted = false; // Add a flag
 
-                waveOut.PlaybackStopped += (sender, args) =>
+                _waveOut.PlaybackStopped += (sender, args) =>
                 {
                     if (isCompleted) return;  // Prevent multiple executions
 
                     isCompleted = true; // Set the flag
                     if (args.Exception != null)
                     {
-                        Logger.External(LOGTYPE.ERROR, "AudioService", "Error during playback.", args.Exception.Message);
+                        Logger.External(LOGTYPE.ERROR, ServiceName(), "Error during playback", args.Exception.Message);
                         tcs.TrySetException(args.Exception);
                     }
                     else
                     {
-                        Logger.External(LOGTYPE.INFO, "AudioService", "Playback finished successfully.");
-                        tcs.TrySetResult(null);
+                        Logger.External(LOGTYPE.INFO, ServiceName(), "Playback finished successfully");
+                        tcs.TrySetResult(true);
                     }
                 };
 
@@ -256,19 +236,19 @@ namespace TwitchController.Services
 
                 if (_cts.Token.IsCancellationRequested)
                 {
-                    Logger.External(LOGTYPE.INFO, "AudioService", "Playback cancelled.");
-                    waveOut.Stop();
+                    Logger.External(LOGTYPE.INFO, ServiceName(), "Playback cancelled");
+                    _waveOut.Stop();
                 }
                 else if (tcs.Task.IsFaulted)
                 {
-                    //Rethrow inner exception if playback failed
-                    throw tcs.Task.Exception.InnerException;
+                    var ex = tcs.Task.Exception;
+                    if (ex != null && ex.InnerException != null) throw ex.InnerException;
                 }
             }
             finally
             {
                 // Ensure resources are cleaned up even if an exception occurs.
-                waveOut.Stop();
+                _waveOut.Stop();
 
                 if (reader != null)
                 {
@@ -278,9 +258,6 @@ namespace TwitchController.Services
                     }
                     reader = null;
                 }
-
-                // Return WaveOutEvent to the pool for reuse
-                _waveOutPool.Add(waveOut);
             }
         }
 
@@ -299,5 +276,7 @@ namespace TwitchController.Services
                 _cts.Dispose();       // Dispose of the cancellation token source.
             }
         }
+
+        public string ServiceName() => "AudioService";
     }
 }
