@@ -10,13 +10,13 @@ namespace TwitchController.Security
     {
         private static string TokenDir => "Users";
 
-        public static void SaveInfo(string secret, string Login, string ID, string Token)
+        public static void SaveInfo(string secret, string Login, string ID, string Token, string RefreshToken)
         {
             try
             {
                 Directory.CreateDirectory(TokenDir);
                 string path = Path.Combine(TokenDir, "user.info");
-                string data = string.Join("\n", [Login, ID, Token]);
+                string data = string.Join("\n", [Login, ID, Token, RefreshToken]);
                 string encrypted = Encrypt(data, secret);
 
                 File.WriteAllText(path, encrypted);
@@ -29,7 +29,7 @@ namespace TwitchController.Security
 
         }
 
-        public static (string? Login, string? ID, string? Token) LoadInfo(string secret)
+        public static (string Login, string ID, string Token, string RefreshToken)? LoadInfo(string secret)
         {
             try
             {
@@ -40,17 +40,17 @@ namespace TwitchController.Security
                     if ((DateTime.Now - File.GetCreationTime(path)).TotalDays >= 14)
                     {
                         File.Delete(path);
-                        return (null, null, null);
+                        return null;
                     }
                     var data = Decrypt(File.ReadAllText(path), secret).Split("\n");
-                    if (data.Length != 3) return (null, null, null);
-                    return (data[0], data[1], data[2]);
+                    if (data.Length != 4) return null;
+                    return (data[0], data[1], data[2], data[3]);
                 }
-                else { return (null, null, null); }
+                else { return null; }
             }
             catch (Exception ex) {
                 Logger.Error($"Failed to load Authorization info: {ex.Message}");
-                return (null, null, null);
+                return null;
             }
         }
 

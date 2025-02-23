@@ -2,6 +2,7 @@
 using TwitchController.Services;
 using TwitchController.Twitch;
 using TwitchController.Logs;
+using TwitchController.LuaTools.Audio;
 
 namespace TwitchController
 {
@@ -11,8 +12,7 @@ namespace TwitchController
 
         static void Main(string[] args)
         {
-            //var path = @"config.lua";
-            var path = @"H:\repos\TwitchController\TwitchController\config.lua";
+            var path = @"config.lua";
             if (!File.Exists(path) && args.Length == 0){
                 var fullPath = Directory.GetCurrentDirectory() + "\\" + path;
                 Logger.Error($"Cannot find {path} in main directory.");
@@ -42,11 +42,13 @@ namespace TwitchController
             }
 
             Logger.Info("To close program press enter");
+            Sounds.audio = new AudioService();
 
             RegisterServices([
                 new TwitchCommandService(configuration),
                 new TwitchRewardService(configuration),
                 // new Services.Http.Service("http://localhost", "8888"), // Пока не придумаем что делать, всё равно не нужен будет
+                Sounds.audio
             ]);
             
             Console.ReadLine();

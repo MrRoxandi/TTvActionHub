@@ -16,7 +16,7 @@ namespace TwitchController
         private static string ClientSecret { get => "--"; }
         private static string RedirectUrl { get => @"http://localhost:3000/"; }
 
-        public readonly (string Login, string ID, string Token) TwitchInfo;
+        public readonly (string Login, string ID, string Token, string RefreshToken) TwitchInfo;
         public readonly TwitchApi TwitchApi;
 
 
@@ -32,7 +32,7 @@ namespace TwitchController
         public readonly string ConfigPath;
 
         public string FieldAdress(string field) => $"In [{ConfigPath}] field [{field}]";
-        public string ParamAdress(string field, string param) => $"In [{ConfigPath}] parameter [{param} in field [{field}]";
+        public string ParamAdress(string field, string param) => $"In [{ConfigPath}] parameter [{param}] in field [{field}]";
         
         public Configuration(string path)
         {
@@ -56,26 +56,42 @@ namespace TwitchController
                 isForceRelog = false;
             }
 
-            (string? Login, string? ID, string? Token) authInfo = (null, null, null);
-            
+            (string? Login, string? ID, string? Token, string? RefreshToken)? authInfo = null;
+
             if (!isForceRelog)
             {
                 authInfo = AuthorizationManager.LoadInfo(ClientSecret);
-            }
-            
-            if (authInfo.Login == null || authInfo.ID == null || authInfo.Token == null)
-            {
-                authInfo = TwitchApi.GetAuthorizationInfo().Result;
-            }
-            
-            if(authInfo.Login == null || authInfo.ID == null || authInfo.Token == null)
-            {
-                throw new Exception("Unable to get authorization info. Aborting");
+                if (authInfo is (string, string, string, string) info)
+                {
+                    if (!TwitchApi.ValidateTokenAsync(info.Token).Result)
+                    {
+                        var (AccessToken, RefreshToken) = TwitchApi.RefreshAccessTokenAsync(info.RefreshToken).Result;
+                        info.Token = AccessToken;
+                        info.RefreshToken = RefreshToken ?? authInfo?.RefreshToken;
+                    }
+
+                    authInfo = info;
+                }
             }
 
-            TwitchInfo = new() { Login = authInfo.Login, ID = authInfo.ID, Token = authInfo.Token };
+            if(isForceRelog || authInfo == null)
+            {
+                var auth = TwitchApi.GetAuthorizationInfo().Result;
+                if (auth.Login == null || auth.ID == null || auth.Token == null)
+                    throw new Exception("Unable to get Authorization information");
+                authInfo = auth;
+            }
 
-            AuthorizationManager.SaveInfo(ClientSecret, TwitchInfo.Login, TwitchInfo.ID, TwitchInfo.Token);
+            TwitchInfo = new() { 
+                Login = authInfo?.Login ?? "", 
+                ID = authInfo?.ID ?? "", 
+                Token = authInfo?.Token ?? "", 
+                RefreshToken = authInfo?.RefreshToken ?? "" 
+            };
+
+            
+
+            AuthorizationManager.SaveInfo(ClientSecret, TwitchInfo.Login, TwitchInfo.ID, TwitchInfo.Token, TwitchInfo.RefreshToken);
             
             if (luaConfig["opening-bracket"] is not string obracket || luaConfig["closing-bracket"] is not string cbracket)
             {

@@ -24,7 +24,7 @@ namespace TwitchController.Services
 
             Client.OnConnected += (sender, args) =>
             {
-                Logger.Info($"Commands service has connected to channel {_configuration.TwitchInfo.Login}."); ;
+                Logger.External(LOGTYPE.INFO, "CommandService", $"Commands service has connected to channel {_configuration.TwitchInfo.Login}."); ;
             };
 
             if (_configuration.ShowLogs)
