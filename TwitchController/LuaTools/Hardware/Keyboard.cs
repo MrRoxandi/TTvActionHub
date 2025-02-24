@@ -10,7 +10,7 @@ namespace TwitchController.LuaTools.Hardware
 {
     public static class Keyboard
     {
-        public enum KeyCode : ushort
+        public enum Key : ushort
         {
             F1 = 0x70, F2 = 0x71, F3 = 0x72, F4 = 0x73,
             F5 = 0x74, F6 = 0x75, F7 = 0x76, F8 = 0x77,
@@ -39,24 +39,24 @@ namespace TwitchController.LuaTools.Hardware
         [DllImport("user32.dll", SetLastError = true)]
         private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, nuint dwExtraInfo);
 
-        public static void PressKey(KeyCode k)
+        public static void PressKey(Key k)
         {
             keybd_event((byte)k, 0, KEYEVENTF_EXTENDEDKEY, nuint.Zero);
         }
 
-        public static void ReleaseKey(KeyCode k)
+        public static void ReleaseKey(Key k)
         {
             keybd_event((byte)k, 0, KEYEVENTF_KEYUP, nuint.Zero);
         }
 
-        public static async Task TypeKeyAsync(KeyCode key)
+        public static async Task TypeKeyAsync(Key key)
         {
             PressKey(key);
             await Task.Delay(50);
             ReleaseKey(key);
         }
 
-        public static async Task HoldKeyAsync(KeyCode k, int duration = 0)
+        public static async Task HoldKeyAsync(Key k, int duration = 50)
         {
             PressKey(k);
             await Task.Delay(duration);

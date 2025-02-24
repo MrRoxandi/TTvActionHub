@@ -21,5 +21,42 @@ namespace TwitchController.LuaTools.Audio
 
             await audio.PlaySoundFromUrlAsync(url);
         }
+
+        public static void SetVolume(float volume) 
+        {
+            if (audio == null) { throw new Exception("Audio service was not provided"); };
+
+            audio.SetVolume(volume);
+        }
+
+        public static float GetVolume()
+        {
+            if (audio == null) { throw new Exception("Audio service was not provided"); };
+
+            return audio.GetVolume();
+        }
+
+        public static void IncreeseVolume(float volume)
+        {
+            if (audio == null) { throw new Exception("Audio service was not provided"); };
+            var res = audio.GetVolume() + volume;
+
+            audio.SetVolume((float)(res > 1.0 ? 1.0 : res));
+        }
+
+        public static void DecreeseVolume(float volume)
+        {
+            if (audio == null) { throw new Exception("Audio service was not provided"); };
+
+            var res = audio.GetVolume() - volume;
+
+            audio.SetVolume((float)(res < 0.0 ? 0.0 : res));
+        }
+
+        public static void SkipSound()
+        {
+            if (audio == null) { throw new Exception("Audio service was not provided"); };
+            audio.SkipSound();
+        }
     }
 }

@@ -58,8 +58,6 @@ namespace TwitchController.Services
             
             if (!_configuration.Commands.TryGetValue(cmd, out Command? value)) return;
 
-            Logger.External(LOGTYPE.INFO, ServiceName(), $"Received command: {cmd} from {cmdSender} with args: {cmdArgStr}");
-
             if (!string.IsNullOrEmpty(_configuration.OpeningBracket) && !string.IsNullOrEmpty(_configuration.ClosingBracket))
             {
                 var start = cmdArgStr.IndexOf(_configuration.OpeningBracket, StringComparison.Ordinal);
@@ -70,7 +68,10 @@ namespace TwitchController.Services
                     cmdArgStr = cmdArgStr.Substring(start + 1, stop - start - 1);
             }
             cmdArgStr = cmdArgStr.Replace("\U000e0000", "").Trim();
+            Logger.External(LOGTYPE.INFO, ServiceName(), $"Received command: {cmd} from {cmdSender} with args: {cmdArgStr}");
+
             string[]? cmdArgs = string.IsNullOrEmpty(cmdArgStr) ? null : cmdArgStr.Split(' ');
+            
             value.Execute(cmdSender, cmdArgs);
         }
 

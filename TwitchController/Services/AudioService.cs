@@ -5,12 +5,13 @@ using TwitchController.Logs;
 
 namespace TwitchController.Services
 {
-    public class AudioService : IService, IDisposable
+    public class AudioService : IService, IDisposable 
     {
         private readonly HttpClient _httpClient = new();
         private readonly WaveOutEvent _waveOut = new();
         private readonly ConcurrentQueue<(string? url, string? path)> _soundQueue = new();
-        private readonly CancellationTokenSource _cts = new();
+        private readonly CancellationTokenSource _serviceCancellationToken = new();
+        private TaskCompletionSource<bool> _soundCompletionSource = new();
         private Task _workerTask;
 
         private static IWaveProvider GetAudioReader(Stream stream, string fileExtension) => fileExtension switch
@@ -23,7 +24,7 @@ namespace TwitchController.Services
 
         public AudioService()
         {
-            _workerTask = Task.Run(ProcessSoundQueueAsync, _cts.Token);
+            _workerTask = Task.Run(ProcessSoundQueueAsync, _serviceCancellationToken.Token);
         }
 
         public void Run()
@@ -34,7 +35,7 @@ namespace TwitchController.Services
         public void Stop()
         {
             Logger.External(LOGTYPE.INFO, ServiceName(), "Sound service is stopping");
-            _cts.Cancel();
+            _serviceCancellationToken.Cancel();
 
             // Wait for worker task to complete
             try
@@ -59,6 +60,29 @@ namespace TwitchController.Services
         public void StopPlaying()
         {
             _waveOut.Stop();
+        }
+
+        public void SkipSound()
+        {
+            if(_waveOut.PlaybackState != PlaybackState.Playing)
+            {
+                Logger.External(LOGTYPE.WARNING, ServiceName(), "Nothing to skip right now");
+                return;
+            }
+            _soundCompletionSource.TrySetResult(false);
+        }
+
+        public float GetVolume()
+        {
+            return _waveOut.Volume;
+        }
+
+        public void SetVolume(float volume)
+        {
+            if(volume < 0) throw new Exception("Minimun value for voleme is 0.0");
+            if (volume > 1) throw new Exception("Maximum value for voleme is 1.0");
+            Logger.External(LOGTYPE.INFO, ServiceName(), $"Setting volume to {volume}");
+            _waveOut.Volume = volume;
         }
 
         public Task PlaySoundFromDiskAsync(string path)
@@ -90,7 +114,7 @@ namespace TwitchController.Services
 
         private async Task ProcessSoundQueueAsync()
         {
-            while (!_cts.Token.IsCancellationRequested)
+            while (!_serviceCancellationToken.Token.IsCancellationRequested)
             {
                 if (_soundQueue.TryDequeue(out var soundRequest))
                 {
@@ -116,7 +140,7 @@ namespace TwitchController.Services
                 }
                 else
                 {
-                    await Task.Delay(100, _cts.Token); // Wait if queue is empty
+                    await Task.Delay(100, _serviceCancellationToken.Token); // Wait if queue is empty
                 }
             }
         }
@@ -147,14 +171,14 @@ namespace TwitchController.Services
             try
             {
                 Logger.External(LOGTYPE.INFO, ServiceName(), $"Downloading audio from: {url}");
-                using (var response = await _httpClient.GetAsync(url, _cts.Token))
+                using (var response = await _httpClient.GetAsync(url, _serviceCancellationToken.Token))
                 {
                     response.EnsureSuccessStatusCode();
                     fileExtension = Path.GetExtension(url).ToLowerInvariant();
-                    using (var stream = await response.Content.ReadAsStreamAsync(_cts.Token))
+                    using (var stream = await response.Content.ReadAsStreamAsync(_serviceCancellationToken.Token))
                     using (var fileStream = File.Create(tempFilePath))
                     {
-                        await stream.CopyToAsync(fileStream, _cts.Token);
+                        await stream.CopyToAsync(fileStream, _serviceCancellationToken.Token);
                     }
                 }
 
@@ -201,7 +225,6 @@ namespace TwitchController.Services
             {
                 throw new ArgumentException("File extension cannot be null or empty.", nameof(fileExtension));
             }
-
             // Get WaveOutEvent from the pool
             IWaveProvider? reader = null;
             try
@@ -211,7 +234,7 @@ namespace TwitchController.Services
                 _waveOut.Play();
                 Logger.External(LOGTYPE.INFO, ServiceName(), "Playback started");
 
-                var tcs = new TaskCompletionSource<object>();
+                _soundCompletionSource = new();
                 bool isCompleted = false; // Add a flag
 
                 _waveOut.PlaybackStopped += (sender, args) =>
@@ -222,27 +245,29 @@ namespace TwitchController.Services
                     if (args.Exception != null)
                     {
                         Logger.External(LOGTYPE.ERROR, ServiceName(), "Error during playback", args.Exception.Message);
-                        tcs.TrySetException(args.Exception);
+                        _soundCompletionSource.TrySetException(args.Exception);
                     }
                     else
                     {
-                        Logger.External(LOGTYPE.INFO, ServiceName(), "Playback finished successfully");
-                        tcs.TrySetResult(true);
+                        _soundCompletionSource.TrySetResult(true);
                     }
                 };
 
                 // Wait for playback to complete or be cancelled.
-                await Task.WhenAny(tcs.Task, Task.Delay(Timeout.Infinite, _cts.Token));
+                await Task.WhenAny(_soundCompletionSource.Task, Task.Delay(Timeout.Infinite, _serviceCancellationToken.Token));
 
-                if (_cts.Token.IsCancellationRequested)
+                if (_soundCompletionSource.Task.IsFaulted)
+                {
+                    var ex = _soundCompletionSource.Task.Exception;
+                    if (ex != null && ex.InnerException != null) throw ex.InnerException;
+                } 
+                else if(_soundCompletionSource.Task.Result == false)
                 {
                     Logger.External(LOGTYPE.INFO, ServiceName(), "Playback cancelled");
-                    _waveOut.Stop();
-                }
-                else if (tcs.Task.IsFaulted)
+                    //_waveOut.Stop();
+                } else
                 {
-                    var ex = tcs.Task.Exception;
-                    if (ex != null && ex.InnerException != null) throw ex.InnerException;
+                    Logger.External(LOGTYPE.INFO, ServiceName(), "Playback finished successfully");
                 }
             }
             finally
@@ -273,7 +298,7 @@ namespace TwitchController.Services
             {
                 Stop(); // Ensure the worker task and WaveOutEvent instances are stopped.
                 _httpClient.Dispose();  //Dispose of the http client
-                _cts.Dispose();       // Dispose of the cancellation token source.
+                _serviceCancellationToken.Dispose();       // Dispose of the cancellation token source.
             }
         }
 

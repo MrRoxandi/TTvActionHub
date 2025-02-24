@@ -31,24 +31,26 @@ namespace TwitchController.Services
             {
                 var rewardTitle = args.RewardRedeemed.Redemption.Reward.Title;
                 var rewardResiever = args.RewardRedeemed.Redemption.User.DisplayName;
-                var rewardArgs = args.RewardRedeemed.Redemption.UserInput;
+                var rewardArgsStr = args.RewardRedeemed.Redemption.UserInput;
 
 
                 if (!_configuration.Rewards.TryGetValue(rewardTitle, out Reward? value)) return;
 
-                Logger.External(LOGTYPE.ERROR, ServiceName(), $"Received reward: {rewardTitle} from {rewardResiever} with args: {rewardArgs}");
 
-                if (_configuration.OpeningBracket is not null && _configuration.ClosingBracket is not null)
+                if (!string.IsNullOrEmpty(_configuration.OpeningBracket) && !string.IsNullOrEmpty(_configuration.ClosingBracket))
                 {
-                    var start = rewardArgs.IndexOf(_configuration.OpeningBracket, StringComparison.Ordinal);
-                    var stop = rewardArgs.IndexOf(_configuration.ClosingBracket, StringComparison.Ordinal);
+                    var start = rewardArgsStr.IndexOf(_configuration.OpeningBracket, StringComparison.Ordinal);
+                    var stop = rewardArgsStr.IndexOf(_configuration.ClosingBracket, StringComparison.Ordinal);
                     if (start == -1 || stop == -1)
-                        rewardArgs = "";
+                        rewardArgsStr = "";
                     else
-                        rewardArgs = rewardArgs.Substring(start + 1, stop - start - 1);
+                        rewardArgsStr = rewardArgsStr.Substring(start + 1, stop - start - 1);
                 }
+                rewardArgsStr = rewardArgsStr.Replace("\U000e0000", "").Trim();
+                Logger.External(LOGTYPE.ERROR, ServiceName(), $"Received reward: {rewardTitle} from {rewardResiever} with args: {rewardArgsStr}");
 
-                value.Execute(rewardResiever, rewardArgs.Replace("\U000e0000", "").Trim().Split(' '));
+                string[]? rewardArgs = string.IsNullOrEmpty(rewardArgsStr) ? null : rewardArgsStr.Split(' ');
+                value.Execute(rewardResiever, rewardArgs);
             };
         }
 

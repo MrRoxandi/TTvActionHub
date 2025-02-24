@@ -65,6 +65,7 @@ namespace TwitchController
                 {
                     if (!TwitchApi.ValidateTokenAsync(info.Token).Result)
                     {
+                        Logger.Info("Trying to update token");
                         var (AccessToken, RefreshToken) = TwitchApi.RefreshAccessTokenAsync(info.RefreshToken).Result;
                         info.Token = AccessToken;
                         info.RefreshToken = RefreshToken ?? authInfo?.RefreshToken;
@@ -194,9 +195,11 @@ namespace TwitchController
         }
 
         public static void GenerateConfig(string path) => File.WriteAllText(path,
-@"local Keyboard = import('TwitchController', 'TwitchController.LuaTools.Hardware').Keyboard
+@"
+local Keyboard = import('TwitchController', 'TwitchController.LuaTools.Hardware').Keyboard
 local Mouse = import('TwitchController', 'TwitchController.LuaTools.Hardware').Mouse
-local TwitchChat = import('TwitchController', 'TwitchController.LuaTools.Stuff').Chat
+local Chat = import('TwitchController', 'TwitchController.LuaTools.Stuff').Chat
+local Sounds = import('TwitchController', 'TwitchController.LuaTools.Audio').Sounds
 local Funcs = import('TwitchController', 'TwitchController.LuaTools.Stuff').Funcs
 
 local res = {}
