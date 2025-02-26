@@ -22,33 +22,37 @@ namespace TwitchController.Logs.BackEnds
 
         public void Error(string message, string? err = null)
         {
-            var writer = File.AppendText(_filepath);
-            writer.WriteLine(_filepath, $"[ERR] {message} {err ?? ""}.");
-            writer.Close();
+            File.AppendAllTextAsync(_filepath, $"[ERR] {message} {err ?? ""}.");
+            //var writer = File.AppendText(_filepath);
+            //writer.WriteLine(_filepath, $"[ERR] {message} {err ?? ""}.");
+            //writer.Close();
             Console.WriteLine($"[ERR] {message} {err ?? ""}.");
         }
 
         public void External(string type, string name, string message, string? err = null)
         {
-            var writer = File.AppendText(_filepath);
-            writer.WriteLine($"[{name}:{type}] {message} {err ?? ""}.");
-            writer.Close();
+            //var writer = File.AppendText(_filepath);
+            //writer.WriteLine($"[{name}:{type}] {message} {err ?? ""}.");
+            //writer.Close();
+            File.AppendAllTextAsync(_filepath, $"[{name}:{type}] {message} {err ?? ""}.");
             Console.WriteLine($"[{name}:{type}] {message} {err ?? ""}.");
         }
 
         public void Info(string message)
         {
-            var writer = File.AppendText(_filepath);
-            writer.WriteLine($"[INFO] {message}.");
-            writer.Close();
+            //var writer = File.AppendText(_filepath);
+            //writer.WriteLine($"[INFO] {message}.");
+            //writer.Close();
+            File.AppendAllTextAsync(_filepath, $"[INFO] {message}.");
             Console.WriteLine($"[INFO] {message}.");
         }
 
         public void Warn(string message)
         {
-            var writer = File.AppendText(_filepath);
-            writer.WriteLine($"[WARN] {message}.");
-            writer.Close();
+            //var writer = File.AppendText(_filepath);
+            //writer.WriteLine($"[WARN] {message}.");
+            //writer.Close();
+            File.AppendAllTextAsync(_filepath, $"[WARN] {message}.");
             Console.WriteLine($"[WARN] {message}.");
         }
     }

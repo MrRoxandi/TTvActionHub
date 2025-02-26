@@ -10,7 +10,7 @@ using TwitchController.Twitch;
 
 namespace TwitchController
 {
-    internal class Configuration
+    public class Configuration
     {
         private static string ClientId { get => "--"; }
         private static string ClientSecret { get => "--"; }

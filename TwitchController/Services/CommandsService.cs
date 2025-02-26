@@ -7,46 +7,45 @@ using TwitchController.Logs;
 
 namespace TwitchController.Services
 {
-    internal class TwitchCommandService : IService
+    public class CommandsService : IService
     {
-        private readonly ConnectionCredentials Credentials;
+        private readonly ConnectionCredentials _credentials;
         private readonly Configuration _configuration;
-        private readonly TwitchClient Client;
+        private readonly TwitchClient _client;
 
-        public TwitchCommandService(Configuration config, string? onJoinMessage = null)
+        public CommandsService(Configuration config, string? onJoinMessage = null)
         {
             _configuration = config;
+            _client = new TwitchClient();
+            _credentials = new ConnectionCredentials(config.TwitchInfo.Login, config.TwitchInfo.Token);
 
-            Client = new TwitchClient();
-
-
-            Credentials = new ConnectionCredentials(config.TwitchInfo.Login, config.TwitchInfo.Token);
-            Client.OnDisconnected += (sender, args) =>
+            _client.OnDisconnected += (sender, args) =>
             {
-                Logger.External(LOGTYPE.INFO, ServiceName(), $"Coomand service has disconnected.");
+                Logger.External(LOGTYPE.INFO, ServiceName(), $"Service has disconnected");
             };
 
-            Client.OnConnected += (sender, args) =>
+            _client.OnConnected += (sender, args) =>
             {
-                Logger.External(LOGTYPE.INFO, ServiceName(), $"Commands service has connected to channel {_configuration.TwitchInfo.Login}."); ;
+                Logger.External(LOGTYPE.INFO, ServiceName(), $"Service has connected to channel {_configuration.TwitchInfo.Login}"); ;
             };
 
             if (_configuration.ShowLogs)
-                Client.OnLog += (sender, args) => {
+                _client.OnLog += (sender, args) => {
                     Logger.External(LOGTYPE.INFO, ServiceName(), args.Data);
                 };
 
             if (onJoinMessage is string msg)
             {
-                Client.OnJoinedChannel += (sender, args) =>
+                _client.OnJoinedChannel += (sender, args) =>
                 {
-                    Client.SendMessage(args.Channel, msg);
+                    _client.SendMessage(args.Channel, msg);
                 };
             }
-            Chat.client = Client;
+
+            Chat.client = _client;
             Chat.chat = config.TwitchInfo.Login;
 
-            Client.OnChatCommandReceived += OnChatCommandReceived;
+            _client.OnChatCommandReceived += OnChatCommandReceived;
         }
 
         private void OnChatCommandReceived(object? sender, OnChatCommandReceivedArgs args)
@@ -77,12 +76,12 @@ namespace TwitchController.Services
 
         public void Run()
         {
-            Client.Initialize(Credentials, _configuration.TwitchInfo.Login);
-            Client.Connect();
+            _client.Initialize(_credentials, _configuration.TwitchInfo.Login);
+            _client.Connect();
         }
 
         public void Stop() {
-            Client.Disconnect();
+            _client.Disconnect();
         }
 
         public string ServiceName() => "CommandService";

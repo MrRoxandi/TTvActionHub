@@ -5,7 +5,7 @@ using TwitchController.Logs;
 
 namespace TwitchController.Items
 {
-    internal class Command
+    public class Command
     {
         private readonly Stopwatch _coolDownTimer = new();
         public required LuaFunction Function;

@@ -4,30 +4,34 @@ using TwitchController.Logs;
 
 namespace TwitchController.Services
 {
-    internal class TwitchRewardService : IService
+    public class RewardsService : IService
     {
         private readonly Configuration _configuration;
-        private readonly TwitchPubSub Client;
-
-        public TwitchRewardService(Configuration configuration)
+        private readonly TwitchPubSub _client;
+        
+        public RewardsService(Configuration configuration)
         {
             _configuration = configuration;
-            Client = new TwitchPubSub();
-            Client.OnPubSubServiceConnected += (sender, args) =>
+            _client = new TwitchPubSub();
+            _client.OnPubSubServiceConnected += (sender, args) =>
             {
-                Client.SendTopics(_configuration.TwitchInfo.Token);
-                Logger.External(LOGTYPE.INFO, ServiceName(), $"Rewards service has connected to channel {_configuration.TwitchInfo.Login}.");
+                _client.SendTopics(_configuration.TwitchInfo.Token);
+                Logger.External(LOGTYPE.INFO, ServiceName(), $"Service has connected to channel {_configuration.TwitchInfo.Login}.");
             };
 
-            Client.OnListenResponse += (sender, args) =>
+            _client.OnListenResponse += (sender, args) =>
             {
                 if (!args.Successful)
                 {
                     Logger.External(LOGTYPE.ERROR, ServiceName(), $"Failed to listen!, {args.Response.Error}");
                 }
+                else if (_configuration.ShowLogs)
+                {
+                    Logger.External(LOGTYPE.ERROR, ServiceName(), $"{args.Response}");
+                }
             };
 
-            Client.OnChannelPointsRewardRedeemed += (sender, args) =>
+            _client.OnChannelPointsRewardRedeemed += (sender, args) =>
             {
                 var rewardTitle = args.RewardRedeemed.Redemption.Reward.Title;
                 var rewardResiever = args.RewardRedeemed.Redemption.User.DisplayName;
@@ -56,12 +60,12 @@ namespace TwitchController.Services
 
         public void Run()
         {
-            Client.ListenToChannelPoints(_configuration.TwitchInfo.ID);
-            Client.Connect();
+            _client.ListenToChannelPoints(_configuration.TwitchInfo.ID);
+            _client.Connect();
         }
 
         public void Stop() {
-            Client.Disconnect();
+            _client.Disconnect();
         }
 
         public string ServiceName() => "RewardService";

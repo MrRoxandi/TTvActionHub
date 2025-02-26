@@ -5,7 +5,7 @@ using TwitchController.Logs;
 
 namespace TwitchController.Items
 {
-    internal class Reward
+    public class Reward
     {
         public required LuaFunction Function;
 
