@@ -12,9 +12,9 @@ namespace TwitchController.Services
         private readonly ConcurrentQueue<(string? url, string? path)> _soundQueue = new();
         private readonly CancellationTokenSource _serviceCancellationToken = new();
         private TaskCompletionSource<bool> _soundCompletionSource = new();
-        private Task _workerTask;
+        private Task? _workerTask;
 
-        private static IWaveProvider GetAudioReader(Stream stream, string fileExtension) => fileExtension switch
+        private static IWaveProvider GetReader(Stream stream, string fileExtension) => fileExtension switch
         {
             ".mp3" => new Mp3FileReader(stream),
             ".wav" => new WaveFileReader(stream),
@@ -22,13 +22,9 @@ namespace TwitchController.Services
             _ => throw new Exception("Format of this audio file is not supporting")
         };
 
-        public AudioService()
-        {
-            _workerTask = Task.Run(ProcessSoundQueueAsync, _serviceCancellationToken.Token);
-        }
-
         public void Run()
         {
+            _workerTask = Task.Run(ProcessSoundQueueAsync, _serviceCancellationToken.Token);
             Logger.External(LOGTYPE.INFO, ServiceName(), "Sound service is running");
         }
 
@@ -40,7 +36,7 @@ namespace TwitchController.Services
             // Wait for worker task to complete
             try
             {
-                _workerTask.Wait();
+                _workerTask?.Wait();
             }
             catch (AggregateException ex)
             {
@@ -125,11 +121,11 @@ namespace TwitchController.Services
                     {
                         if (path != null)
                         {
-                            await PlaySoundFromDiskInternalAsync(path);
+                            await InternalSoundFromDiskAsync(path);
                         }
                         else if (url != null)
                         {
-                            await PlaySoundFromUrlInternalAsync(url);
+                            await InternalSoundFromUrlAsync(url);
                         }
 
                     }
@@ -145,7 +141,7 @@ namespace TwitchController.Services
             }
         }
 
-        private async Task PlaySoundFromDiskInternalAsync(string path)
+        private async Task InternalSoundFromDiskAsync(string path)
         {
             try
             {
@@ -163,7 +159,7 @@ namespace TwitchController.Services
             }
         }
 
-        private async Task PlaySoundFromUrlInternalAsync(string url)
+        private async Task InternalSoundFromUrlAsync(string url)
         {
             string tempFilePath = Path.GetTempFileName();
             string? fileExtension = null;
@@ -171,20 +167,20 @@ namespace TwitchController.Services
             try
             {
                 Logger.External(LOGTYPE.INFO, ServiceName(), $"Downloading audio from: {url}");
-                using (var response = await _httpClient.GetAsync(url, _serviceCancellationToken.Token))
+                using (var response = await _httpClient.GetAsync(url, _serviceCancellationToken.Token).ConfigureAwait(false))
                 {
                     response.EnsureSuccessStatusCode();
                     fileExtension = Path.GetExtension(url).ToLowerInvariant();
-                    using (var stream = await response.Content.ReadAsStreamAsync(_serviceCancellationToken.Token))
+                    using (var stream = await response.Content.ReadAsStreamAsync(_serviceCancellationToken.Token).ConfigureAwait(false))
                     using (var fileStream = File.Create(tempFilePath))
                     {
-                        await stream.CopyToAsync(fileStream, _serviceCancellationToken.Token);
+                        await stream.CopyToAsync(fileStream, _serviceCancellationToken.Token).ConfigureAwait(false);
                     }
                 }
 
                 using (var audioStream = File.OpenRead(tempFilePath))
                 {
-                    await PlayAudioStreamAsync(audioStream, fileExtension);
+                    await PlayAudioStreamAsync(audioStream, fileExtension).ConfigureAwait(false);
                 }
             }
             catch (HttpRequestException ex)
@@ -229,7 +225,7 @@ namespace TwitchController.Services
             IWaveProvider? reader = null;
             try
             {
-                reader = GetAudioReader(audioStream, fileExtension);
+                reader = GetReader(audioStream, fileExtension);
                 _waveOut.Init(reader);
                 _waveOut.Play();
                 Logger.External(LOGTYPE.INFO, ServiceName(), "Playback started");
