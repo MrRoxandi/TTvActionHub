@@ -14,6 +14,14 @@ namespace TwitchController.Services
         private TaskCompletionSource<bool> _soundCompletionSource = new();
         private Task? _workerTask;
 
+        private static bool IsValidUrl(string url_end) => url_end switch
+        {
+            ".mp3" => true,
+            ".wav" => true,
+            ".ogg" => true,
+            _ => false
+        };
+
         private static IWaveProvider GetReader(Stream stream, string fileExtension) => fileExtension switch
         {
             ".mp3" => new Mp3FileReader(stream),
@@ -161,13 +169,14 @@ namespace TwitchController.Services
 
         private async Task InternalSoundFromUrlAsync(string url)
         {
+            if (!IsValidUrl(Path.GetExtension(url))) return;
             string tempFilePath = Path.GetTempFileName();
             string? fileExtension = null;
 
             try
             {
                 Logger.Log(LOGTYPE.INFO, ServiceName(), $"Downloading audio from: {url}");
-                using (var response = await _httpClient.GetAsync(url, _serviceCancellationToken.Token).ConfigureAwait(false))
+                using (var response = await _httpClient.GetAsync(url, _serviceCancellationToken.Token))
                 {
                     response.EnsureSuccessStatusCode();
                     fileExtension = Path.GetExtension(url).ToLowerInvariant();
