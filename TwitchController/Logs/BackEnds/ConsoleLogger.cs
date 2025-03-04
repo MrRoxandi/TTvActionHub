@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 
 namespace TwitchController.Logs.BackEnds
 {
-    internal class ConsoleLogger : ILogger
+    internal class ConsoleLogger
     {
         public void Error(string message, string? err = null)
         {
             Console.WriteLine($"[ERR] {message} {err ?? ""}.");
         }
 
-        public void External(string type, string name, string message, string? err = null)
+        public void Log(string type, string name, string message, string? err = null)
         {
             Console.WriteLine($"[{name}:{type}] {message} {err ?? ""}.");
         }

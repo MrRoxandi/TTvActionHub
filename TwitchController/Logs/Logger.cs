@@ -27,7 +27,7 @@ namespace TwitchController.Logs
             _logger.Warn(message); 
         }
 
-        public static void External(LOGTYPE type, string name, string message, string? err = null)
+        public static void Log(LOGTYPE type, string name, string message, string? err = null)
         {
             string res = type switch
             {
@@ -37,7 +37,8 @@ namespace TwitchController.Logs
                 _ => "NULL"
             };
 
-            _logger.External(res, name, message, err);
+            _logger.Log(res, name, message, err);
         }
+
     }
 }

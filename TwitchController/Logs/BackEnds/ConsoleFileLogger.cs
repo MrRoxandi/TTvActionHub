@@ -1,59 +1,77 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace TwitchController.Logs.BackEnds
 {
-    internal class ConsoleFileLogger : ILogger
+    internal class ConsoleFileLogger : ILogger, IDisposable
     {
         private string _filepath;
+        private StreamWriter _writer;
+        private object _lock = new object();
+        private bool _disposed = false;
 
         public ConsoleFileLogger()
         {
-            var dir = Directory.GetCurrentDirectory() + "\\Logs";
+            var dir = Path.Combine(Directory.GetCurrentDirectory(), "logs");
             Directory.CreateDirectory(dir);
-            _filepath = dir + "\\" + DateTime.Now.ToString()
-                .Replace(" ", string.Empty)
-                .Replace(":", ".") + ".txt";
-            File.Create(_filepath).Close();
+            _filepath = Path.Combine(dir, DateTime.Now.ToString("yyyy-MM-dd-HH.mm") + ".txt");
+            _writer = new(new FileStream(_filepath, FileMode.Create, FileAccess.Write, FileShare.Read))
+            {
+                AutoFlush = true
+            };
+
         }
 
-        public void Error(string message, string? err = null)
+        private async Task InternalLogAsync(string message)
         {
-            File.AppendAllTextAsync(_filepath, $"[ERR] {message} {err ?? ""}.");
-            //var writer = File.AppendText(_filepath);
-            //writer.WriteLine(_filepath, $"[ERR] {message} {err ?? ""}.");
-            //writer.Close();
-            Console.WriteLine($"[ERR] {message} {err ?? ""}.");
+            string formatted = message + Environment.NewLine;
+            try
+            {
+                lock (_lock)
+                {
+                    _writer.Write(formatted);
+                }
+                await Task.Run(() => Console.WriteLine(message));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Logger error]: {ex}");
+            }
         }
 
-        public void External(string type, string name, string message, string? err = null)
+        public Task Info(string message)
         {
-            //var writer = File.AppendText(_filepath);
-            //writer.WriteLine($"[{name}:{type}] {message} {err ?? ""}.");
-            //writer.Close();
-            File.AppendAllTextAsync(_filepath, $"[{name}:{type}] {message} {err ?? ""}.");
-            Console.WriteLine($"[{name}:{type}] {message} {err ?? ""}.");
+            return InternalLogAsync($"[INFO] {message}.");
         }
 
-        public void Info(string message)
+        public Task Error(string message, string? err = null)
         {
-            //var writer = File.AppendText(_filepath);
-            //writer.WriteLine($"[INFO] {message}.");
-            //writer.Close();
-            File.AppendAllTextAsync(_filepath, $"[INFO] {message}.");
-            Console.WriteLine($"[INFO] {message}.");
+            return InternalLogAsync($"[ERR] {message} {err ?? ""}.");
         }
 
-        public void Warn(string message)
+        public Task Warn(string message)
         {
-            //var writer = File.AppendText(_filepath);
-            //writer.WriteLine($"[WARN] {message}.");
-            //writer.Close();
-            File.AppendAllTextAsync(_filepath, $"[WARN] {message}.");
-            Console.WriteLine($"[WARN] {message}.");
+            return InternalLogAsync($"[WARN] {message}.");
         }
+
+        public Task Log(string type, string name, string message, string? err = null)
+        {
+            return InternalLogAsync($"[{name}:{type}] {message} {err ?? ""}.");
+        }
+
+
+        public void Dispose()
+        {
+            if (!_disposed)
+            {
+                _writer?.Dispose();
+                _disposed = true;
+            }
+        }
+
     }
 }

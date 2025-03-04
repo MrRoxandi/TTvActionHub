@@ -21,17 +21,17 @@ namespace TwitchController.Services
 
             _client.OnDisconnected += (sender, args) =>
             {
-                Logger.External(LOGTYPE.INFO, ServiceName(), $"Service has disconnected");
+                Logger.Log(LOGTYPE.INFO, ServiceName(), $"Service has disconnected");
             };
 
             _client.OnConnected += (sender, args) =>
             {
-                Logger.External(LOGTYPE.INFO, ServiceName(), $"Service has connected to channel {_configuration.TwitchInfo.Login}"); ;
+                Logger.Log(LOGTYPE.INFO, ServiceName(), $"Service has connected to channel {_configuration.TwitchInfo.Login}"); ;
             };
 
             if (_configuration.ShowLogs)
                 _client.OnLog += (sender, args) => {
-                    Logger.External(LOGTYPE.INFO, ServiceName(), args.Data);
+                    Logger.Log(LOGTYPE.INFO, ServiceName(), args.Data);
                 };
 
             if (onJoinMessage is string msg)
@@ -67,7 +67,7 @@ namespace TwitchController.Services
                     cmdArgStr = cmdArgStr.Substring(start + 1, stop - start - 1);
             }
             cmdArgStr = cmdArgStr.Replace("\U000e0000", "").Trim();
-            Logger.External(LOGTYPE.INFO, ServiceName(), $"Received command: {cmd} from {cmdSender} with args: {cmdArgStr}");
+            Logger.Log(LOGTYPE.INFO, ServiceName(), $"Received command: {cmd} from {cmdSender} with args: {cmdArgStr}");
 
             string[]? cmdArgs = string.IsNullOrEmpty(cmdArgStr) ? null : cmdArgStr.Split(' ');
             

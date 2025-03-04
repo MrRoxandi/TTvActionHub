@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace TwitchController.Logs.BackEnds
 {
-    internal class FileLogger : ILogger
+    internal class FileLogger
     {
         private string _filepath;
 
@@ -26,7 +26,7 @@ namespace TwitchController.Logs.BackEnds
             writer.Close();
         }
 
-        public void External(string type, string name, string message, string? err = null)
+        public void Log(string type, string name, string message, string? err = null)
         {
             var writer = File.AppendText(_filepath);
             writer.WriteLine($"[{name}:{type}] {message} {err ?? ""}.");

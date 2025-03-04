@@ -31,7 +31,7 @@ namespace TwitchController.Twitch
 
         public async Task<(string? Login, string? ID, string? Token, string? RefreshToken)> GetAuthorizationInfo()
         {
-            Logger.External(LOGTYPE.INFO, "TwitchApi", "Requesting new Twitch authentication token.");
+            Logger.Log(LOGTYPE.INFO, "TwitchApi", "Requesting new Twitch authentication token.");
             var authInfo = await RequestAuthorizationInfo();
 
             return authInfo;
@@ -97,12 +97,12 @@ namespace TwitchController.Twitch
                 {
                     return (user.Login, user.Id);
                 }
-                Logger.External(LOGTYPE.WARNING, "TwitchApi", "Could not retrieve user information from Twitch API.");
+                Logger.Log(LOGTYPE.WARNING, "TwitchApi", "Could not retrieve user information from Twitch API.");
                 return (null, null);
             }
             catch (Exception ex)
             {
-                Logger.External(LOGTYPE.ERROR, "TwitchApi", "Error getting channel info from Twitch API.", ex.Message);
+                Logger.Log(LOGTYPE.ERROR, "TwitchApi", "Error getting channel info from Twitch API.", ex.Message);
                 return (null, null);
             }
         }
@@ -119,12 +119,12 @@ namespace TwitchController.Twitch
                 {
                     return user.Login;
                 }
-                Logger.External(LOGTYPE.WARNING, "TwitchApi", "Could not retrieve user login from Twitch API.");
+                Logger.Log(LOGTYPE.WARNING, "TwitchApi", "Could not retrieve user login from Twitch API.");
                 return null;
             }
             catch (Exception ex)
             {
-                Logger.External(LOGTYPE.ERROR, "TwitchApi", "Error getting channel login from Twitch API.", ex.Message);
+                Logger.Log(LOGTYPE.ERROR, "TwitchApi", "Error getting channel login from Twitch API.", ex.Message);
                 return null;
             }
         }
@@ -141,12 +141,12 @@ namespace TwitchController.Twitch
                 {
                     return user.Id;
                 }
-                Logger.External(LOGTYPE.WARNING, "TwitchApi", "Could not retrieve user Id from Twitch API.");
+                Logger.Log(LOGTYPE.WARNING, "TwitchApi", "Could not retrieve user Id from Twitch API.");
                 return null;
             }
             catch (Exception ex)
             {
-                Logger.External(LOGTYPE.ERROR, "TwitchApi", "Error getting channel Id from Twitch API.", ex.Message);
+                Logger.Log(LOGTYPE.ERROR, "TwitchApi", "Error getting channel Id from Twitch API.", ex.Message);
                 return null;
             }
         }
@@ -169,7 +169,7 @@ namespace TwitchController.Twitch
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    Logger.External(LOGTYPE.ERROR, "TwitchApi", $"Token request failed. Status: {response.StatusCode}, Response: {responseString}");
+                    Logger.Log(LOGTYPE.ERROR, "TwitchApi", $"Token request failed. Status: {response.StatusCode}, Response: {responseString}");
                     return (null, null);
                 }
 
@@ -181,7 +181,7 @@ namespace TwitchController.Twitch
             }
             catch (Exception ex)
             {
-                Logger.External(LOGTYPE.ERROR, "TwitchApi", "Error getting access token from Twitch API.", ex.Message);
+                Logger.Log(LOGTYPE.ERROR, "TwitchApi", "Error getting access token from Twitch API.", ex.Message);
                 return (null, null);
             }
         }
@@ -204,7 +204,7 @@ namespace TwitchController.Twitch
 
                 if (!response.IsSuccessStatusCode)
                 {
-                    Logger.External(LOGTYPE.ERROR, "TwitchApi", $"Refresh token request failed. Status: {response.StatusCode}, Response: {responseString}");
+                    Logger.Log(LOGTYPE.ERROR, "TwitchApi", $"Refresh token request failed. Status: {response.StatusCode}, Response: {responseString}");
                     return (null, null);
                 }
 
@@ -216,7 +216,7 @@ namespace TwitchController.Twitch
             }
             catch (Exception ex)
             {
-                Logger.External(LOGTYPE.ERROR, "TwitchApi", "Error refreshing access token from Twitch API.", ex.Message);
+                Logger.Log(LOGTYPE.ERROR, "TwitchApi", "Error refreshing access token from Twitch API.", ex.Message);
                 return (null, null);
             }
         }
@@ -233,7 +233,7 @@ namespace TwitchController.Twitch
             }
             catch (Exception ex)
             {
-                Logger.External(LOGTYPE.WARNING, "TwitchApi", "Token validation failed. Token may be expired.", ex.Message);
+                Logger.Log(LOGTYPE.WARNING, "TwitchApi", "Token validation failed. Token may be expired.", ex.Message);
                 return false; // Token invalid
             }
         }

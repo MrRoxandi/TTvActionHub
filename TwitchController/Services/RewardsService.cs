@@ -16,18 +16,18 @@ namespace TwitchController.Services
             _client.OnPubSubServiceConnected += (sender, args) =>
             {
                 _client.SendTopics(_configuration.TwitchInfo.Token);
-                Logger.External(LOGTYPE.INFO, ServiceName(), $"Service has connected to channel {_configuration.TwitchInfo.Login}.");
+                Logger.Log(LOGTYPE.INFO, ServiceName(), $"Service has connected to channel {_configuration.TwitchInfo.Login}.");
             };
 
             _client.OnListenResponse += (sender, args) =>
             {
                 if (!args.Successful)
                 {
-                    Logger.External(LOGTYPE.ERROR, ServiceName(), $"Failed to listen!, {args.Response.Error}");
+                    Logger.Log(LOGTYPE.ERROR, ServiceName(), $"Failed to listen!, {args.Response.Error}");
                 }
                 else if (_configuration.ShowLogs)
                 {
-                    Logger.External(LOGTYPE.ERROR, ServiceName(), $"{args.Response}");
+                    Logger.Log(LOGTYPE.ERROR, ServiceName(), $"{args.Response}");
                 }
             };
 
@@ -51,7 +51,7 @@ namespace TwitchController.Services
                         rewardArgsStr = rewardArgsStr.Substring(start + 1, stop - start - 1);
                 }
                 rewardArgsStr = rewardArgsStr.Replace("\U000e0000", "").Trim();
-                Logger.External(LOGTYPE.ERROR, ServiceName(), $"Received reward: {rewardTitle} from {rewardResiever} with args: {rewardArgsStr}");
+                Logger.Log(LOGTYPE.ERROR, ServiceName(), $"Received reward: {rewardTitle} from {rewardResiever} with args: {rewardArgsStr}");
 
                 string[]? rewardArgs = string.IsNullOrEmpty(rewardArgsStr) ? null : rewardArgsStr.Split(' ');
                 value.Execute(rewardResiever, rewardArgs);
