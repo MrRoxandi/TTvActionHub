@@ -4,6 +4,7 @@ using TwitchController.Twitch;
 using TwitchController.Logs;
 using TwitchController.LuaTools.Audio;
 using TwitchController.Services.Http;
+using TwitchController.LuaTools.Stuff;
 
 namespace TwitchController
 {
@@ -52,11 +53,9 @@ namespace TwitchController
             RunServices();
 
             _ = Console.ReadLine();
-
             StopServices();
 
             Logger.Info("Proggram is stopped");
-            
             _ = Console.ReadLine();
         }
 
@@ -77,6 +76,10 @@ namespace TwitchController
             if (_rewardservice == null) return false;
             _services.Add(_rewardservice);
 
+            var _containerservice = InitService<ContainerService>("container service");
+            if (_containerservice == null) return false;
+            Storage._service = _containerservice;
+            _services.Add(_containerservice);
             return true;
         }
 

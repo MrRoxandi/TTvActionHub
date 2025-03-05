@@ -27,7 +27,7 @@ namespace TwitchController.Services
                 }
                 else if (_configuration.ShowLogs)
                 {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName(), $"{args.Response}");
+                    Logger.Log(LOGTYPE.INFO, ServiceName(), $"{args.Topic}");
                 }
             };
 
