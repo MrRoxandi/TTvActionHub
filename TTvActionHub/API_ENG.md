@@ -8,12 +8,12 @@ Any module is accessed via `TTvActionHub.LuaTools.<module>`. The table below lis
 
 | Module                                    | Description                                                                     | Documentation                      |
 | ----------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------- |
-| `TTvActionHub.LuaTools.Audio.Sounds`      | This module is responsible for playing music                                    | [Documentation](API/RU/Sounds.md)   |
-| `TTvActionHub.LuaTools.Hardware.Keyboard` | This module is responsible for keyboard emulation                               | [Documentation](API/RU/Keyboard.md) |
-| `TTvActionHub.LuaTools.Hardware.Mouse`    | This module is responsible for mouse emulation                                  | [Documentation](API/RU/Mouse.md)    |
-| `TTvActionHub.LuaTools.Stuff.Chat`        | This module is responsible for interacting with the Twitch chat                  | [Documentation](API/RU/Chat.md)     |
-| `TTvActionHub.LuaTools.Stuff.Storage`     | This module is responsible for interacting with a special internal storage      | [Documentation](API/RU/Storage.md)  |
-| `TTvActionHub.LuaTools.Stuff.Funcs`       | This module contains useful functions for writing the configuration           | [Documentation](API/RU/Funcs.md)    |
+| `TTvActionHub.LuaTools.Audio.Sounds`      | This module is responsible for playing music                                    | [Documentation](API/ENG/Sounds.md)   |
+| `TTvActionHub.LuaTools.Hardware.Keyboard` | This module is responsible for keyboard emulation                               | [Documentation](API/ENG/Keyboard.md) |
+| `TTvActionHub.LuaTools.Hardware.Mouse`    | This module is responsible for mouse emulation                                  | [Documentation](API/ENG/Mouse.md)    |
+| `TTvActionHub.LuaTools.Stuff.Chat`        | This module is responsible for interacting with the Twitch chat                  | [Documentation](API/ENG/Chat.md)     |
+| `TTvActionHub.LuaTools.Stuff.Storage`     | This module is responsible for interacting with a special internal storage      | [Documentation](API/ENG/Storage.md)  |
+| `TTvActionHub.LuaTools.Stuff.Funcs`       | This module contains useful functions for writing the configuration           | [Documentation](API/ENG/Funcs.md)    |
 
 ### Example of Connecting the Music Playback Module
 
