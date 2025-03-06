@@ -80,6 +80,11 @@ namespace TTvActionHub
             if (_containerservice == null) return false;
             Storage._service = _containerservice;
             _services.Add(_containerservice);
+
+            var _teventservice = InitService<TEventsService>("timer events service", [_configuration]);
+            if (_teventservice == null) return false;
+            _services.Add(_teventservice);
+
             return true;
         }
 

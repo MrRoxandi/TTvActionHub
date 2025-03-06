@@ -25,6 +25,7 @@ namespace TTvActionHub
 
         public readonly Dictionary<string, Command> Commands;
         public readonly Dictionary<string, Reward> Rewards;
+        public readonly List<TEvent> TEvents;
 
         public readonly string OpeningBracket;
         public readonly string ClosingBracket;
@@ -123,9 +124,11 @@ namespace TTvActionHub
 
             Commands = [];
             Rewards = [];
+            TEvents = [];
 
             LoadCommands(luaConfig["commands"] as LuaTable);
             LoadRewards(luaConfig["rewards"] as LuaTable);
+            LoadTEvents(luaConfig["tevents"] as LuaTable);
 
             ShowConfigInfo();
 
@@ -170,7 +173,7 @@ namespace TTvActionHub
             foreach (var keyObj in rewards.Keys)
             {
                 if (rewards[keyObj] is not LuaTable table)
-                    throw new Exception($"{ParamAdress("rewards", $"{keyObj}")} is not a command. Check syntax.");
+                    throw new Exception($"{ParamAdress("rewards", $"{keyObj}")} is not a reward. Check syntax.");
 
                 if (table["action"] is not LuaFunction action)
                     throw new Exception($"{ParamAdress($"{keyObj}", "action")} is not a action. Check syntax.");
@@ -178,6 +181,31 @@ namespace TTvActionHub
                 Rewards.Add(keyObj.ToString()!, new Reward { Function = action });
 
                 Logger.Info($"Loaded reward: {keyObj}");
+            }
+        }
+
+        private void LoadTEvents(LuaTable? events)
+        {
+            if (events is null)
+            {
+                Logger.Warn($"{FieldAdress("tevents")} is not presented. Ignoring...");
+                return;
+            }
+
+            foreach (var keyObj in events.Keys)
+            {
+                if(events[keyObj] is not LuaTable table)
+                    throw new Exception($"{ParamAdress("tevents", $"{keyObj}")} is not a event. Check syntax.");
+                if (table["action"] is not LuaFunction action)
+                    throw new Exception($"{ParamAdress($"{keyObj}", "action")} is not a action. Check syntax.");
+                if (table["timeout"] is not long timeout)
+                    throw new Exception($"{ParamAdress($"{keyObj}", "timeout")} is not a integer. Check syntax.");
+                else if(timeout <= 0)
+                    throw new Exception($"{ParamAdress($"{keyObj}", "timeout")} is not valid time. Allowed values (>= 1).");
+
+                TEvents.Add(new TEvent() { Action = action, Name = keyObj.ToString()!, TimeOut = timeout });
+
+                Logger.Info($"Loaded TEvent: {keyObj}");
             }
         }
 
@@ -212,9 +240,11 @@ res[""logs""] = false -- may be changed
 
 local commands = {}
 local rewards = {}
+loacl tevents = {}
 
 res[""commands""] = commands
 res[""rewards""] = rewards
+res[""tevents""] = tevents
 return res"
                 );
     }

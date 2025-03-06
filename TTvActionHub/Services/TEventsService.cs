@@ -1,0 +1,36 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using TTvActionHub.Logs;
+
+namespace TTvActionHub.Services
+{
+    public class TEventsService(Configuration config) : IService
+    {
+        private readonly Configuration _config = config;
+
+        public void Run()
+        {
+            foreach (var e in _config.TEvents)
+            {
+                Logger.Log(LOGTYPE.INFO, ServiceName(), $"Running [{e.Name}] event");
+                e.Run();
+            }
+            Logger.Log(LOGTYPE.INFO, ServiceName(), "All events are running");
+        }
+
+        public void Stop()
+        {
+            foreach (var e in _config.TEvents)
+            {
+                Logger.Log(LOGTYPE.INFO, ServiceName(), $"Stopping [{e.Name}] event");
+                e.Stop();
+            }
+            Logger.Log(LOGTYPE.INFO, ServiceName(), "All events stopped");
+        }
+
+        public string ServiceName() => "TEventsService";
+    }
+}
