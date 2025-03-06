@@ -1,82 +1,104 @@
-﻿## Документация для модуля Funcs в `TTvActionHub.LuaTools.Stuff`
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
-Этот модуль предоставляет набор полезных функций для выполнения различных операций, таких как генерация случайных чисел, выбор случайного элемента из коллекции, перемешивание коллекции и создание случайных строк.
+namespace TTvActionHub.LuaTools.Stuff
+{
+    public static class Funcs
+    {
+        private static readonly Random rng = new();
 
-### Функции
+        public static int RandomNumber(int? min, int? max)
+        {
+            if (min is int a && max is int b)
+                return rng.Next(a, b + 1);
+            else
+            {
+                if (min is null) throw new ArgumentNullException(nameof(min));
+                else throw new ArgumentNullException(nameof(max));
+            }
+        }
 
-| Функция                                              | Описание                                                                                                                      | Возвращаемое значение |
-| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| `RandomNumber(int? min, int? max)`                    | Генерирует случайное целое число в диапазоне от `min` до `max` (включительно). Оба аргумента `min` и `max` **обязательны**.      | `int`                |
-| `RandomDouble(double? min, double? max)`                  | Генерирует случайное число с плавающей точкой в диапазоне от `min` до `max`. Оба аргумента `min` и `max` **обязательны**.       | `double`             |
-| `RandomNumberAsync(int? min, int? max)`               | Асинхронно генерирует случайное целое число в диапазоне от `min` до `max` (включительно). Оба аргумента `min` и `max` **обязательны**.   | `int`                |
-| `RandomDoubleAsync(double? min, double? max)`                 | Асинхронно генерирует случайное число с плавающей точкой в диапазоне от `min` до `max`. Оба аргумента `min` и `max` **обязательны**.    | `double`             |
-| `RandomElementAsync(IEnumerable<string>? collection)` | Асинхронно выбирает случайный элемент из переданной коллекции строк `collection`. Если коллекция пуста, возвращает пустую строку. Аргумент `collection` **обязателен**. | `string`             |
-| `ShuffleAsync(IEnumerable<string>? collection)`       | Асинхронно перемешивает переданную коллекцию строк `collection` и возвращает новую перемешанную коллекцию в виде списка. Если коллекция пуста, возвращает пустой список. Аргумент `collection` **обязателен**. | `List<string>`      |
-| `RandomStringAsync(int length)`                       | Асинхронно генерирует случайную строку указанной длины `length`, состоящую из букв (в верхнем и нижнем регистре) и цифр.    | `string`             |
-| `DelayAsync(int? delay)`                                  | Асинхронно приостанавливает выполнение на указанное количество миллисекунд `delay`. Аргумент `delay` **обязателен**. | `void`             |
-| `RandomPositionAsync(int? minX, int? maxX, int? minY, int? maxY)`                       | Асинхронно генерирует случайную позицию (Point) со случайными координатами X и Y в указанных диапазонах. Все аргументы **обязательны**.    | `Funcs.Point`             |
-| `CollectionToStringAsync(IEnumerable<string>? collection, string sep = " ")`       | Асинхронно преобразует коллекцию строк `collection` в одну строку, разделяя элементы указанным разделителем `sep` (по умолчанию пробел).  Аргумент `collection` **обязателен**.  | `string`             |
+        public static double RandomDouble(double? min, double? max)
+        {
+            if (min is double a && max is double b)
+                return rng.NextDouble() * (b - a) + a;
+            else
+            {
+                if (min is null) throw new ArgumentNullException(nameof(min));
+                else throw new ArgumentNullException(nameof(max));
+            }
+        }
 
-### Типы
+        public static async Task<int> RandomNumberAsync(int? min, int? max)
+        {
+            return await Task.Run(() => RandomNumber(min, max));
+        }
 
-#### `Point`
+        public static async Task<double> RandomDoubleAsync(double? min, double? max)
+        {
+            return await Task.Run(() => RandomDouble(min, max));
+        }
 
-Структура, представляющая точку с координатами X и Y.
+        public static async Task<string> RandomElementAsync(IEnumerable<string>? collection)
+        {
+            if (collection is IEnumerable<string> col)
+            {
+                if (!col.Any()) return await Task.Run(() => string.Empty);
+                return await Task.Run(() => col.ElementAt(rng.Next(col.Count())));
+            }
+            else throw new ArgumentNullException(nameof(collection));
+        }
 
-| Свойство | Тип   | Описание        |
-| -------- | ----- | --------------- |
-| `X`      | `int` | Координата X    |
-| `Y`      | `int` | Координата Y    |
+        public static async Task<List<string>> ShuffleAsync(IEnumerable<string>? collection)
+        {
+            if (collection is IEnumerable<string> col)
+            {
+                if (!collection.Any()) return await Task.Run(() => new List<string>());
+                return await Task.Run(() =>
+                {
+                    Span<string> span = new(collection.ToArray());
+                    rng.Shuffle(span);
+                    return span.ToArray().ToList();
+                });
+            }
+            else throw new ArgumentNullException(nameof(collection));
+        }
 
-**Примечания:**
+        public static async Task<string> RandomStringAsync(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+            return await Task.Run(() => new string(Enumerable.Repeat(chars, length)
+                .Select(s => s[rng.Next(s.Length)]).ToArray()));
+        }
 
-*Все функции, заканчивающиеся на `Async`, выполняются асинхронно, не блокируя основной поток программы.
-*   Перед использованием любой функции убедитесь, что все обязательные аргументы указаны. В противном случае будет выброшено исключение `ArgumentNullException`.
-* Для работы с `RandomPositionAsync` необходимо указывать все четыре параметра: `minX`, `maxX`, `minY`, `maxY`.
+        public static async Task DelayAsync(int? delay)
+        {
+            if (delay is int d)
+                await Task.Delay(d);
+            else throw new ArgumentNullException(nameof(delay));
+        }
 
-### Пример использования в `config.lua`
+        public struct Point(int x, int y)
+        {
+            public int X { get; set; } = x;
+            public int Y { get; set; } = y;
+        }
 
-```lua
-local Funcs = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Funcs
+        public static async Task<Point> RandomPositionAsync(int? minX, int? maxX, int? minY, int? maxY)
+        {
+            return await Task.Run(() => new Point(RandomNumber(minX, maxX), RandomNumber(minY, maxY)));
+        }
 
--- Генерация случайного числа от 1 до 100
-local randomNumber = Funcs.RandomNumber(1, 100)
-print("Случайное число: " .. randomNumber)
-
--- Генерация случайного числа с плавающей точкой от 0.0 до 1.0
-local randomDouble = Funcs.RandomDouble(0.0, 1.0)
-print("Случайное число с плавающей точкой: " .. randomDouble)
-
--- Выбор случайного элемента из списка
-local myList = {"apple", "banana", "cherry"}
-Funcs.RandomElementAsync(myList):next(function(randomElement)
-    print("Случайный элемент: "..randomElement)
-end)
-
--- Перемешивание списка
-local myList = {"apple", "banana", "cherry"}
-Funcs.ShuffleAsync(myList):next(function(shuffledList)
-    print("Перемешанный список:")
-    for i, element in ipairs(shuffledList) do
-        print(i..": "..element)
-    end
-end)
-
--- Генерация случайной строки длиной 10 символов
-Funcs.RandomStringAsync(10):next(function(randomString)
-    print("Случайная строка: "..randomString)
-end)
-
--- Приостановка выполнения на 1 секунду
-Funcs.DelayAsync(1000)
-
--- Получение случайной позиции
-Funcs.RandomPositionAsync(0, 100, 0, 100):next(function(pos)
-    print("Случайная позиция: X="..pos.X..", Y="..pos.Y)
-end)
-
--- Преобразование списка в строку с разделителем
-local myList = {"apple", "banana", "cherry"}
-Funcs.CollectionToStringAsync(myList, ", "):next(function(myString)
-    print("Строка: "..myString)
-end)
+        public static async Task<string> CollectionToStringAsync(IEnumerable<string>? collection, string sep = " ")
+        {
+            if (collection is IEnumerable<string> list)
+            {
+                if (!list.Any()) return await Task.Run(() => string.Empty);
+                else return await Task.Run(() => string.Join(sep, list));
+            }
+            else throw new ArgumentNullException(nameof(collection));
+        }
+    }
+}
