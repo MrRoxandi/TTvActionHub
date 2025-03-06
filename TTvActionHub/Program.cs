@@ -13,7 +13,7 @@ namespace TTvActionHub
         static List<IService> _services = [];
         static Configuration? _configuration;
         static string path = "config.lua";
-        
+
         static void Main(string[] args)
         {
             if (args.Length > 0)
@@ -49,10 +49,29 @@ namespace TTvActionHub
                 return;
             }
             Logger.Info("All services created. Starting them up");
-            
+
             RunServices();
 
-            _ = Console.ReadLine();
+            // Command processing loop
+            string? command;
+            do
+            {
+                Console.Write("Enter command (reload, exit): ");
+                command = Console.ReadLine()?.ToLower();
+
+                switch (command)
+                {
+                    case "reload":
+                        ReloadConfiguration();
+                        break;
+                    case "exit":
+                        break;
+                    default:
+                        Logger.Warn("Unknown command.");
+                        break;
+                }
+            } while (command != "exit");
+
             StopServices();
 
             Logger.Info("Proggram is stopped");
@@ -121,8 +140,39 @@ namespace TTvActionHub
 
         private static void StopServices()
         {
-            foreach(var service in _services)
+            foreach (var service in _services)
                 service.Stop();
+        }
+
+        static void ReloadConfiguration()
+        {
+            Logger.Info("Reloading configuration...");
+
+            // 1. Stop existing services
+            StopServices();
+            _services.Clear();  // Very important:  Clear the list!
+
+            // 2. Reload configuration
+            try
+            {
+                _configuration = new(path); // Re-create the configuration
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Error reloading configuration:", ex.Message);
+                return;
+            }
+
+            // 3. Re-create services
+            if (!CreateAllServices())
+            {
+                return;
+            }
+
+            // 4. Start services again
+            Logger.Info("Starting services after reload...");
+            RunServices();
+            Logger.Info("Configuration reloaded successfully.");
         }
 
     }
