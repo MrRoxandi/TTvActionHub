@@ -53,7 +53,8 @@ namespace TTvActionHub.Services
             //Getting command name from chat
             var cmd = args.Command.CommandText;
             var cmdArgStr = args.Command.ArgumentsAsString;
-            var cmdSender = args.Command.ChatMessage.Username;
+            var chatMessage = args.Command.ChatMessage;
+            var cmdSender = chatMessage.Username;
             
             if (!_configuration.Commands.TryGetValue(cmd, out Command? value)) return;
 
@@ -71,7 +72,10 @@ namespace TTvActionHub.Services
 
             string[]? cmdArgs = string.IsNullOrEmpty(cmdArgStr) ? null : cmdArgStr.Split(' ');
             
-            value.Execute(cmdSender, cmdArgs);
+            value.Execute(
+                cmdSender, 
+                Users.ParceFromTwitchLib(chatMessage.UserType, chatMessage.IsSubscriber, chatMessage.IsVip),
+                cmdArgs);
         }
 
         public void Run()
