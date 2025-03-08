@@ -3,7 +3,7 @@ using TTvActionHub.Logs;
 
 namespace TTvActionHub.Items
 {
-    public class TEvent
+    public class TActions
     {
         private System.Timers.Timer? _timer;
         public required LuaFunction Action;
@@ -24,8 +24,8 @@ namespace TTvActionHub.Items
             {
                 _timer.Stop();
                 _timer.Dispose();
+                _timer = null;
             }
-            _timer = null;
         }
 
         private void TimerElapsed(object? sender, System.Timers.ElapsedEventArgs e)

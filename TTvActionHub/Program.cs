@@ -5,15 +5,15 @@ using TTvActionHub.Logs;
 using TTvActionHub.LuaTools.Audio;
 using TTvActionHub.Services.Http;
 using TTvActionHub.LuaTools.Stuff;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace TTvActionHub
 {
     internal abstract class Program
     {
-        static List<IService> _services = [];
-        static Configuration? _configuration;
         static string path = "config.lua";
-        
+        static ServiceProvider? provider;
+
         static void Main(string[] args)
         {
             if (args.Length > 0)
@@ -27,30 +27,28 @@ namespace TTvActionHub
                 var fullpath = @$"{Directory.GetCurrentDirectory()}\{path}";
                 Logger.Warn($"Cannot find config in {path}.");
                 Logger.Info($"Config will be generated at {fullpath}. Relaunch programm after that");
-                Configuration.GenerateConfig(fullpath);
+                CreateConfig(fullpath); // Imagine it is static method of IConfig
                 _ = Console.ReadLine();
                 return;
             }
+            ServiceCollection collection = new();
+                collection.AddSingleton<IConfig, Configuration>((o) => new Configuration(path));
+                collection.AddSingleton<AudioService>();
+                collection.AddSingleton<CommandsService>();
+                collection.AddSingleton<RewardsService>();
+                collection.AddSingleton<TActionsService>();
+                collection.AddSingleton<ContainerService>();
+            provider = collection.BuildServiceProvider();
 
             try
             {
-                _configuration = new(path);
+                RunServices();
             }
             catch (Exception ex)
             {
-                Logger.Error("While reading configuration occured an error:", ex.Message);
-                Logger.Info("Closing program.");
-                _ = Console.ReadLine();
+                Logger.Error("While running services, occured an error: ", ex.Message);
                 return;
             }
-            // Creating services
-            if (!CreateAllServices())
-            {
-                return;
-            }
-            Logger.Info("All services created. Starting them up");
-            
-            RunServices();
 
             _ = Console.ReadLine();
             StopServices();
@@ -61,69 +59,71 @@ namespace TTvActionHub
 
         static bool CheckConfigExists(string path) => File.Exists(path);
 
-        private static bool CreateAllServices()
-        {
-            var _audio = InitService<AudioService>("audio service");
-            if (_audio == null) return false;
-            Sounds.audio = _audio;
-            _services.Add(_audio);
-
-            var _commandservice = InitService<CommandsService>("command service", [_configuration, null]);
-            if (_commandservice == null) return false;
-            _services.Add(_commandservice);
-
-            var _rewardservice = InitService<RewardsService>("reward service", [_configuration]);
-            if (_rewardservice == null) return false;
-            _services.Add(_rewardservice);
-
-            var _containerservice = InitService<ContainerService>("container service");
-            if (_containerservice == null) return false;
-            Storage._service = _containerservice;
-            _services.Add(_containerservice);
-
-            var _teventservice = InitService<TEventsService>("timer events service", [_configuration]);
-            if (_teventservice == null) return false;
-            _services.Add(_teventservice);
-
-            return true;
-        }
-
-        private static T? InitService<T>(string serviceName, object?[]? args = null) where T : class
-        {
-            try
-            {
-                Logger.Info($"Creating {serviceName}");
-                if (args == null)
-                {
-                    T? service = Activator.CreateInstance(typeof(T)) as T;
-                    return service;
-                }
-                else
-                {
-                    T? service = Activator.CreateInstance(typeof(T), args) as T;
-                    return service;
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error($"While creating {serviceName} occurred an error:", ex.Message);
-                Logger.Info("Closing program.");
-                _ = Console.ReadLine();
-                return default;
-            }
-        }
-
         private static void RunServices()
         {
-            foreach (var service in _services)
-                service.Run();
+            var _commandservice = provider?.GetService<CommandsService>();
+           _commandservice?.Run();
+
+            var _rewardsservice = provider?.GetService<RewardsService>();
+            _rewardsservice?.Run();
+
+            var _container = provider?.GetService<ContainerService>();
+            Storage._service = _container;
+            _container?.Run();
+
+            var actionsService = provider?.GetService<TActionsService>();
+            actionsService?.Run();
+
+            var _audio = provider?.GetService<AudioService>();
+            Sounds.audio = _audio;
+            _audio?.Run();
+
         }
 
         private static void StopServices()
         {
-            foreach(var service in _services)
-                service.Stop();
+            var _audio = provider?.GetService<AudioService>();
+            _audio?.Stop();
+
+            var _commandservice = provider?.GetService<CommandsService>();
+            _commandservice?.Stop();
+
+            var _rewardsservice = provider?.GetService<RewardsService>();
+            _rewardsservice?.Stop();
+
+            var _container = provider?.GetService<ContainerService>();
+            _container?.Stop();
+
+            var actionsService = provider?.GetService<TActionsService>();
+            actionsService?.Stop();
+
+            
         }
 
+        private static void CreateConfig(string path) => File.WriteAllText(path,
+@"
+local Keyboard = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Keyboard
+local Mouse = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Mouse
+local Chat = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Chat
+local Sounds = import('TTvActionHub', 'TTvActionHub.LuaTools.Audio').Sounds
+local Funcs = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Funcs
+
+local res = {}
+res[""force-relog""] = false -- may be changed to relogin with new account by force 
+res[""timeout""] = 1000 -- may be changed
+res[""logs""] = false -- may be changed
+
+--res[""opening-bracket""] = '<' -- uncomment if you like !command <arg> more than !command (arg)
+--res[""closing-bracket""] = '>' -- bracket may be any symbol, but to work they must be not identical
+
+local commands = {}
+local rewards = {}
+loacl tevents = {}
+
+res[""commands""] = commands
+res[""rewards""] = rewards
+res[""tevents""] = tevents
+return res"
+                        );
     }
 }

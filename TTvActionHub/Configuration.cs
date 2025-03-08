@@ -7,33 +7,41 @@ using TTvActionHub.Items;
 using TTvActionHub.Logs;
 using TTvActionHub.Security;
 using TTvActionHub.Twitch;
+using TTvActionHub.LuaTools.Stuff;
 
 namespace TTvActionHub
 {
-    public class Configuration
+    public class Configuration : IConfig
     {
         private static string ClientId { get => "--"; }
         private static string ClientSecret { get => "--"; }
         private static string RedirectUrl { get => @"http://localhost:3000/"; }
 
-        public readonly (string Login, string ID, string Token, string RefreshToken) TwitchInfo;
-        public readonly TwitchApi TwitchApi;
+        public Dictionary<string, Command> Commands { get => _commands; }
+        public Dictionary<string, Reward> Rewards { get => _rewards; }
+        public List<TActions> TActions { get => _tActions; }
 
+        public (string Login, string ID, string Token, string RefreshToken) TwitchInfo { get => _ttvInfo; }
+        public bool LogState { get => _logsState; }
+        public (string obr, string cbr) Brackets { get => new(_obracket, _cbracket); }
 
-        public readonly long StandartCooldown;
-        public readonly bool ShowLogs;
+        private readonly (string Login, string ID, string Token, string RefreshToken) _ttvInfo;
+        private readonly TwitchApi TwitchApi;
 
-        public readonly Dictionary<string, Command> Commands;
-        public readonly Dictionary<string, Reward> Rewards;
-        public readonly List<TEvent> TEvents;
+        private readonly long _stdCooldown;
+        private readonly bool _logsState;
 
-        public readonly string OpeningBracket;
-        public readonly string ClosingBracket;
+        private readonly Dictionary<string, Command> _commands;
+        private readonly Dictionary<string, Reward> _rewards;
+        private readonly List<TActions> _tActions;
 
-        public readonly string ConfigPath;
+        private readonly string _obracket;
+        private readonly string _cbracket;
 
-        public string FieldAdress(string field) => $"In [{ConfigPath}] field [{field}]";
-        public string ParamAdress(string field, string param) => $"In [{ConfigPath}] parameter [{param}] in field [{field}]";
+        private readonly string _configPath;
+
+        private string FieldAdress(string field) => $"In [{_configPath}] field [{field}]";
+        private string ParamAdress(string field, string param) => $"In [{_configPath}] parameter [{param}] in field [{field}]";
         
         public Configuration(string path)
         {
@@ -47,7 +55,6 @@ namespace TTvActionHub
             {
                 throw new Exception($"Failed to load controller configuration. Check the [{path}] config");
             }
-            ConfigPath = path;
 
             TwitchApi = new TwitchApi(ClientId, ClientSecret, RedirectUrl);
 
@@ -55,7 +62,8 @@ namespace TTvActionHub
             {
                 Logger.Warn($"{FieldAdress("force-relog")} is not presented. Will be used default value: [{false}].");
                 isForceRelog = false;
-            }
+            } 
+            _configPath = path;
 
             (string? Login, string? ID, string? Token, string? RefreshToken)? authInfo = null;
 
@@ -84,7 +92,7 @@ namespace TTvActionHub
                 authInfo = auth;
             }
 
-            TwitchInfo = new() { 
+            _ttvInfo = new() { 
                 Login = authInfo?.Login ?? "", 
                 ID = authInfo?.ID ?? "", 
                 Token = authInfo?.Token ?? "", 
@@ -93,7 +101,7 @@ namespace TTvActionHub
 
             
 
-            AuthorizationManager.SaveInfo(ClientSecret, TwitchInfo.Login, TwitchInfo.ID, TwitchInfo.Token, TwitchInfo.RefreshToken);
+            AuthorizationManager.SaveInfo(ClientSecret, _ttvInfo.Login, _ttvInfo.ID, _ttvInfo.Token, _ttvInfo.RefreshToken);
             
             if (luaConfig["opening-bracket"] is not string obracket || luaConfig["closing-bracket"] is not string cbracket)
             {
@@ -103,8 +111,8 @@ namespace TTvActionHub
                 cbracket = String.Empty;
             }
 
-            OpeningBracket = obracket;
-            ClosingBracket = cbracket;
+            _obracket = obracket;
+            _cbracket = cbracket;
 
             if (luaConfig["logs"] is not bool logState)
             {
@@ -112,7 +120,7 @@ namespace TTvActionHub
                 logState = true;
             }
             
-            ShowLogs = logState;
+            _logsState = logState;
             
             if (luaConfig["timeout"] is not long timeOut)
             {
@@ -120,15 +128,15 @@ namespace TTvActionHub
                 Logger.Warn($"{FieldAdress("timeout")} is not presented. Will be used default value: {timeOut}");
             }
             
-            StandartCooldown = timeOut;
+            _stdCooldown = timeOut;
 
-            Commands = [];
-            Rewards = [];
-            TEvents = [];
+            _commands = [];
+            _rewards = [];
+            _tActions = [];
 
             LoadCommands(luaConfig["commands"] as LuaTable);
             LoadRewards(luaConfig["rewards"] as LuaTable);
-            LoadTEvents(luaConfig["tevents"] as LuaTable);
+            LoadTActions(luaConfig["tactions"] as LuaTable);
 
             ShowConfigInfo();
 
@@ -153,8 +161,8 @@ namespace TTvActionHub
 
                 if (table["timeout"] is not long timer)
                 {
-                    Logger.Warn($"{ParamAdress($"{keyObj}", "timeout")} is not presented. Will be used default value: {StandartCooldown} ms");
-                    timer = StandartCooldown;
+                    Logger.Warn($"{ParamAdress($"{keyObj}", "timeout")} is not presented. Will be used default value: {_stdCooldown} ms");
+                    timer = _stdCooldown;
                 }
                 if (table["perm"] is not USERLEVEL perm)
                 {
@@ -162,7 +170,7 @@ namespace TTvActionHub
                     perm = USERLEVEL.VIEWIER;
                 }
                             
-                Commands.Add(keyObj.ToString()!, new Command { Function = action, Perm = perm, TimeOut = timer});
+                _commands.Add(keyObj.ToString()!, new Command { Function = action, Perm = perm, TimeOut = timer});
                 Logger.Info($"Loaded comand: {keyObj}");
             }
         }
@@ -183,24 +191,24 @@ namespace TTvActionHub
                 if (table["action"] is not LuaFunction action)
                     throw new Exception($"{ParamAdress($"{keyObj}", "action")} is not a action. Check syntax.");
                 
-                Rewards.Add(keyObj.ToString()!, new Reward { Function = action });
+                _rewards.Add(keyObj.ToString()!, new Reward { Function = action });
 
                 Logger.Info($"Loaded reward: {keyObj}");
             }
         }
 
-        private void LoadTEvents(LuaTable? events)
+        private void LoadTActions(LuaTable? events)
         {
             if (events is null)
             {
-                Logger.Warn($"{FieldAdress("tevents")} is not presented. Ignoring...");
+                Logger.Warn($"{FieldAdress("tactions")} is not presented. Ignoring...");
                 return;
             }
 
             foreach (var keyObj in events.Keys)
             {
                 if(events[keyObj] is not LuaTable table)
-                    throw new Exception($"{ParamAdress("tevents", $"{keyObj}")} is not a event. Check syntax.");
+                    throw new Exception($"{ParamAdress("tactions", $"{keyObj}")} is not a event. Check syntax.");
                 if (table["action"] is not LuaFunction action)
                     throw new Exception($"{ParamAdress($"{keyObj}", "action")} is not a action. Check syntax.");
                 if (table["timeout"] is not long timeout)
@@ -208,7 +216,7 @@ namespace TTvActionHub
                 else if(timeout <= 0)
                     throw new Exception($"{ParamAdress($"{keyObj}", "timeout")} is not valid time. Allowed values (>= 1).");
 
-                TEvents.Add(new TEvent() { Action = action, Name = keyObj.ToString()!, TimeOut = timeout });
+                _tActions.Add(new TActions() { Action = action, Name = keyObj.ToString()!, TimeOut = timeout });
 
                 Logger.Info($"Loaded TEvent: {keyObj}");
             }
@@ -216,41 +224,15 @@ namespace TTvActionHub
 
         private void ShowConfigInfo()
         {
-            Logger.Info($"Config file stored at: {ConfigPath}");
-            Logger.Info($"Login: {TwitchInfo.Login}");
-            Logger.Info($"ID: {TwitchInfo.ID}");
+            Logger.Info($"Login: {_ttvInfo.Login}");
+            Logger.Info($"ID: {_ttvInfo.ID}");
             Logger.Info($"Token: found");
-            Logger.Info($"Standart cooldown: {StandartCooldown}");
-            Logger.Info($"Services logs state: {ShowLogs}");
-            if (!string.IsNullOrEmpty(OpeningBracket) && !string.IsNullOrEmpty(ClosingBracket))
-                Logger.Info($"Brackets: {OpeningBracket} and {ClosingBracket}");
+            Logger.Info($"Standart cooldown: {_stdCooldown}");
+            Logger.Info($"Services logs state: {_logsState}");
+            if (!string.IsNullOrEmpty(_obracket) && !string.IsNullOrEmpty(_cbracket))
+                Logger.Info($"Brackets: {_obracket} and {_cbracket}");
 
         }
 
-        public static void GenerateConfig(string path) => File.WriteAllText(path,
-@"
-local Keyboard = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Keyboard
-local Mouse = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Mouse
-local Chat = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Chat
-local Sounds = import('TTvActionHub', 'TTvActionHub.LuaTools.Audio').Sounds
-local Funcs = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Funcs
-
-local res = {}
-res[""force-relog""] = false -- may be changed to relogin with new account by force 
-res[""timeout""] = 1000 -- may be changed
-res[""logs""] = false -- may be changed
-
---res[""opening-bracket""] = '<' -- uncomment if you like !command <arg> more than !command (arg)
---res[""closing-bracket""] = '>' -- bracket may be any symbol, but to work they must be not identical
-
-local commands = {}
-local rewards = {}
-loacl tevents = {}
-
-res[""commands""] = commands
-res[""rewards""] = rewards
-res[""tevents""] = tevents
-return res"
-                );
     }
 }

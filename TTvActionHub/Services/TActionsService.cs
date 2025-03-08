@@ -7,13 +7,13 @@ using TTvActionHub.Logs;
 
 namespace TTvActionHub.Services
 {
-    public class TEventsService(Configuration config) : IService
+    public class TActionsService(IConfig config) : IService
     {
-        private readonly Configuration _config = config;
+        private readonly IConfig _config = config;
 
         public void Run()
         {
-            foreach (var e in _config.TEvents)
+            foreach (var e in _config.TActions)
             {
                 Logger.Log(LOGTYPE.INFO, ServiceName(), $"Running [{e.Name}] event");
                 e.Run();
@@ -23,7 +23,7 @@ namespace TTvActionHub.Services
 
         public void Stop()
         {
-            foreach (var e in _config.TEvents)
+            foreach (var e in _config.TActions)
             {
                 Logger.Log(LOGTYPE.INFO, ServiceName(), $"Stopping [{e.Name}] event");
                 e.Stop();

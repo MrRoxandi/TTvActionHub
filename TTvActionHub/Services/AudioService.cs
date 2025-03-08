@@ -5,7 +5,7 @@ using TTvActionHub.Logs;
 
 namespace TTvActionHub.Services
 {
-    public class AudioService : IService, IDisposable 
+    public class AudioService: IService, IDisposable 
     {
         private readonly HttpClient _httpClient = new();
         private readonly WaveOutEvent _waveOut = new();

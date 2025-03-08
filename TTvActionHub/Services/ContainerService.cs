@@ -11,12 +11,12 @@ using TTvActionHub.Logs;
 
 namespace TTvActionHub.Services
 {
-    public class ContainerService : IService
+    public class ContainerService: IService
     {
         private ConcurrentDictionary<string, string> _storage = new();
-        private string _fullpath = string.Empty;
+        private string _fullpath;
 
-        public void Run()
+        public ContainerService() 
         {
             var _dir = Path.Combine(Directory.GetCurrentDirectory(), "container");
             _fullpath = Path.Combine(_dir, "data.dat");
@@ -31,12 +31,18 @@ namespace TTvActionHub.Services
             {
                 ReadDataFromDisk();
             }
+        }
+
+        public void Run()
+        {
+            
             Logger.Log(LOGTYPE.INFO, ServiceName(), "Service is running");
         }
 
         public void Stop()
         {
             SaveDataToDisk().Wait(); // Ensure data is saved before stopping
+            Logger.Log(LOGTYPE.INFO, ServiceName(), "Service is stopped");
         }
 
         public string ServiceName() => "ContainerService";

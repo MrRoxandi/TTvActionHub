@@ -7,13 +7,13 @@ using TTvActionHub.Logs;
 
 namespace TTvActionHub.Services
 {
-    public class CommandsService : IService
+    public class CommandsService: IService
     {
         private readonly ConnectionCredentials _credentials;
-        private readonly Configuration _configuration;
+        private readonly IConfig _configuration;
         private readonly TwitchClient _client;
 
-        public CommandsService(Configuration config, string? onJoinMessage = null)
+        public CommandsService(IConfig config)
         {
             _configuration = config;
             _client = new TwitchClient();
@@ -29,18 +29,18 @@ namespace TTvActionHub.Services
                 Logger.Log(LOGTYPE.INFO, ServiceName(), $"Service has connected to channel {_configuration.TwitchInfo.Login}"); ;
             };
 
-            if (_configuration.ShowLogs)
+            if (_configuration.LogState)
                 _client.OnLog += (sender, args) => {
                     Logger.Log(LOGTYPE.INFO, ServiceName(), args.Data);
                 };
 
-            if (onJoinMessage is string msg)
-            {
-                _client.OnJoinedChannel += (sender, args) =>
-                {
-                    _client.SendMessage(args.Channel, msg);
-                };
-            }
+            //if (onJoinMessage is string msg)
+            //{
+            //    _client.OnJoinedChannel += (sender, args) =>
+            //    {
+            //        _client.SendMessage(args.Channel, msg);
+            //    };
+            //}
 
             Chat.client = _client;
             Chat.chat = config.TwitchInfo.Login;
@@ -50,18 +50,18 @@ namespace TTvActionHub.Services
 
         private void OnChatCommandReceived(object? sender, OnChatCommandReceivedArgs args)
         {
-            //Getting command name from chat
             var cmd = args.Command.CommandText;
             var cmdArgStr = args.Command.ArgumentsAsString;
             var chatMessage = args.Command.ChatMessage;
             var cmdSender = chatMessage.Username;
-            
-            if (!_configuration.Commands.TryGetValue(cmd, out Command? value)) return;
 
-            if (!string.IsNullOrEmpty(_configuration.OpeningBracket) && !string.IsNullOrEmpty(_configuration.ClosingBracket))
+            if (!_configuration.Commands.TryGetValue(cmd, out Command? value)) return;
+            var (obr, cbr) = _configuration.Brackets;
+
+            if (!string.IsNullOrEmpty(obr) && !string.IsNullOrEmpty(cbr))
             {
-                var start = cmdArgStr.IndexOf(_configuration.OpeningBracket, StringComparison.Ordinal);
-                var stop = cmdArgStr.IndexOf(_configuration.ClosingBracket, StringComparison.Ordinal);
+                var start = cmdArgStr.IndexOf(obr, StringComparison.Ordinal);
+                var stop = cmdArgStr.IndexOf(cbr, StringComparison.Ordinal);
                 if (start == -1 || stop == -1)
                     cmdArgStr = "";
                 else
@@ -71,9 +71,9 @@ namespace TTvActionHub.Services
             Logger.Log(LOGTYPE.INFO, ServiceName(), $"Received command: {cmd} from {cmdSender} with args: {cmdArgStr}");
 
             string[]? cmdArgs = string.IsNullOrEmpty(cmdArgStr) ? null : cmdArgStr.Split(' ');
-            
+
             value.Execute(
-                cmdSender, 
+                cmdSender,
                 Users.ParceFromTwitchLib(chatMessage.UserType, chatMessage.IsSubscriber, chatMessage.IsVip),
                 cmdArgs);
         }

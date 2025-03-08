@@ -6,10 +6,10 @@ namespace TTvActionHub.Services
 {
     public class RewardsService : IService
     {
-        private readonly Configuration _configuration;
+        private readonly IConfig _configuration;
         private readonly TwitchPubSub _client;
         
-        public RewardsService(Configuration configuration)
+        public RewardsService(IConfig configuration)
         {
             _configuration = configuration;
             _client = new TwitchPubSub();
@@ -25,7 +25,7 @@ namespace TTvActionHub.Services
                 {
                     Logger.Log(LOGTYPE.ERROR, ServiceName(), $"Failed to listen!, {args.Response.Error}");
                 }
-                else if (_configuration.ShowLogs)
+                else if (_configuration.LogState)
                 {
                     Logger.Log(LOGTYPE.INFO, ServiceName(), $"{args.Topic}");
                 }
@@ -40,11 +40,11 @@ namespace TTvActionHub.Services
 
                 if (!_configuration.Rewards.TryGetValue(rewardTitle, out Reward? value)) return;
 
-
-                if (!string.IsNullOrEmpty(_configuration.OpeningBracket) && !string.IsNullOrEmpty(_configuration.ClosingBracket))
+                var (obr, cbr) = _configuration.Brackets;
+                if (!string.IsNullOrEmpty(obr) && !string.IsNullOrEmpty(cbr))
                 {
-                    var start = rewardArgsStr.IndexOf(_configuration.OpeningBracket, StringComparison.Ordinal);
-                    var stop = rewardArgsStr.IndexOf(_configuration.ClosingBracket, StringComparison.Ordinal);
+                    var start = rewardArgsStr.IndexOf(obr, StringComparison.Ordinal);
+                    var stop = rewardArgsStr.IndexOf(cbr, StringComparison.Ordinal);
                     if (start == -1 || stop == -1)
                         rewardArgsStr = "";
                     else
