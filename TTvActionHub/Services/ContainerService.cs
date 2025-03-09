@@ -36,29 +36,29 @@ namespace TTvActionHub.Services
         public void Run()
         {
             
-            Logger.Log(LOGTYPE.INFO, ServiceName(), "Service is running");
+            Logger.Log(LOGTYPE.INFO,  ServiceName, "Service is running");
         }
 
         public void Stop()
         {
             SaveDataToDisk().Wait(); // Ensure data is saved before stopping
-            Logger.Log(LOGTYPE.INFO, ServiceName(), "Service is stopped");
+            Logger.Log(LOGTYPE.INFO,  ServiceName, "Service is stopped");
         }
 
-        public string ServiceName() => "ContainerService";
+        public string ServiceName { get => "ContainerService"; }
 
         public void AddOrUpdateItem<T>(string name, T value)
         {
             string serializedValue = JsonSerializer.Serialize(value);
             _storage.AddOrUpdate(name, serializedValue, (_, __) => serializedValue);
-            Logger.Log(LOGTYPE.INFO, ServiceName(), $"Field [{name}] was updated with value [{value}]");
+            Logger.Log(LOGTYPE.INFO,  ServiceName, $"Field [{name}] was updated with value [{value}]");
         }
 
         public async Task AddOrUpdateItemAsync<T>(string name, T value)
         {
             string serializedValue = JsonSerializer.Serialize(value);
             await Task.Run(() => _storage.AddOrUpdate(name, serializedValue, (_, __) => serializedValue));
-            Logger.Log(LOGTYPE.INFO, ServiceName(), $"Field [{name}] was updated with value [{value}]");
+            Logger.Log(LOGTYPE.INFO,  ServiceName, $"Field [{name}] was updated with value [{value}]");
         }
 
         public T? GetItem<T>(string name) => _storage.ContainsKey(name) switch
@@ -80,7 +80,7 @@ namespace TTvActionHub.Services
         public bool RemoveItem(string name) {
             bool result = _storage.TryRemove(name, out _);
             if(result)
-                Logger.Log(LOGTYPE.INFO, ServiceName(), $"Field [{name}] was removed");
+                Logger.Log(LOGTYPE.INFO,  ServiceName, $"Field [{name}] was removed");
             return result;
         }
 
@@ -88,7 +88,7 @@ namespace TTvActionHub.Services
         {
             bool result = await Task.Run(() => _storage.TryRemove(name, out _));
             if (result)
-                Logger.Log(LOGTYPE.INFO, ServiceName(), $"Field [{name}] was removed");
+                Logger.Log(LOGTYPE.INFO,  ServiceName, $"Field [{name}] was removed");
             return result;
         }
 
@@ -107,11 +107,11 @@ namespace TTvActionHub.Services
                 };
                 string jsonData = JsonSerializer.Serialize(_storage, options);
                 await File.WriteAllTextAsync(_fullpath, jsonData);
-                Logger.Log(LOGTYPE.INFO, ServiceName(), "Data was saved successfully");
+                Logger.Log(LOGTYPE.INFO,  ServiceName, "Data was saved successfully");
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName(), "Error saving data", ex.Message);
+                Logger.Log(LOGTYPE.ERROR,  ServiceName, "Error saving data", ex.Message);
             }
         }
 
@@ -131,13 +131,13 @@ namespace TTvActionHub.Services
                         ?? new ConcurrentDictionary<string, string>();
 
                     _storage = new ConcurrentDictionary<string, string>(deserializedStorage);
-                    Logger.Log(LOGTYPE.INFO, ServiceName(), "Data was readed successfully");
+                    Logger.Log(LOGTYPE.INFO,  ServiceName, "Data was readed successfully");
                 }
-                else Logger.Log(LOGTYPE.INFO, ServiceName(), $"Nothing to read from {_fullpath}");
+                else Logger.Log(LOGTYPE.INFO,  ServiceName, $"Nothing to read from {_fullpath}");
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName(), "Error while loading data from disk", ex.Message);
+                Logger.Log(LOGTYPE.ERROR,  ServiceName, "Error while loading data from disk", ex.Message);
                 _storage = new ConcurrentDictionary<string, string>();
             }
         }

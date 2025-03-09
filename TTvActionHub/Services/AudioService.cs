@@ -33,12 +33,12 @@ namespace TTvActionHub.Services
         public void Run()
         {
             _workerTask = Task.Run(ProcessSoundQueueAsync, _serviceCancellationToken.Token);
-            Logger.Log(LOGTYPE.INFO, ServiceName(), "Sound service is running");
+            Logger.Log(LOGTYPE.INFO,  ServiceName, "Sound service is running");
         }
 
         public void Stop()
         {
-            Logger.Log(LOGTYPE.INFO, ServiceName(), "Sound service is stopping");
+            Logger.Log(LOGTYPE.INFO,  ServiceName, "Sound service is stopping");
             _serviceCancellationToken.Cancel();
 
             // Wait for worker task to complete
@@ -51,7 +51,7 @@ namespace TTvActionHub.Services
                 // Log exceptions from the worker task
                 foreach (var innerEx in ex.InnerExceptions)
                 {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName(), "Exception during sound processing:", innerEx.Message);
+                    Logger.Log(LOGTYPE.ERROR,  ServiceName, "Exception during sound processing:", innerEx.Message);
                 }
             }
 
@@ -70,7 +70,7 @@ namespace TTvActionHub.Services
         {
             if(_waveOut.PlaybackState != PlaybackState.Playing)
             {
-                Logger.Log(LOGTYPE.WARNING, ServiceName(), "Nothing to skip right now");
+                Logger.Log(LOGTYPE.WARNING,  ServiceName, "Nothing to skip right now");
                 return;
             }
             _soundCompletionSource.TrySetResult(false);
@@ -85,7 +85,7 @@ namespace TTvActionHub.Services
         {
             if(volume < 0) throw new Exception("Minimun value for voleme is 0.0");
             if (volume > 1) throw new Exception("Maximum value for voleme is 1.0");
-            Logger.Log(LOGTYPE.INFO, ServiceName(), $"Setting volume to {volume}");
+            Logger.Log(LOGTYPE.INFO,  ServiceName, $"Setting volume to {volume}");
             _waveOut.Volume = volume;
         }
 
@@ -139,7 +139,7 @@ namespace TTvActionHub.Services
                     }
                     catch (Exception ex)
                     {
-                        Logger.Log(LOGTYPE.ERROR, ServiceName(), "Error processing sound request.", ex.Message);
+                        Logger.Log(LOGTYPE.ERROR,  ServiceName, "Error processing sound request.", ex.Message);
                     }
                 }
                 else
@@ -162,7 +162,7 @@ namespace TTvActionHub.Services
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName(), $"Error playing sound from disk: {path}", ex.Message);
+                Logger.Log(LOGTYPE.ERROR,  ServiceName, $"Error playing sound from disk: {path}", ex.Message);
                 throw; // Re-throw to allow handling higher up.
             }
         }
@@ -175,7 +175,7 @@ namespace TTvActionHub.Services
 
             try
             {
-                Logger.Log(LOGTYPE.INFO, ServiceName(), $"Downloading audio from: {url}");
+                Logger.Log(LOGTYPE.INFO,  ServiceName, $"Downloading audio from: {url}");
                 using (var response = await _httpClient.GetAsync(url, _serviceCancellationToken.Token))
                 {
                     response.EnsureSuccessStatusCode();
@@ -194,16 +194,16 @@ namespace TTvActionHub.Services
             }
             catch (HttpRequestException ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName(), $"Error downloading audio from: {url}", ex.Message);
+                Logger.Log(LOGTYPE.ERROR,  ServiceName, $"Error downloading audio from: {url}", ex.Message);
                 throw;
             }
             catch (OperationCanceledException)
             {
-                Logger.Log(LOGTYPE.INFO, ServiceName(), "Download cancelled.");
+                Logger.Log(LOGTYPE.INFO,  ServiceName, "Download cancelled.");
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName(), $"Error playing sound from URL: {url}", ex.Message);
+                Logger.Log(LOGTYPE.ERROR,  ServiceName, $"Error playing sound from URL: {url}", ex.Message);
                 throw;
             }
             finally
@@ -213,12 +213,12 @@ namespace TTvActionHub.Services
                     if (File.Exists(tempFilePath))
                     {
                         File.Delete(tempFilePath);
-                        Logger.Log(LOGTYPE.INFO, ServiceName(), $"Deleted temporary file: {tempFilePath}");
+                        Logger.Log(LOGTYPE.INFO,  ServiceName, $"Deleted temporary file: {tempFilePath}");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName(), $"Error deleting temporary file: {tempFilePath}", ex.Message);
+                    Logger.Log(LOGTYPE.ERROR,  ServiceName, $"Error deleting temporary file: {tempFilePath}", ex.Message);
                 }
             }
         }
@@ -237,7 +237,7 @@ namespace TTvActionHub.Services
                 reader = GetReader(audioStream, fileExtension);
                 _waveOut.Init(reader);
                 _waveOut.Play();
-                Logger.Log(LOGTYPE.INFO, ServiceName(), "Playback started");
+                Logger.Log(LOGTYPE.INFO,  ServiceName, "Playback started");
 
                 _soundCompletionSource = new();
                 bool isCompleted = false; // Add a flag
@@ -249,7 +249,7 @@ namespace TTvActionHub.Services
                     isCompleted = true; // Set the flag
                     if (args.Exception != null)
                     {
-                        Logger.Log(LOGTYPE.ERROR, ServiceName(), "Error during playback", args.Exception.Message);
+                        Logger.Log(LOGTYPE.ERROR,  ServiceName, "Error during playback", args.Exception.Message);
                         _soundCompletionSource.TrySetException(args.Exception);
                     }
                     else
@@ -268,11 +268,11 @@ namespace TTvActionHub.Services
                 } 
                 else if(_soundCompletionSource.Task.Result == false)
                 {
-                    Logger.Log(LOGTYPE.INFO, ServiceName(), "Playback cancelled");
+                    Logger.Log(LOGTYPE.INFO,  ServiceName, "Playback cancelled");
                     //_waveOut.Stop();
                 } else
                 {
-                    Logger.Log(LOGTYPE.INFO, ServiceName(), "Playback finished successfully");
+                    Logger.Log(LOGTYPE.INFO,  ServiceName, "Playback finished successfully");
                 }
             }
             finally
@@ -307,6 +307,6 @@ namespace TTvActionHub.Services
             }
         }
 
-        public string ServiceName() => "AudioService";
+        public string ServiceName { get => "AudioService"; }
     }
 }

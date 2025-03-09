@@ -164,10 +164,10 @@ namespace TTvActionHub
                     Logger.Warn($"{ParamAdress($"{keyObj}", "timeout")} is not presented. Will be used default value: {_stdCooldown} ms");
                     timer = _stdCooldown;
                 }
-                if (table["perm"] is not USERLEVEL perm)
+                if (table["perm"] is not Users.USERLEVEL perm)
                 {
                     Logger.Warn($"{ParamAdress($"{keyObj}", "perm")} is not presented. Will be used default value: VIEWIER");
-                    perm = USERLEVEL.VIEWIER;
+                    perm = Users.USERLEVEL.VIEWIER;
                 }
                             
                 _commands.Add(keyObj.ToString()!, new Command { Function = action, Perm = perm, TimeOut = timer});

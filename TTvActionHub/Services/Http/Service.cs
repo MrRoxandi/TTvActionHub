@@ -72,9 +72,7 @@ namespace TTvActionHub.Services.Http
             response.Close();
         }
 
-        public string ServiceName()
-        {
-            throw new NotImplementedException();
-        }
+        public string ServiceName { get => throw new NotImplementedException(); }
+
     }
 }

@@ -7,13 +7,13 @@ using TwitchLib.Client.Enums;
 
 namespace TTvActionHub.LuaTools.Stuff
 {
-    public enum USERLEVEL: int
-    {
-        VIEWIER, VIP, SUB, MODERATOR, BROADCASTER
-    }
-
     public class Users
     {
+        public enum USERLEVEL : int
+        {
+            VIEWIER, VIP, SUB, MODERATOR, BROADCASTER
+        }
+
         public static USERLEVEL ParceFromTwitchLib(UserType type, bool issub, bool isvip)
         {
             return type switch

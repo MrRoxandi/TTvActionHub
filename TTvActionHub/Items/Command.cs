@@ -9,10 +9,10 @@ namespace TTvActionHub.Items
     {
         private readonly Stopwatch _coolDownTimer = new();
         public required LuaFunction Function;
-        public required USERLEVEL Perm;
+        public required Users.USERLEVEL Perm;
         public long? TimeOut;
         
-        public void Execute(string sender, USERLEVEL level, string[]? args)
+        public void Execute(string sender, Users.USERLEVEL level, string[]? args)
         {
             if(level < Perm)
             {
