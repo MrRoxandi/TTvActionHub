@@ -1,9 +1,6 @@
-﻿using System.Runtime.CompilerServices;
-using TTvActionHub.Services;
-using TTvActionHub.Twitch;
+﻿using TTvActionHub.Services;
 using TTvActionHub.Logs;
 using TTvActionHub.LuaTools.Audio;
-using TTvActionHub.Services.Http;
 using TTvActionHub.LuaTools.Stuff;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -32,12 +29,12 @@ namespace TTvActionHub
                 return;
             }
             ServiceCollection collection = new();
-                collection.AddSingleton<IConfig, Configuration>((o) => new Configuration(path));
-                collection.AddSingleton<AudioService>();
-                collection.AddSingleton<CommandsService>();
-                collection.AddSingleton<RewardsService>();
-                collection.AddSingleton<TActionsService>();
-                collection.AddSingleton<ContainerService>();
+            collection.AddSingleton<IConfig, Configuration>((o) => new Configuration(path));
+            collection.AddSingleton<AudioService>();
+            collection.AddSingleton<CommandsService>();
+            collection.AddSingleton<RewardsService>();
+            collection.AddSingleton<TActionsService>();
+            collection.AddSingleton<ContainerService>();
             provider = collection.BuildServiceProvider();
 
             try
@@ -62,7 +59,7 @@ namespace TTvActionHub
         private static void RunServices()
         {
             var _commandservice = provider?.GetService<CommandsService>();
-           _commandservice?.Run();
+            _commandservice?.Run();
 
             var _rewardsservice = provider?.GetService<RewardsService>();
             _rewardsservice?.Run();
@@ -97,7 +94,7 @@ namespace TTvActionHub
             var actionsService = provider?.GetService<TActionsService>();
             actionsService?.Stop();
 
-            
+
         }
 
         private static void CreateConfig(string path) => File.WriteAllText(path,
@@ -112,7 +109,7 @@ local Users = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Users
 local Chat = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Chat
 
 local res = {}
-res[""force-relog""] = false -- may be changed to relogin with new account by force 
+res[""force-relog""] = false -- may be changed to relogin with new account by force
 res[""timeout""] = 1000 -- may be changed
 res[""logs""] = false -- may be changed
 

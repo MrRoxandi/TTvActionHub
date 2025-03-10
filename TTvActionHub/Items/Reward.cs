@@ -1,6 +1,4 @@
-﻿using System;
-using System.Diagnostics;
-using NLua;
+﻿using NLua;
 using TTvActionHub.Logs;
 
 namespace TTvActionHub.Items

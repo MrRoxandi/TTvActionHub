@@ -1,6 +1,4 @@
-﻿using NAudio.Vorbis;
-using NAudio.Wave;
-using TTvActionHub.Services;
+﻿using TTvActionHub.Services;
 
 namespace TTvActionHub.LuaTools.Audio
 {

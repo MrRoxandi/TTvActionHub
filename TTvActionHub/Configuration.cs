@@ -1,6 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Text;
 using NLua;
 using TTvActionHub.Items;
@@ -84,7 +81,7 @@ namespace TTvActionHub
                 }
             }
 
-            if(isForceRelog || authInfo == null)
+            if (isForceRelog || authInfo == null)
             {
                 var auth = TwitchApi.GetAuthorizationInfo().Result;
                 if (auth.Login == null || auth.ID == null || auth.Token == null)
@@ -92,7 +89,9 @@ namespace TTvActionHub
                 authInfo = auth;
             }
 
-            _ttvInfo = new() { 
+
+            _ttvInfo = new()
+            {
                 Login = authInfo?.Login ?? "", 
                 ID = authInfo?.ID ?? "", 
                 Token = authInfo?.Token ?? "", 

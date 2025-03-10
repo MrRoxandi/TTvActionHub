@@ -2,10 +2,7 @@
 using System.Net;
 using System.Text.Json;
 using TwitchLib.Api;
-using TTvActionHub.Logs; // Assuming this is your custom logging
-using System.Net.Http;
-using System.Threading.Tasks;
-using System.Collections.Concurrent;
+using TTvActionHub.Logs;
 
 namespace TTvActionHub.Twitch
 {
