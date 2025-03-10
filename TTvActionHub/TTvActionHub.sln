@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.002.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TwitchController", "TwitchController.csproj", "{4B0C9F70-5120-48A5-A1B1-A1D2CD59C35E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TTvActionHub", "TTvActionHub.csproj", "{4B0C9F70-5120-48A5-A1B1-A1D2CD59C35E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

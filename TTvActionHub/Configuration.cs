@@ -105,8 +105,7 @@ namespace TTvActionHub
             
             if (luaConfig["opening-bracket"] is not string obracket || luaConfig["closing-bracket"] is not string cbracket)
             {
-                //TODO: FIX
-                //ConsoleLogger.Warn($"{FieldAdress("[opening-bracket] or [closing-bracket]")} is not presented. Ignoring...");
+                Logger.Warn($"{FieldAdress("opening-bracket")} or {FieldAdress("closing-bracket")} is not presented. Ignoring...");
                 obracket = String.Empty;
                 cbracket = String.Empty;
             }
@@ -143,9 +142,11 @@ namespace TTvActionHub
             Logger.Info($"Configuration loaded successfully");
         }
 
-        private void LoadCommands(LuaTable? cmds) {
+        private void LoadCommands(LuaTable? cmds)
+        {
             
-            if (cmds is null) {
+            if (cmds is null)
+            {
                 Logger.Warn($"{FieldAdress("commands")} is not presented. Ignoring...");
                 return;
             }
@@ -154,23 +155,28 @@ namespace TTvActionHub
             {
 
                 if (cmds[keyObj] is not LuaTable table)
-                    throw new Exception($"{ParamAdress("commands", $"{keyObj}")} is not a command. Check syntax.");
+                    throw new Exception($"{ParamAdress("commands", keyObj.ToString()!)} is not a command. Check syntax.");
 
                 if (table["action"] is not LuaFunction action)
-                    throw new Exception($"{ParamAdress($"{keyObj}", "action")} is not a action. Check syntax.");
+                    throw new Exception($"{ParamAdress(keyObj.ToString()!, "action")} is not a action. Check syntax.");
 
                 if (table["timeout"] is not long timer)
                 {
-                    Logger.Warn($"{ParamAdress($"{keyObj}", "timeout")} is not presented. Will be used default value: {_stdCooldown} ms");
+                    Logger.Warn($"{ParamAdress(keyObj.ToString()!, "timeout")} is not presented. Will be used default value: {_stdCooldown} ms");
+                    timer = _stdCooldown;
+                }
+                else if (timer < 0)
+                {
+                    Logger.Warn($"{ParamAdress(keyObj.ToString()!, "timeout")} is not a valid timeout value. Will be used default value: {_stdCooldown} ms");
                     timer = _stdCooldown;
                 }
                 if (table["perm"] is not Users.USERLEVEL perm)
                 {
-                    Logger.Warn($"{ParamAdress($"{keyObj}", "perm")} is not presented. Will be used default value: VIEWIER");
+                    Logger.Warn($"{ParamAdress(keyObj.ToString()!, "perm")} is not presented. Will be used default value: VIEWIER");
                     perm = Users.USERLEVEL.VIEWIER;
                 }
                             
-                _commands.Add(keyObj.ToString()!, new Command { Function = action, Perm = perm, TimeOut = timer});
+                _commands.Add(keyObj.ToString()!, new Command { Function = action, Perm = perm, TimeOut = timer });
                 Logger.Info($"Loaded comand: {keyObj}");
             }
         }
@@ -186,10 +192,10 @@ namespace TTvActionHub
             foreach (var keyObj in rewards.Keys)
             {
                 if (rewards[keyObj] is not LuaTable table)
-                    throw new Exception($"{ParamAdress("rewards", $"{keyObj}")} is not a reward. Check syntax.");
+                    throw new Exception($"{ParamAdress("rewards", keyObj.ToString()!)} is not a reward. Check syntax.");
 
                 if (table["action"] is not LuaFunction action)
-                    throw new Exception($"{ParamAdress($"{keyObj}", "action")} is not a action. Check syntax.");
+                    throw new Exception($"{ParamAdress(keyObj.ToString()!, "action")} is not a action. Check syntax.");
                 
                 _rewards.Add(keyObj.ToString()!, new Reward { Function = action });
 
@@ -207,14 +213,14 @@ namespace TTvActionHub
 
             foreach (var keyObj in events.Keys)
             {
-                if(events[keyObj] is not LuaTable table)
-                    throw new Exception($"{ParamAdress("tactions", $"{keyObj}")} is not a event. Check syntax.");
+                if (events[keyObj] is not LuaTable table)
+                    throw new Exception($"{ParamAdress("tactions", keyObj.ToString()!)} is not a event. Check syntax.");
                 if (table["action"] is not LuaFunction action)
-                    throw new Exception($"{ParamAdress($"{keyObj}", "action")} is not a action. Check syntax.");
+                    throw new Exception($"{ParamAdress(keyObj.ToString()!, "action")} is not a action. Check syntax.");
                 if (table["timeout"] is not long timeout)
-                    throw new Exception($"{ParamAdress($"{keyObj}", "timeout")} is not a integer. Check syntax.");
-                else if(timeout <= 0)
-                    throw new Exception($"{ParamAdress($"{keyObj}", "timeout")} is not valid time. Allowed values (>= 1).");
+                    throw new Exception($"{ParamAdress(keyObj.ToString()!, "timeout")} is not a integer. Check syntax.");
+                else if (timeout <= 0)
+                    throw new Exception($"{ParamAdress(keyObj.ToString()!, "timeout")} is not valid time. Allowed values (>= 1).");
 
                 _tActions.Add(new TActions() { Action = action, Name = keyObj.ToString()!, TimeOut = timeout });
 
@@ -229,6 +235,8 @@ namespace TTvActionHub
             Logger.Info($"Token: found");
             Logger.Info($"Standart cooldown: {_stdCooldown}");
             Logger.Info($"Services logs state: {_logsState}");
+            Logger.Info($"Loaded commands: [{string.Join(',', _commands.Keys)}]");
+            Logger.Info($"Loaded rewards: [{string.Join(',', _rewards.Keys)}]");
             if (!string.IsNullOrEmpty(_obracket) && !string.IsNullOrEmpty(_cbracket))
                 Logger.Info($"Brackets: {_obracket} and {_cbracket}");
 

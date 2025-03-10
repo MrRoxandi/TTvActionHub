@@ -104,9 +104,12 @@ namespace TTvActionHub
 @"
 local Keyboard = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Keyboard
 local Mouse = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Mouse
-local Chat = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Chat
 local Sounds = import('TTvActionHub', 'TTvActionHub.LuaTools.Audio').Sounds
+
+local Storage = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Storage
 local Funcs = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Funcs
+local Users = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Users
+local Chat = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Chat
 
 local res = {}
 res[""force-relog""] = false -- may be changed to relogin with new account by force 
@@ -118,11 +121,11 @@ res[""logs""] = false -- may be changed
 
 local commands = {}
 local rewards = {}
-loacl tevents = {}
+local tactions = {}
 
 res[""commands""] = commands
 res[""rewards""] = rewards
-res[""tevents""] = tevents
+res[""tactions""] = tactions
 return res"
                         );
     }
