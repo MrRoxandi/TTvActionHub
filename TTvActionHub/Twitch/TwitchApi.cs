@@ -8,6 +8,8 @@ namespace TTvActionHub.Twitch
 {
     public class TwitchApi
     {
+        public TwitchAPI InnerAPI { get => _api; }
+
         private readonly TwitchAPI _api;
         private readonly string _redirectUrl;
         private readonly string _clientId;

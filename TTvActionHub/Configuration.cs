@@ -5,6 +5,7 @@ using TTvActionHub.Logs;
 using TTvActionHub.Security;
 using TTvActionHub.Twitch;
 using TTvActionHub.LuaTools.Stuff;
+using System.Collections.Concurrent;
 
 namespace TTvActionHub
 {
@@ -14,22 +15,23 @@ namespace TTvActionHub
         private static string ClientSecret { get => "--"; }
         private static string RedirectUrl { get => @"http://localhost:3000/"; }
 
-        public Dictionary<string, Command> Commands { get => _commands; }
-        public Dictionary<string, Reward> Rewards { get => _rewards; }
+        public ConcurrentDictionary<string, Command> Commands { get => _commands; }
+        public ConcurrentDictionary<string, Reward> Rewards { get => _rewards; }
         public List<TActions> TActions { get => _tActions; }
 
         public (string Login, string ID, string Token, string RefreshToken) TwitchInfo { get => _ttvInfo; }
         public bool LogState { get => _logsState; }
         public (string obr, string cbr) Brackets { get => new(_obracket, _cbracket); }
+        public TwitchApi TwitchApi { get => _twitchApi; }
 
         private readonly (string Login, string ID, string Token, string RefreshToken) _ttvInfo;
-        private readonly TwitchApi TwitchApi;
+        private readonly TwitchApi _twitchApi;
 
         private readonly long _stdCooldown;
         private readonly bool _logsState;
 
-        private readonly Dictionary<string, Command> _commands;
-        private readonly Dictionary<string, Reward> _rewards;
+        private readonly ConcurrentDictionary<string, Command> _commands;
+        private readonly ConcurrentDictionary<string, Reward> _rewards;
         private readonly List<TActions> _tActions;
 
         private readonly string _obracket;
@@ -53,7 +55,7 @@ namespace TTvActionHub
                 throw new Exception($"Failed to load controller configuration. Check the [{path}] config");
             }
 
-            TwitchApi = new TwitchApi(ClientId, ClientSecret, RedirectUrl);
+            _twitchApi = new TwitchApi(ClientId, ClientSecret, RedirectUrl);
 
             if (luaConfig["force-relog"] is not bool isForceRelog)
             {
@@ -69,10 +71,10 @@ namespace TTvActionHub
                 authInfo = AuthorizationManager.LoadInfo(ClientSecret);
                 if (authInfo is (string, string, string, string) info)
                 {
-                    if (!TwitchApi.ValidateTokenAsync(info.Token).Result)
+                    if (!_twitchApi.ValidateTokenAsync(info.Token).Result)
                     {
                         Logger.Info("Trying to update token");
-                        var (AccessToken, RefreshToken) = TwitchApi.RefreshAccessTokenAsync(info.RefreshToken).Result;
+                        var (AccessToken, RefreshToken) = _twitchApi.RefreshAccessTokenAsync(info.RefreshToken).Result;
                         info.Token = AccessToken;
                         info.RefreshToken = RefreshToken ?? authInfo?.RefreshToken;
                     }
@@ -83,7 +85,7 @@ namespace TTvActionHub
 
             if (isForceRelog || authInfo == null)
             {
-                var auth = TwitchApi.GetAuthorizationInfo().Result;
+                var auth = _twitchApi.GetAuthorizationInfo().Result;
                 if (auth.Login == null || auth.ID == null || auth.Token == null)
                     throw new Exception("Unable to get Authorization information");
                 authInfo = auth;
@@ -175,7 +177,7 @@ namespace TTvActionHub
                     perm = Users.USERLEVEL.VIEWIER;
                 }
                             
-                _commands.Add(keyObj.ToString()!, new Command { Function = action, Perm = perm, TimeOut = timer });
+                _commands.TryAdd(keyObj.ToString()!, new Command { Function = action, Perm = perm, TimeOut = timer });
                 Logger.Info($"Loaded comand: {keyObj}");
             }
         }
@@ -196,7 +198,7 @@ namespace TTvActionHub
                 if (table["action"] is not LuaFunction action)
                     throw new Exception($"{ParamAdress(keyObj.ToString()!, "action")} is not a action. Check syntax.");
                 
-                _rewards.Add(keyObj.ToString()!, new Reward { Function = action });
+                _rewards.TryAdd(keyObj.ToString()!, new Reward { Function = action });
 
                 Logger.Info($"Loaded reward: {keyObj}");
             }

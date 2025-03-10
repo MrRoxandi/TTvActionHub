@@ -48,7 +48,7 @@ namespace TTvActionHub.Services
             _client.OnChatCommandReceived += OnChatCommandReceived;
         }
 
-        private void OnChatCommandReceived(object? sender, OnChatCommandReceivedArgs args)
+        private void OnChatCommandReceived(object? sender, OnChatCommandReceivedArgs args) => Task.Run(() =>
         {
             var cmd = args.Command.CommandText;
             var cmdArgStr = args.Command.ArgumentsAsString;
@@ -68,7 +68,7 @@ namespace TTvActionHub.Services
                     cmdArgStr = cmdArgStr.Substring(start + 1, stop - start - 1);
             }
             cmdArgStr = cmdArgStr.Replace("\U000e0000", "").Trim();
-            Logger.Log(LOGTYPE.INFO,  ServiceName, $"Received command: {cmd} from {cmdSender} with args: {cmdArgStr}");
+            Logger.Log(LOGTYPE.INFO, ServiceName, $"Received command: {cmd} from {cmdSender} with args: {cmdArgStr}");
 
             string[]? cmdArgs = string.IsNullOrEmpty(cmdArgStr) ? null : cmdArgStr.Split(' ');
 
@@ -76,7 +76,7 @@ namespace TTvActionHub.Services
                 cmdSender,
                 Users.ParceFromTwitchLib(chatMessage.UserType, chatMessage.IsSubscriber, chatMessage.IsVip),
                 cmdArgs);
-        }
+        });
 
         public void Run()
         {
