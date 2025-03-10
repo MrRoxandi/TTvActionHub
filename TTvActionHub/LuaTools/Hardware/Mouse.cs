@@ -32,6 +32,13 @@ namespace TTvActionHub.LuaTools.Hardware
         private const uint INPUT_MOUSE = 0;
 
         [StructLayout(LayoutKind.Sequential)]
+        private struct INPUT
+        {
+            public uint type;
+            public MOUSEINPUT mi;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
         private struct MOUSEINPUT
         {
             public int dx;
@@ -40,13 +47,6 @@ namespace TTvActionHub.LuaTools.Hardware
             public uint dwFlags;
             public uint time;
             public nint dwExtraInfo;
-        }
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct INPUT
-        {
-            public uint type;
-            public MOUSEINPUT mi;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -131,7 +131,7 @@ namespace TTvActionHub.LuaTools.Hardware
 
         private static void SendMouseEvent(uint flags, int data = 0)
         {
-            INPUT input = new INPUT
+            var input = new INPUT
             {
                 type = INPUT_MOUSE,
                 mi = new MOUSEINPUT
@@ -145,7 +145,7 @@ namespace TTvActionHub.LuaTools.Hardware
                 }
             };
 
-            if (SendInput(1, new INPUT[] { input }, Marshal.SizeOf(typeof(INPUT))) == 0)
+            if (SendInput(1, [input], Marshal.SizeOf<INPUT>()) == 0)
                 throw new InvalidOperationException("Failed to send mouse input.");
         }
     }

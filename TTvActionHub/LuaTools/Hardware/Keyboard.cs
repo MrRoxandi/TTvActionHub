@@ -41,7 +41,7 @@ namespace TTvActionHub.LuaTools.Hardware
 
         public static void PressKey(Key k)
         {
-            keybd_event((byte)k, 0, KEYEVENTF_EXTENDEDKEY, nuint.Zero);
+            keybd_event((byte)k, 0, 0, nuint.Zero);
         }
 
         public static void ReleaseKey(Key k)
