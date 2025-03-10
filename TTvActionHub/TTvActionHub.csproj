@@ -2,11 +2,22 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.22000.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
+    <StartupObject>TTvActionHub.Program</StartupObject>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+    <PlatformTarget>x64</PlatformTarget>
+    <PublishAot>False</PublishAot>
+    <ApplicationIcon>logo.ico</ApplicationIcon>
+    <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="logo.ico" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="KeraLua" Version="1.4.3" />
