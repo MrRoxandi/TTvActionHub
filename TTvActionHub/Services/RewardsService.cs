@@ -20,34 +20,7 @@ namespace TTvActionHub.Services
             _client.WebsocketDisconnected += WebsocketDisconnectedHandler;
             _client.ErrorOccurred += ErrorOccurredHandler;
             _client.ChannelPointsCustomRewardRedemptionAdd += ChannelPointsCustomRewardRedemptionAddHandler;
-            //_client.ChannelPointsCustomRewardRedemptionUpdate += ChannelPointsCustomRewardRedemptionUpdate;
-
-
-            //_client.OnChannelPointsRewardRedeemed += (sender, args) =>
-            //{
-            //    var rewardTitle = args.RewardRedeemed.Redemption.Reward.Title;
-            //    var rewardResiever = args.RewardRedeemed.Redemption.User.DisplayName;
-            //    var rewardArgsStr = args.RewardRedeemed.Redemption.UserInput;
-
-
-            //    if (!_configuration.Rewards.TryGetValue(rewardTitle, out Reward? value)) return;
-
-            //    var (obr, cbr) = _configuration.Brackets;
-            //    if (!string.IsNullOrEmpty(obr) && !string.IsNullOrEmpty(cbr))
-            //    {
-            //        var start = rewardArgsStr.IndexOf(obr, StringComparison.Ordinal);
-            //        var stop = rewardArgsStr.IndexOf(cbr, StringComparison.Ordinal);
-            //        if (start == -1 || stop == -1)
-            //            rewardArgsStr = "";
-            //        else
-            //            rewardArgsStr = rewardArgsStr.Substring(start + 1, stop - start - 1);
-            //    }
-            //    rewardArgsStr = rewardArgsStr.Replace("\U000e0000", "").Trim();
-            //    Logger.Log(LOGTYPE.ERROR,  ServiceName, $"Received reward: {rewardTitle} from {rewardResiever} with args: {rewardArgsStr}");
-
-            //    string[]? rewardArgs = string.IsNullOrEmpty(rewardArgsStr) ? null : rewardArgsStr.Split(' ');
-            //    value.Execute(rewardResiever, rewardArgs);
-            //};
+            
         }
 
         private Task ChannelPointsCustomRewardRedemptionUpdate(object sender, TwitchLib.EventSub.Websockets.Core.EventArgs.Channel.ChannelPointsCustomRewardRedemptionArgs args)
