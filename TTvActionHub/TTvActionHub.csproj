@@ -1,0 +1,44 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows10.0.22000.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <StartupObject>TTvActionHub.Program</StartupObject>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+    <PlatformTarget>x64</PlatformTarget>
+    <PublishAot>False</PublishAot>
+    <ApplicationIcon>logo.ico</ApplicationIcon>
+    <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
+
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier> <!-- Укажите целевую ОС и архитектуру -->
+    <PublishTrimmed>false</PublishTrimmed> <!-- Опционально: для уменьшения размера, но может потребовать тестирования -->
+    <ReadyToRun>true</ReadyToRun>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="logo.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="KeraLua" Version="1.4.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.2" />
+    <PackageReference Include="NAudio" Version="2.2.1" />
+    <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
+    <PackageReference Include="NLua" Version="1.7.4" />
+    <PackageReference Include="NVorbis" Version="0.10.4" />
+    <PackageReference Include="TwitchLib" Version="3.5.3" />
+    <PackageReference Include="TwitchLib.EventSub.Core" Version="2.5.2" />
+    <PackageReference Include="TwitchLib.EventSub.Websockets" Version="0.5.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Service Include="{508349b6-6b84-4df5-91f0-309beebad82d}" />
+  </ItemGroup>
+
+</Project>

@@ -1,15 +1,23 @@
-# Twitch Controller
+# TTvActionHub
 
-> Spice up your Twitch streams by letting your chat control your keyboard and mouse with custom LUA scripts!
-
-This project lets you create custom Twitch chat commands that trigger keyboard and mouse presses. Viewers can use these commands or rewards for channel points to interact with your game or stream. Define the command logic keyboard and mouse actions using LUA scripts.
+> This project focuses on gathering all the most useful tools for Twitch streaming in one place.
+> Music playback.
+> Keyboard and mouse emulation.
+> Storing interesting data.
+> And all of this is tied to actions that can be triggered through Twitch channel points or Twitch commands (yes, your own personal chat bot).
 
 ## Features
 
-- **Custom Chat Commands:** Create commands that viewers can trigger in chat.
-- **LUA Scripting:** Define command behavior and keyboard actions with flexible LUA scripts.
-- **Keyboard Emulation:** Simulate key presses and combinations for in-game actions or other effects.
-- **Mouse emulation:** Simulate mouse buttons presses and wheel scrolls for in-game actions or other effects.
+- **Sound playback**
+- **Data storage under names**
+- **Custom events for Twitch chat commands**
+- **Custom events for Twitch channel points**
+- **Keyboard emulation**
+- **Mouse emulation**
+
+## Highlights
+
+- **[LUA Scripting](#lua-scripting)**: Since the project focuses on complete freedom, we provide possibilities and tools, and the user determines what and how it should work. That's why the most user-friendly interface was chosen for this approach.
 
 ## Installation (Windows)
 
@@ -20,12 +28,12 @@ This project lets you create custom Twitch chat commands that trigger keyboard a
 ## Running (Windows)
 
 1. Navigate to the extracted directory.
-2. Place `config.lua` file in bin directory.
+2. Place `config.lua` file in root directory. (or just run the program)
 3. Run the `TwitchController.exe`.
 
 ## LUA Scripting
 
-This project allows you to customize chat commands using LUA scripts. The [`example.lua`](TwitchController/example/example.md) file provides an example configuration. For a detailed description of the available API, please refer to the [API_ENG](TwitchController/API_ENG.md)/[API_RU](TwitchController/API_RU.md) .
+This project allows you to customize chat commands using LUA scripts. The [`examples`](TTvActionHub/example/) files provides an example files for configuration, commands and other. For a detailed description of the available API, please refer to the [API_ENG](TTvActionHub/API_ENG.md)/[API_RU](TTvActionHub/API_RU.md) .
 
 ## License
 
