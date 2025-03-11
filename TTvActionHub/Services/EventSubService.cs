@@ -1,18 +1,16 @@
 ﻿using TTvActionHub.Items;
 using TTvActionHub.Logs;
-using TwitchLib.Api.Helix;
 using TwitchLib.Api.Helix.Models.EventSub;
 using TwitchLib.EventSub.Websockets;
 
 namespace TTvActionHub.Services
 {
-    public class RewardsService : IService
+    public class EventSubService : IService
     {
         private readonly IConfig _configuration;
-        //private readonly TwitchPubSub _client;
         private readonly EventSubWebsocketClient _client;
 
-        public RewardsService(IConfig configuration)
+        public EventSubService(IConfig configuration)
         {
             _configuration = configuration;
             _client = new();
@@ -65,7 +63,7 @@ namespace TTvActionHub.Services
 
         private async Task WebsocketConnectedHandler(object sender, TwitchLib.EventSub.Websockets.Core.EventArgs.WebsocketConnectedArgs args) 
         {
-            await Task.Run(() => Logger.Log(LOGTYPE.INFO, ServiceName, "connected to EventSub"));
+            await Task.Run(() => Logger.Log(LOGTYPE.INFO, ServiceName, "Connected to Twitch EventSub"));
             if (!args.IsRequestedReconnect)
             {
                 Logger.Log(LOGTYPE.INFO, ServiceName, "Subscribing to topics...");
@@ -117,6 +115,6 @@ namespace TTvActionHub.Services
             _client.DisconnectAsync();
         }
 
-        public string ServiceName { get => "RewardService"; }
+        public string ServiceName { get => "EventSubService"; }
     }
 }

@@ -8,7 +8,7 @@ namespace TTvActionHub
     {
         public ConcurrentDictionary<string, Command> Commands { get; }
         public ConcurrentDictionary<string, Reward> Rewards { get; }
-        public List<TActions> TActions { get; }
+        public List<TimerAction> TActions { get; }
         
         public bool LogState { get; }
         public (string Login, string ID, string Token, string RefreshToken) TwitchInfo { get; }

@@ -3,6 +3,7 @@ using System.Net;
 using System.Text.Json;
 using TwitchLib.Api;
 using TTvActionHub.Logs;
+using TwitchLib.Api.Core.Enums;
 
 namespace TTvActionHub.Twitch
 {
@@ -72,17 +73,14 @@ namespace TTvActionHub.Twitch
             return (login, id, accessToken, refreshToken);
         }
 
+        private string TokenURL => _api.Auth.GetAuthorizationCodeUrl(_redirectUrl, [
+                                    AuthScopes.Helix_Channel_Read_Redemptions,
+                                    AuthScopes.Helix_Channel_Manage_Redemptions,
+                                    AuthScopes.Chat_Edit,
+                                    AuthScopes.Chat_Read,
+                                    AuthScopes.Helix_User_Edit], clientId: _clientId);
 
-        private string TokenURL => $"https://id.twitch.tv/oauth2/authorize?client_id=" +
-                                   $"{_clientId}&redirect_uri={Uri.EscapeDataString(_redirectUrl)}" +
-                                   $"&response_type=code&scope=" +
-                                   $"{string.Join("+", [
-                                        "channel:read:redemptions",
-                                        "channel:manage:redemptions",
-                                        "user:edit",
-                                        "chat:edit",
-                                        "chat:read"
-                                   ])}";
+        private string ServiceName => "TwitchAPI";
 
         private async Task<(string? Login, string? ID)> GetChannelInfoAsync(string token)
         {
@@ -96,126 +94,38 @@ namespace TTvActionHub.Twitch
                 {
                     return (user.Login, user.Id);
                 }
-                Logger.Log(LOGTYPE.WARNING, "TwitchApi", "Could not retrieve user information from Twitch API.");
+                Logger.Log(LOGTYPE.WARNING, ServiceName, "Could not retrieve user information from Twitch API.");
                 return (null, null);
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, "TwitchApi", "Error getting channel info from Twitch API.", ex.Message);
+                Logger.Log(LOGTYPE.ERROR, ServiceName, "Error getting channel info from Twitch API.", ex.Message);
                 return (null, null);
-            }
-        }
-
-        private async Task<string?> GetLoginAsync(string token)
-        {
-            _api.Settings.AccessToken = token;
-
-            try
-            {
-                var usersResponse = await _api.Helix.Users.GetUsersAsync();
-                var user = usersResponse.Users.FirstOrDefault();
-                if (user != null)
-                {
-                    return user.Login;
-                }
-                Logger.Log(LOGTYPE.WARNING, "TwitchApi", "Could not retrieve user login from Twitch API.");
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LOGTYPE.ERROR, "TwitchApi", "Error getting channel login from Twitch API.", ex.Message);
-                return null;
-            }
-        }
-
-        private async Task<string?> GetIdAsync(string token)
-        {
-            _api.Settings.AccessToken = token;
-
-            try
-            {
-                var usersResponse = await _api.Helix.Users.GetUsersAsync();
-                var user = usersResponse.Users.FirstOrDefault();
-                if (user != null)
-                {
-                    return user.Id;
-                }
-                Logger.Log(LOGTYPE.WARNING, "TwitchApi", "Could not retrieve user Id from Twitch API.");
-                return null;
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LOGTYPE.ERROR, "TwitchApi", "Error getting channel Id from Twitch API.", ex.Message);
-                return null;
             }
         }
 
         private async Task<(string? AccessToken, string? RefreshToken)> GetAccessTokenAsync(string authorizationCode)
         {
-            var content = new FormUrlEncodedContent(
-            [
-                new KeyValuePair<string, string>("client_id", _clientId),
-                new KeyValuePair<string, string>("client_secret", _clientSecret),
-                new KeyValuePair<string, string>("code", authorizationCode),
-                new KeyValuePair<string, string>("grant_type", "authorization_code"),
-                new KeyValuePair<string, string>("redirect_uri", _redirectUrl)
-            ]);
-
             try
             {
-                var response = await _httpClient.PostAsync("https://id.twitch.tv/oauth2/token", content);
-                var responseString = await response.Content.ReadAsStringAsync();
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    Logger.Log(LOGTYPE.ERROR, "TwitchApi", $"Token request failed. Status: {response.StatusCode}, Response: {responseString}");
-                    return (null, null);
-                }
-
-                var jsonDoc = JsonDocument.Parse(responseString);
-                string? accessToken = jsonDoc.RootElement.GetProperty("access_token").GetString();
-                string? refreshToken = jsonDoc.RootElement.GetProperty("refresh_token").GetString();
-
-                return (accessToken, refreshToken);
-            }
-            catch (Exception ex)
+                var result = await _api.Auth.GetAccessTokenFromCodeAsync(authorizationCode, _clientSecret, _redirectUrl, _clientId);
+                return (result.AccessToken, result.RefreshToken);
+            } catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, "TwitchApi", "Error getting access token from Twitch API.", ex.Message);
+                Logger.Log(LOGTYPE.ERROR, ServiceName, "Unable to get access token due to erro: ", ex.Message);
                 return (null, null);
             }
         }
 
         public async Task<(string? AccessToken, string? RefreshToken)> RefreshAccessTokenAsync(string refreshToken)
         {
-            var content = new FormUrlEncodedContent(new[]
-            {
-                new KeyValuePair<string, string>("client_id", _clientId),
-                new KeyValuePair<string, string>("client_secret", _clientSecret),
-                new KeyValuePair<string, string>("grant_type", "refresh_token"),
-                new KeyValuePair<string, string>("refresh_token", refreshToken),
-                new KeyValuePair<string, string>("redirect_uri", _redirectUrl)
-            });
-
-            try
-            {
-                var response = await _httpClient.PostAsync("https://id.twitch.tv/oauth2/token", content);
-                var responseString = await response.Content.ReadAsStringAsync();
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    Logger.Log(LOGTYPE.ERROR, "TwitchApi", $"Refresh token request failed. Status: {response.StatusCode}, Response: {responseString}");
-                    return (null, null);
-                }
-
-                var jsonDoc = JsonDocument.Parse(responseString);
-                string? newAccessToken = jsonDoc.RootElement.GetProperty("access_token").GetString();
-                string? newRefreshToken = jsonDoc.RootElement.GetProperty("refresh_token").GetString();  // Twitch *might* send a new refresh token
-
-                return (newAccessToken, newRefreshToken);
+            try { 
+                var result = await _api.Auth.RefreshAuthTokenAsync(refreshToken, _clientSecret, _clientId);
+                return (result.AccessToken, result.RefreshToken);
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, "TwitchApi", "Error refreshing access token from Twitch API.", ex.Message);
+                Logger.Log(LOGTYPE.ERROR, ServiceName, "Unable to refresh token due to error: ", ex.Message);
                 return (null, null);
             }
         }
@@ -225,15 +135,13 @@ namespace TTvActionHub.Twitch
             _api.Settings.AccessToken = token;
             try
             {
-                // Call an endpoint that requires authentication
                 var usersResponse = await _api.Helix.Users.GetUsersAsync();
-                return usersResponse.Users.Any(); // If we get a user, token is valid
-
+                return usersResponse.Users.Length != 0; // If we get a user, token is valid
             }
             catch (Exception ex)
             {
                 Logger.Log(LOGTYPE.WARNING, "TwitchApi", "Token validation failed. Token may be expired.", ex.Message);
-                return false; // Token invalid
+                return false; 
             }
         }
     }

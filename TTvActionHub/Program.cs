@@ -32,8 +32,8 @@ namespace TTvActionHub
             collection.AddSingleton<IConfig, Configuration>((o) => new Configuration(path));
             collection.AddSingleton<AudioService>();
             collection.AddSingleton<CommandsService>();
-            collection.AddSingleton<RewardsService>();
-            collection.AddSingleton<TActionsService>();
+            collection.AddSingleton<EventSubService>();
+            collection.AddSingleton<TimerActionsService>();
             collection.AddSingleton<ContainerService>();
             provider = collection.BuildServiceProvider();
 
@@ -61,14 +61,14 @@ namespace TTvActionHub
             var _commandservice = provider?.GetService<CommandsService>();
             _commandservice?.Run();
 
-            var _rewardsservice = provider?.GetService<RewardsService>();
+            var _rewardsservice = provider?.GetService<EventSubService>();
             _rewardsservice?.Run();
 
             var _container = provider?.GetService<ContainerService>();
             Storage._service = _container;
             _container?.Run();
 
-            var actionsService = provider?.GetService<TActionsService>();
+            var actionsService = provider?.GetService<TimerActionsService>();
             actionsService?.Run();
 
             var _audio = provider?.GetService<AudioService>();
@@ -85,13 +85,13 @@ namespace TTvActionHub
             var _commandservice = provider?.GetService<CommandsService>();
             _commandservice?.Stop();
 
-            var _rewardsservice = provider?.GetService<RewardsService>();
+            var _rewardsservice = provider?.GetService<EventSubService>();
             _rewardsservice?.Stop();
 
             var _container = provider?.GetService<ContainerService>();
             _container?.Stop();
 
-            var actionsService = provider?.GetService<TActionsService>();
+            var actionsService = provider?.GetService<TimerActionsService>();
             actionsService?.Stop();
 
 

@@ -17,7 +17,7 @@ namespace TTvActionHub
 
         public ConcurrentDictionary<string, Command> Commands { get => _commands; }
         public ConcurrentDictionary<string, Reward> Rewards { get => _rewards; }
-        public List<TActions> TActions { get => _tActions; }
+        public List<TimerAction> TActions { get => _tActions; }
 
         public (string Login, string ID, string Token, string RefreshToken) TwitchInfo { get => _ttvInfo; }
         public bool LogState { get => _logsState; }
@@ -32,7 +32,7 @@ namespace TTvActionHub
 
         private readonly ConcurrentDictionary<string, Command> _commands;
         private readonly ConcurrentDictionary<string, Reward> _rewards;
-        private readonly List<TActions> _tActions;
+        private readonly List<TimerAction> _tActions;
 
         private readonly string _obracket;
         private readonly string _cbracket;
@@ -223,7 +223,7 @@ namespace TTvActionHub
                 else if (timeout <= 0)
                     throw new Exception($"{ParamAdress(keyObj.ToString()!, "timeout")} is not valid time. Allowed values (>= 1).");
 
-                _tActions.Add(new TActions() { Action = action, Name = keyObj.ToString()!, TimeOut = timeout });
+                _tActions.Add(new TimerAction() { Action = action, Name = keyObj.ToString()!, TimeOut = timeout });
 
                 Logger.Info($"Loaded TEvent: {keyObj}");
             }

@@ -3,8 +3,9 @@ using TTvActionHub.Logs;
 
 namespace TTvActionHub.Items
 {
-    public class TActions
+    public class TimerAction
     {
+        public bool IsRunning { get => _timer != null; }
         private System.Timers.Timer? _timer;
         public required LuaFunction Action;
         public required string Name;
