@@ -13,6 +13,12 @@
     <PublishAot>False</PublishAot>
     <ApplicationIcon>logo.ico</ApplicationIcon>
     <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
+
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier> <!-- Укажите целевую ОС и архитектуру -->
+    <PublishTrimmed>false</PublishTrimmed> <!-- Опционально: для уменьшения размера, но может потребовать тестирования -->
+    <ReadyToRun>true</ReadyToRun>
   </PropertyGroup>
 
   <ItemGroup>
