@@ -33,7 +33,7 @@
 
 ## LUA Scripting
 
-This project allows you to customize chat commands using LUA scripts. The [`example.lua`](TTvActionHub/example/example.md) file provides an example configuration. For a detailed description of the available API, please refer to the [API_ENG](TTvActionHub/API_ENG.md)/[API_RU](TTvActionHub/API_RU.md) .
+This project allows you to customize chat commands using LUA scripts. The [`examples`](TTvActionHub/example/) files provides an example files for configuration, commands and other. For a detailed description of the available API, please refer to the [API_ENG](TTvActionHub/API_ENG.md)/[API_RU](TTvActionHub/API_RU.md) .
 
 ## License
 
