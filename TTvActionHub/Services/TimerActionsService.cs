@@ -15,10 +15,10 @@ namespace TTvActionHub.Services
             }
             foreach (var e in _config.TActions)
             {
-                Logger.Log(LOGTYPE.INFO, ServiceName, $"Running [{e.Name}] event");
+                Logger.Log(LOGTYPE.INFO, ServiceName, $"Running [{e.Name}] action");
                 e.Run();
             }
-            Logger.Log(LOGTYPE.INFO, ServiceName, "All events are running");
+            Logger.Log(LOGTYPE.INFO, ServiceName, "All actions are running");
         }
 
         public void Stop()
@@ -31,12 +31,12 @@ namespace TTvActionHub.Services
             foreach (var e in _config.TActions)
             {
                 if (!e.IsRunning) continue;
-                Logger.Log(LOGTYPE.INFO, ServiceName, $"Stopping [{e.Name}] event");
+                Logger.Log(LOGTYPE.INFO, ServiceName, $"Stopping [{e.Name}] action");
                 e.Stop();
             }
-            Logger.Log(LOGTYPE.INFO, ServiceName, "All events stopped");
+            Logger.Log(LOGTYPE.INFO, ServiceName, "All action stopped");
         }
 
-        public string ServiceName { get => "TimerEventsService"; }
+        public string ServiceName { get => "TimerActionsService"; }
     }
 }

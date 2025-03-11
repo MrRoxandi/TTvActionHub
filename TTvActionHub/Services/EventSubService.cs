@@ -18,7 +18,6 @@ namespace TTvActionHub.Services
             _client.WebsocketDisconnected += WebsocketDisconnectedHandler;
             _client.ErrorOccurred += ErrorOccurredHandler;
             _client.ChannelPointsCustomRewardRedemptionAdd += ChannelPointsCustomRewardRedemptionAddHandler;
-            
         }
 
         private Task ChannelPointsCustomRewardRedemptionUpdate(object sender, TwitchLib.EventSub.Websockets.Core.EventArgs.Channel.ChannelPointsCustomRewardRedemptionArgs args)
@@ -48,7 +47,7 @@ namespace TTvActionHub.Services
                         rewardArgsStr = rewardArgsStr.Substring(start + 1, stop - start - 1);
                 }
                 rewardArgsStr = rewardArgsStr.Replace("\U000e0000", "").Trim();
-                Logger.Log(LOGTYPE.ERROR, ServiceName, $"Received reward: {rewardTitle} from {rewardResiever} with args: {rewardArgsStr}");
+                Logger.Log(LOGTYPE.INFO, ServiceName, $"Received reward: {rewardTitle} from {rewardResiever} with args: {rewardArgsStr}");
 
                 string[]? rewardArgs = string.IsNullOrEmpty(rewardArgsStr) ? null : rewardArgsStr.Split(' ');
                 value.Execute(rewardResiever, rewardArgs);
@@ -76,9 +75,6 @@ namespace TTvActionHub.Services
 
         private async Task SubscribeTopics()
         {
-            var id = _configuration.TwitchInfo.ID;
-            var API = _configuration.TwitchApi.InnerAPI;
-
             try
             {
                 var result = await CreateEventSubSubscription("channel.channel_points_custom_reward_redemption.add", "1");
