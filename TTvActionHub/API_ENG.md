@@ -11,7 +11,7 @@ Any module is accessed via `TTvActionHub.LuaTools.<module>`. The table below lis
 | `TTvActionHub.LuaTools.Audio.Sounds`      | This module is responsible for playing music                               | [Documentation](API/ENG/Sounds.md)   |
 | `TTvActionHub.LuaTools.Hardware.Keyboard` | This module is responsible for keyboard emulation                          | [Documentation](API/ENG/Keyboard.md) |
 | `TTvActionHub.LuaTools.Hardware.Mouse`    | This module is responsible for mouse emulation                             | [Documentation](API/ENG/Mouse.md)    |
-| `TTvActionHub.LuaTools.Stuff.Chat`        | This module is responsible for interacting with the Twitch chat            | [Documentation](API/ENG/Chat.md)     |
+| `TTvActionHub.LuaTools.Stuff.TwitchChat`  | This module is responsible for interacting with the Twitch chat            | [Documentation](API/ENG/Chat.md)     |
 | `TTvActionHub.LuaTools.Stuff.Storage`     | This module is responsible for interacting with a special internal storage | [Documentation](API/ENG/Storage.md)  |
 | `TTvActionHub.LuaTools.Stuff.Funcs`       | This module contains useful functions for writing configurations           | [Documentation](API/ENG/Funcs.md)    |
 | `TTvActionHub.LuaTools.Stuff.Users`       | This module contains access levels used for [commands](#commands)          | ~~[Documentation]~~                  |

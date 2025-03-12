@@ -1,4 +1,4 @@
-## Documentation for the Chat Module in `TTvActionHub.LuaTools.Stuff`
+## Documentation for the TwitchChat Module in `TTvActionHub.LuaTools.Stuff`
 
 Well... There's nothing particularly amazing here, just sending messages to the Twitch chat on your behalf :/
 
@@ -10,7 +10,7 @@ Well... There's nothing particularly amazing here, just sending messages to the 
 Example usage in `config.lua`:
 
 ```lua
-local TwitchChat = import('TTvActionHub', 'TTvActionHub.Stuff').Chat
+local TwitchChat = import('TTvActionHub', 'TTvActionHub.Stuff').TwitchChat
 local name = "Someone"
 
 TwitchChat.SendMessage("Hello " .. name)

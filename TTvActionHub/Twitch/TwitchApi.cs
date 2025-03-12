@@ -29,7 +29,7 @@ namespace TTvActionHub.Twitch
             _api.Settings.Secret = clientSecret;
         }
 
-        public async Task<(string? Login, string? ID, string? Token, string? RefreshToken)> GetAuthorizationInfo()
+        public async Task<(string? Token, string? RefreshToken)> GetAuthorizationInfo()
         {
             Logger.Log(LOGTYPE.INFO, "TwitchApi", "Requesting new Twitch authentication token.");
             var authInfo = await RequestAuthorizationInfo();
@@ -37,7 +37,7 @@ namespace TTvActionHub.Twitch
             return authInfo;
         }
 
-        private async Task<(string? Login, string? ID, string? Token, string? RefreshToken)> RequestAuthorizationInfo()
+        private async Task<(string? Token, string? RefreshToken)> RequestAuthorizationInfo()
         {
             using HttpListener listener = new();
             listener.Prefixes.Add(_redirectUrl);
@@ -64,13 +64,9 @@ namespace TTvActionHub.Twitch
 
             var (accessToken, refreshToken) = await GetAccessTokenAsync(code);
 
-            if (accessToken == null || refreshToken == null) return (null, null, null, null);
+            if (accessToken == null || refreshToken == null) return (null, null);
 
-            var (login, id) = await GetChannelInfoAsync(accessToken);
-
-            if (login == null || id == null) return (null, null, null, null);
-
-            return (login, id, accessToken, refreshToken);
+            return (accessToken, refreshToken);
         }
 
         private string TokenURL => _api.Auth.GetAuthorizationCodeUrl(_redirectUrl, [
@@ -80,9 +76,9 @@ namespace TTvActionHub.Twitch
                                     AuthScopes.Chat_Read,
                                     AuthScopes.Helix_User_Edit], clientId: _clientId);
 
-        private string ServiceName => "TwitchAPI";
+        private static string ServiceName => "TwitchAPI";
 
-        private async Task<(string? Login, string? ID)> GetChannelInfoAsync(string token)
+        public async Task<(string? Login, string? ID)> GetChannelInfoAsync(string token)
         {
             _api.Settings.AccessToken = token;
 

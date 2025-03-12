@@ -1,4 +1,4 @@
-## Документация для модуля Chat в `TTvActionHub.LuaTools.Stuff`
+## Документация для модуля TwitchChat в `TTvActionHub.LuaTools.Stuff`
 
 Ну... Тут ничего прям крутого нет, просто отправка сообщений в чат Twitch от вашего имени :/
 
@@ -10,7 +10,7 @@
 Пример испоользования в `config.lua`:
 
 ```lua
-local TwitchChat = import('TTvActionHub', 'TTvActionHub.Stuff').Chat
+local TwitchChat = import('TTvActionHub', 'TTvActionHub.Stuff').TwitchChat
 local name = "Someone"
 
 TwitchChat.SendMessage("Hello " .. name)

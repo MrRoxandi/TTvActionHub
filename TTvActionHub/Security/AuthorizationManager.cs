@@ -6,14 +6,15 @@ namespace TTvActionHub.Security
 {
     internal static class AuthorizationManager 
     {
-        private static string TokenDir => "Users";
+        private static string AuthDir => "auth";
+        private static string FileName => "data";
 
         public static void SaveInfo(string secret, string Login, string ID, string Token, string RefreshToken)
         {
+            Directory.CreateDirectory(AuthDir);
+            string path = Path.Combine(AuthDir, FileName);
             try
             {
-                Directory.CreateDirectory(TokenDir);
-                string path = Path.Combine(TokenDir, "user.info");
                 string data = string.Join("\n", [Login, ID, Token, RefreshToken]);
                 string encrypted = Encrypt(data, secret);
 
@@ -22,7 +23,8 @@ namespace TTvActionHub.Security
             }
             catch (Exception ex)
             {
-                Logger.Warn($"Token save failed: {ex.Message}");
+                Logger.Warn($"Authorization info save failed: {ex.Message}");
+                if(File.Exists(path)) File.Delete(path);
             }
 
         }
@@ -31,7 +33,7 @@ namespace TTvActionHub.Security
         {
             try
             {
-                string path = Path.Combine(TokenDir, "user.info");
+                string path = Path.Combine(AuthDir, FileName);
 
                 if (File.Exists(path))
                 {

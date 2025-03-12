@@ -16,7 +16,7 @@ namespace TTvActionHub.Items
             }
             catch (Exception ex)
             {
-                Logger.Error($"Unable to run reward: {ex.Message}");
+                Logger.Error($"Unable to run reward due to error:", ex.Message);
                 return;
             }
         }

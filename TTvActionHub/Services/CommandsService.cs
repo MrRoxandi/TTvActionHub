@@ -34,16 +34,8 @@ namespace TTvActionHub.Services
                     Logger.Log(LOGTYPE.INFO,  ServiceName, args.Data);
                 };
 
-            //if (onJoinMessage is string msg)
-            //{
-            //    _client.OnJoinedChannel += (sender, args) =>
-            //    {
-            //        _client.SendMessage(args.Channel, msg);
-            //    };
-            //}
-
-            Chat.client = _client;
-            Chat.chat = config.TwitchInfo.Login;
+            TwitchChat.Client = _client;
+            TwitchChat.Channel = config.TwitchInfo.Login;
 
             _client.OnChatCommandReceived += OnChatCommandReceived;
         }

@@ -14,7 +14,7 @@
 | `TTvActionHub.LuaTools.Audio.Sounds`      | Этот модуль отвечает за воспроизведение музыки                                         | [Документация](API/RU/Sounds.md)   |
 | `TTvActionHub.LuaTools.Hardware.Keyboard` | Этот модуль отвечает за эмуляцию клавиатуры                                            | [Документация](API/RU/Keyboard.md) |
 | `TTvActionHub.LuaTools.Hardware.Mouse`    | Этот модуль отвечает за эмуляцию мышки                                                 | [Документация](API/RU/Mouse.md)    |
-| `TTvActionHub.LuaTools.Stuff.Chat`        | Этот модуль отвечает за взаимодействие с чатом твича                                   | [Документация](API/RU/Chat.md)     |
+| `TTvActionHub.LuaTools.Stuff.TwitchChat`  | Этот модуль отвечает за взаимодействие с чатом твича                                   | [Документация](API/RU/Chat.md)     |
 | `TTvActionHub.LuaTools.Stuff.Storage`     | Этот модуль отвечает за взаимодействие со специальным внутренним хранилищем            | [Документация](API/RU/Storage.md)  |
 | `TTvActionHub.LuaTools.Stuff.Funcs`       | В данном модуле содержатся полезные функции для написание конфигурации                 | [Документация](API/RU/Funcs.md)    |
 | `TTvActionHub.LuaTools.Stuff.Users`       | В данном модуле содержатся уровни доступа, которые используются для [команд](#команды) | ~~[Документация]~~                 |

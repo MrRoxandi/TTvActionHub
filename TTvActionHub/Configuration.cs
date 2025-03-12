@@ -37,8 +37,8 @@ namespace TTvActionHub
         private readonly string _obracket;
         private readonly string _cbracket;
 
-        private string FieldAdress(string confpath, string field) => $"In [{confpath}] field [{field}]";
-        private string ParamAdress(string confpath, string field, string param) => $"In [{confpath}] parameter [{param}] in field [{field}]";
+        private static string FieldAdress(string confpath, string field) => $"In [{confpath}] field [{field}]";
+        private static string ParamAdress(string confpath, string field, string param) => $"In [{confpath}] parameter [{param}] in field [{field}]";
 
         public Configuration(string configs_path)
         {
@@ -84,46 +84,43 @@ namespace TTvActionHub
                 Logger.Warn($"{FieldAdress(configpath, "force-relog")} is not presented. Will be used default value: [{false}].");
                 isForceRelog = false;
             } 
-            _configPath = path;
 
-            (string? Login, string? ID, string? Token, string? RefreshToken)? authInfo = null;
+            (string? Login, string? ID, string? Token, string? RefreshToken) authInfo = new();
 
-            if (!isForceRelog)
+            if (isForceRelog)
             {
-                authInfo = AuthorizationManager.LoadInfo(ClientSecret);
-                if (authInfo is (string, string, string, string) info)
+                authInfo = GetAuthInfoFromAPI();
+            }
+            else
                 {
-                    if (!_twitchApi.ValidateTokenAsync(info.Token).Result)
+                var authManagerResult = AuthorizationManager.LoadInfo(ClientSecret);
+                if (authManagerResult is null)
+                    authInfo = GetAuthInfoFromAPI();
+                else authInfo = authManagerResult.Value;
+                var valid_task = _twitchApi.ValidateTokenAsync(authInfo.Token!);
+                valid_task.Wait();
+                if (!valid_task.Result)
                     {
-                        Logger.Info("Trying to update token");
-                        var (AccessToken, RefreshToken) = _twitchApi.RefreshAccessTokenAsync(info.RefreshToken).Result;
-                        info.Token = AccessToken;
-                        info.RefreshToken = RefreshToken ?? authInfo?.RefreshToken;
+                    var refresh_task = _twitchApi.RefreshAccessTokenAsync(authInfo.RefreshToken!);
+                    refresh_task.Wait();
+                    authInfo.Token = refresh_task.Result.AccessToken;
+                    authInfo.RefreshToken = refresh_task.Result.RefreshToken;
                     }
-
-                    authInfo = info;
                 }
-            }
 
-            if (isForceRelog || authInfo == null)
+            if (authInfo.Token is not string token ||
+                authInfo.RefreshToken is not string rtoken ||
+                authInfo.Login is not string login ||
+                authInfo.ID is not string id)
             {
-                var auth = _twitchApi.GetAuthorizationInfo().Result;
-                if (auth.Login == null || auth.ID == null || auth.Token == null)
-                    throw new Exception("Unable to get Authorization information");
-                authInfo = auth;
+                throw new Exception("For some reasong program failed to get auth info. If u see this error report it");
             }
-
-
-            _ttvInfo = new()
+            else
             {
-                Login = authInfo?.Login ?? "", 
-                ID = authInfo?.ID ?? "", 
-                Token = authInfo?.Token ?? "", 
-                RefreshToken = authInfo?.RefreshToken ?? "" 
-            };
+                _ttvInfo = new() { ID = id, Login = login, RefreshToken = rtoken, Token = token };
+            }
 
             
-
             AuthorizationManager.SaveInfo(ClientSecret, _ttvInfo.Login, _ttvInfo.ID, _ttvInfo.Token, _ttvInfo.RefreshToken);
             
             if (luaConfig["opening-bracket"] is not string obracket || luaConfig["closing-bracket"] is not string cbracket)
@@ -163,6 +160,33 @@ namespace TTvActionHub
             ShowConfigInfo();
 
             Logger.Info($"Configuration loaded successfully");
+        }
+
+        private (string? Login, string? ID, string? Token, string? RefreshToken) GetAuthInfoFromAPI()
+        {
+            (string? Login, string? ID, string? Token, string? RefreshToken) authInfo = new();
+            var authTask = _twitchApi.GetAuthorizationInfo();
+            authTask.Wait();
+            if (authTask.IsCompleted)
+            {
+                var (Token, RefreshToken) = authTask.Result;
+                if (string.IsNullOrEmpty(Token) || string.IsNullOrEmpty(RefreshToken))
+                    throw new Exception("Unable to get Authorization information");
+                authInfo.Token = Token;
+                authInfo.RefreshToken = RefreshToken;
+            }
+            var channelInfoTask = _twitchApi.GetChannelInfoAsync(authInfo.Token!);
+            channelInfoTask.Wait();
+            if (channelInfoTask.IsCompleted)
+            {
+                var (Login, ID) = channelInfoTask.Result;
+                if (string.IsNullOrEmpty(Login) || string.IsNullOrEmpty(ID))
+                    throw new Exception("Unable to get channel information");
+                authInfo.Login = Login;
+                authInfo.ID = ID;
+            }
+
+            return authInfo;
         }
 
         private void LoadCommands(LuaTable? cmds, string path)
