@@ -84,8 +84,7 @@ namespace TTvActionHub
                 Logger.Warn($"{FieldAdress(configpath, "force-relog")} is not presented. Will be used default value: [{false}].");
                 isForceRelog = false;
             } 
-            _configPath = path;
-
+            
             (string? Login, string? ID, string? Token, string? RefreshToken)? authInfo = null;
 
             if (!isForceRelog)
