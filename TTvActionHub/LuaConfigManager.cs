@@ -12,7 +12,7 @@ namespace TTvActionHub
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Audio\").Sounds",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Hardware\").Keyboard",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Hardware\").Mouse",
-            "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Stuff\").Chat",
+            "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Stuff\").TwitchChat",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Stuff\").Storage",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Stuff\").Funcs",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Stuff\").Users"
@@ -33,7 +33,7 @@ namespace TTvActionHub
             builder.AppendLine();
             builder.AppendLine("commands['test'] = {}");
             builder.AppendLine("commands['test']['action'] =\n" +
-                "\tfunction(sender, args)\n\t\tChat.SendMessageAsync('@'..sender..' -> test')\n\tend");
+                "\tfunction(sender, args)\n\t\tTwitchChat.SendMessageAsync('@'..sender..' -> test')\n\tend");
             builder.AppendLine("commands['test']['timeout'] = 1000 -- 1000 ms");
             builder.AppendLine("commands['test']['perm'] = Users.USERLEVEL.VIEWIER");
             builder.AppendLine();
@@ -57,7 +57,7 @@ namespace TTvActionHub
             builder.AppendLine();
             builder.AppendLine("rewards['test'] = {}");
             builder.AppendLine("rewards['test']['action'] =\n" +
-                "\tfunction(sender, args)\n\t\tChat.SendMessageAsync('@'..sender..' -> test')\n\tend");
+                "\tfunction(sender, args)\n\t\tTwitchChat.SendMessageAsync('@'..sender..' -> test')\n\tend");
             builder.AppendLine();
             builder.AppendLine("return rewards");
 
@@ -79,7 +79,7 @@ namespace TTvActionHub
             builder.AppendLine();
             builder.AppendLine("timeractions['test'] = {}");
             builder.AppendLine("timeractions['test']['action'] =\n" +
-                "\tfunction()\n\t\tChat.SendMessageAsync('Just a test -> test')\n\tend");
+                "\tfunction()\n\t\tTwitchChat.SendMessageAsync('Just a test -> test')\n\tend");
             builder.AppendLine("timeractions['test']['timeout'] = 10000 -- 10000 ms");
             builder.AppendLine();
             builder.AppendLine("return timeractions");
