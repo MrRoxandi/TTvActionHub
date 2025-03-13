@@ -35,7 +35,7 @@ namespace TTvActionHub.Services
                 };
 
             TwitchChat.Client = _client;
-            TwitchChat.Channel = config.TwitchInfo.Login;
+            TwitchChat.Channel = _configuration.TwitchInfo.Login;
 
             _client.OnChatCommandReceived += OnChatCommandReceived;
         }

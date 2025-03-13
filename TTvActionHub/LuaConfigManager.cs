@@ -8,7 +8,7 @@ namespace TTvActionHub
 {
     public static class LuaConfigManager
     {
-        private static IEnumerable<string> _libs => [
+        private static IEnumerable<string> Libs => [
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Audio\").Sounds",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Hardware\").Keyboard",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Hardware\").Mouse",
@@ -24,7 +24,7 @@ namespace TTvActionHub
             if (File.Exists(file)) return;
             var builder = new StringBuilder();
 
-            foreach (var lib in _libs)
+            foreach (var lib in Libs)
             {
                 builder.AppendLine($"local {lib.Split(").").Last()} = import {lib}");
             }
@@ -48,7 +48,7 @@ namespace TTvActionHub
             if (File.Exists(file)) return;
             var builder = new StringBuilder();
 
-            foreach (var lib in _libs)
+            foreach (var lib in Libs)
             {
                 builder.AppendLine($"local {lib.Split(").").Last()} = import {lib}");
             }
@@ -70,7 +70,7 @@ namespace TTvActionHub
             if (File.Exists(file)) return;
             var builder = new StringBuilder();
 
-            foreach (var lib in _libs)
+            foreach (var lib in Libs)
             {
                 builder.AppendLine($"local {lib.Split(").").Last()} = import {lib}");
             }

@@ -58,24 +58,16 @@ namespace TTvActionHub
             var timeraction_state = lua.DoFile(timeractionspath);
             
             if (config_state[0] is not LuaTable luaConfig)
-            {
                 throw new Exception($"Returned result from {configpath} was not a valid table. Check syntax.");
-            }
 
             if (commands_state[0] is not LuaTable luaCommands)
-            {
                 throw new Exception($"Returned result from {commandspath} was not a valid table. Check syntax.");
-            }
 
             if (rewards_state[0] is not LuaTable luaRewards)
-            {
                 throw new Exception($"Returned result from {rewardspath} was not a valid table. Check syntax.");
-            }
 
             if (timeraction_state[0] is not LuaTable luaTimerActions)
-            {
                 throw new Exception($"Returned result from {timeractionspath} was not a valid table. Check syntax.");
-            }
 
             _twitchApi = new TwitchApi(ClientId, ClientSecret, RedirectUrl);
 
@@ -261,7 +253,7 @@ namespace TTvActionHub
             foreach (var keyObj in events.Keys)
             {
                 if (events[keyObj] is not LuaTable table)
-                    throw new Exception($"{ParamAdress(path, "tactions", keyObj.ToString()!)} is not a event. Check syntax.");
+                    throw new Exception($"{ParamAdress(path, "tactions", keyObj.ToString()!)} is not a timer action. Check syntax.");
                 if (table["action"] is not LuaFunction action)
                     throw new Exception($"{ParamAdress(path, keyObj.ToString()!, "action")} is not a action. Check syntax.");
                 if (table["timeout"] is not long timeout)

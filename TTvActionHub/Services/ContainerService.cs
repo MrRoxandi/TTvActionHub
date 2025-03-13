@@ -7,7 +7,7 @@ namespace TTvActionHub.Services
     public class ContainerService: IService
     {
         private ConcurrentDictionary<string, string> _storage = new();
-        private string _fullpath;
+        private readonly string _fullpath;
 
         public ContainerService() 
         {
