@@ -32,7 +32,8 @@ namespace TTvActionHub.Logs.BackEnds
             string consoleMessage, fileMessage;
             if (err is null)
             {
-                fileMessage = consoleMessage = $"{message}\n";
+                consoleMessage = $"{message}";
+                fileMessage = message + Environment.NewLine;
             }
             else
             {
