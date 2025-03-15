@@ -27,7 +27,7 @@ namespace TTvActionHub
             ServiceCollection collection = new();
             collection.AddSingleton<IConfig, Configuration>((o) => new Configuration(ConfigurationPath));
             collection.AddSingleton<AudioService>();
-            collection.AddSingleton<CommandsService>();
+            collection.AddSingleton<TwitchChatService>();
             collection.AddSingleton<EventSubService>();
             collection.AddSingleton<TimerActionsService>();
             collection.AddSingleton<ContainerService>();
@@ -39,7 +39,7 @@ namespace TTvActionHub
             }
             catch (Exception ex)
             {
-                Logger.Error("While running services, occured an error: ", ex.Message);
+                Logger.Error("While running services, occured an error: ", ex);
                 _ = Console.ReadLine();
                 return;
             }
@@ -53,7 +53,7 @@ namespace TTvActionHub
 
         private static void RunServices()
         {
-            var _commandservice = provider?.GetService<CommandsService>();
+            var _commandservice = provider?.GetService<TwitchChatService>();
             _commandservice?.Run();
 
             var _rewardsservice = provider?.GetService<EventSubService>();
@@ -77,7 +77,7 @@ namespace TTvActionHub
             var _audio = provider?.GetService<AudioService>();
             _audio?.Stop();
 
-            var _commandservice = provider?.GetService<CommandsService>();
+            var _commandservice = provider?.GetService<TwitchChatService>();
             _commandservice?.Stop();
 
             var _rewardsservice = provider?.GetService<EventSubService>();

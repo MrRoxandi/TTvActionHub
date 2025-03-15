@@ -7,13 +7,13 @@ using TTvActionHub.Logs;
 
 namespace TTvActionHub.Services
 {
-    public class CommandsService: IService
+    public class TwitchChatService: IService
     {
         private readonly ConnectionCredentials _credentials;
         private readonly IConfig _configuration;
         private readonly TwitchClient _client;
 
-        public CommandsService(IConfig config)
+        public TwitchChatService(IConfig config)
         {
             _configuration = config;
             _client = new TwitchClient();
@@ -38,6 +38,7 @@ namespace TTvActionHub.Services
             TwitchChat.Channel = _configuration.TwitchInfo.Login;
 
             _client.OnChatCommandReceived += OnChatCommandReceived;
+            
         }
 
         private void OnChatCommandReceived(object? sender, OnChatCommandReceivedArgs args) => Task.Run(() =>

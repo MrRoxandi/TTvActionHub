@@ -33,7 +33,7 @@ namespace TTvActionHub.Services
                 var rewardResiever = _event.UserName;
                 var rewardArgsStr = _event.UserInput;
 
-                if (!_configuration.Rewards.TryGetValue(rewardTitle, out Reward? value))
+                if (!_configuration.Rewards.TryGetValue(rewardTitle, out TwitchReward? value))
                     return;
 
                 var (obr, cbr) = _configuration.Brackets;
@@ -66,32 +66,36 @@ namespace TTvActionHub.Services
             if (!args.IsRequestedReconnect)
             {
                 Logger.Log(LOGTYPE.INFO, ServiceName, "Subscribing to topics...");
-                await SubscribeTopics();
+                await RegisterEvents();
             } else
             {
                 Logger.Log(LOGTYPE.INFO, ServiceName, "Reconnected. Subscriptions should persist.");
             }
         }
 
-        private async Task SubscribeTopics()
+        private async Task RegisterEvents()
+        {
+            // Subbing to rewards.
+            var result = await SubscribeToEvent("channel.channel_points_custom_reward_redemption.add", "1");
+            if (result is not null)
+            {
+                foreach (var sub in result.Subscriptions)
+                {
+                    Logger.Log(LOGTYPE.INFO, ServiceName, $"Subscription to [{sub.Type}:{sub.Version}] has status: {sub.Status}");
+                }
+            }
+            else
+            {
+                Logger.Log(LOGTYPE.ERROR, ServiceName, "For some reason all subscribtion types failed. Report it if u see this");
+            }
+        }
+        
+        private async Task<CreateEventSubSubscriptionResponse?> SubscribeToEvent(string type, string version)
         {
             try
             {
-                var result = await CreateEventSubSubscription("channel.channel_points_custom_reward_redemption.add", "1");
-                foreach (var item in result.Subscriptions)
-                {
-                    Logger.Log(LOGTYPE.INFO, ServiceName, $"Subscribed to {item.Type} event with status {item.Status}");
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LOGTYPE.ERROR, "Unable to subscribe to events: ", ex.Message);
-            }
-            
-        }
-
-        private async Task<CreateEventSubSubscriptionResponse> CreateEventSubSubscription(string type, string version) =>
-            await _configuration.TwitchApi.InnerAPI.Helix.EventSub.CreateEventSubSubscriptionAsync(
+                Logger.Log(LOGTYPE.INFO, ServiceName, $"Trying to subscribe to [{type}:{version}]");
+                var result = await _configuration.TwitchApi.InnerAPI.Helix.EventSub.CreateEventSubSubscriptionAsync(
                     type: type,
                     version: version,
                     condition: new()
@@ -100,7 +104,15 @@ namespace TTvActionHub.Services
                     },
                     method: TwitchLib.Api.Core.Enums.EventSubTransportMethod.Websocket,
                     websocketSessionId: _client.SessionId
-                );
+                    );
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LOGTYPE.ERROR, ServiceName, $"Unable to subscribe to [{type}:{version}] due to error:", ex.Message);
+                return null;
+            }
+        }
 
         public void Run()
         {

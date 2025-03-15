@@ -7,7 +7,7 @@ namespace TTvActionHub
     public interface IConfig
     {
         public ConcurrentDictionary<string, Command> Commands { get; }
-        public ConcurrentDictionary<string, Reward> Rewards { get; }
+        public ConcurrentDictionary<string, TwitchReward> Rewards { get; }
         public List<TimerAction> TActions { get; }
         
         public bool LogState { get; }
@@ -15,7 +15,6 @@ namespace TTvActionHub
 
         public (string obr, string cbr) Brackets { get; }
         public TwitchApi TwitchApi { get; }
-        //static abstract void CreateConfig(string path);
 
     }
 }

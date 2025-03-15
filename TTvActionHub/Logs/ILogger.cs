@@ -8,7 +8,7 @@ namespace TTvActionHub.Logs
 {
     internal interface ILogger
     {
-        public Task Error(string message, string? err = null);
+        public Task Error(string message, Exception? err = null);
 
         public Task Info(string message);
 

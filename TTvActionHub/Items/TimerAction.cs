@@ -40,7 +40,7 @@ namespace TTvActionHub.Items
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error($"While executing timer event [{Name}] occured an error", ex.Message);
+                    Logger.Error($"While executing timer event [{Name}] occured an error", ex);
                     Logger.Info($"Stopping timer event [{Name}]");
                     this.Stop();
                 }

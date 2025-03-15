@@ -3,7 +3,7 @@ using TTvActionHub.Logs;
 
 namespace TTvActionHub.Items
 {
-    public class Reward
+    public class TwitchReward
     {
         public required LuaFunction Function;
 
@@ -16,7 +16,7 @@ namespace TTvActionHub.Items
             }
             catch (Exception ex)
             {
-                Logger.Error($"Unable to run reward due to error:", ex.Message);
+                Logger.Error($"Unable to run reward due to error:", ex);
                 return;
             }
         }

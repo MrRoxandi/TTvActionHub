@@ -16,7 +16,7 @@ namespace TTvActionHub
         private static string RedirectUrl { get => @"http://localhost:3000/"; }
 
         public ConcurrentDictionary<string, Command> Commands { get => _commands; }
-        public ConcurrentDictionary<string, Reward> Rewards { get => _rewards; }
+        public ConcurrentDictionary<string, TwitchReward> Rewards { get => _rewards; }
         public List<TimerAction> TActions { get => _tActions; }
 
         public (string Login, string ID, string Token, string RefreshToken) TwitchInfo { get => _ttvInfo; }
@@ -31,7 +31,7 @@ namespace TTvActionHub
         private readonly bool _logsState;
 
         private readonly ConcurrentDictionary<string, Command> _commands;
-        private readonly ConcurrentDictionary<string, Reward> _rewards;
+        private readonly ConcurrentDictionary<string, TwitchReward> _rewards;
         private readonly List<TimerAction> _tActions;
 
         private readonly string _obracket;
@@ -236,7 +236,7 @@ namespace TTvActionHub
                 if (table["action"] is not LuaFunction action)
                     throw new Exception($"{ParamAdress(path, keyObj.ToString()!, "action")} is not a action. Check syntax.");
                 
-                _rewards.TryAdd(keyObj.ToString()!, new Reward { Function = action });
+                _rewards.TryAdd(keyObj.ToString()!, new TwitchReward { Function = action });
 
                 Logger.Info($"Loaded reward: {keyObj}");
             }

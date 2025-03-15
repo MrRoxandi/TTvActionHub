@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.Extensions.Primitives;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -26,16 +27,27 @@ namespace TTvActionHub.Logs.BackEnds
 
         }
 
-        private async Task InternalLogAsync(string message)
+        private async Task InternalLogAsync(string message, Exception? err = null)
         {
-            string formatted = message + Environment.NewLine;
+            string consoleMessage, fileMessage;
+            if (err is null)
+            {
+                fileMessage = consoleMessage = $"{message}\n";
+            }
+            else
+            {
+                consoleMessage = $"{message} {err.Message} (full trace in file)\n";
+                fileMessage = $"{message}\n" +
+                    $"\tErorr message: {err.Message}\n" +
+                    $"\tStack trace: {err.StackTrace}\n";
+            }
             try
             {
                 lock (_lock)
                 {
-                    _writer.Write(formatted);
+                    _writer.Write(fileMessage);
                 }
-                await Task.Run(() => Console.WriteLine(message));
+                await Task.Run(() => Console.WriteLine(consoleMessage));
             }
             catch (Exception ex)
             {
@@ -48,9 +60,9 @@ namespace TTvActionHub.Logs.BackEnds
             return InternalLogAsync($"[INFO] {message}.");
         }
 
-        public Task Error(string message, string? err = null)
+        public Task Error(string message, Exception? err = null)
         {
-            return InternalLogAsync($"[ERR] {message} {err ?? ""}.");
+            return InternalLogAsync($"[ERR] {message}.", err);
         }
 
         public Task Warn(string message)

@@ -12,7 +12,7 @@ namespace TTvActionHub.Logs
     {
         private static readonly ILogger _logger = new ConsoleFileLogger();
 
-        public static void Error(string message, string? err = null)
+        public static void Error(string message, Exception? err = null)
         {
             _logger.Error(message, err);
         }

@@ -27,7 +27,7 @@ namespace TTvActionHub.Items
             }
             catch (Exception ex)
             {
-                Logger.Error("Unable to run command due to error:", ex.Message);
+                Logger.Error($"Unable to run command for user: {sender} due to error:", ex);
                 
                 return;
             }
