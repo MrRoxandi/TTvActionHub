@@ -14,7 +14,7 @@ namespace TTvActionHub.Logs
 
         public Task Warn(string message);
 
-        public Task Log(string type, string name, string message, string? err = null);
+        public Task Log(string type, string name, string message, Exception? err = null);
 
     }
 }

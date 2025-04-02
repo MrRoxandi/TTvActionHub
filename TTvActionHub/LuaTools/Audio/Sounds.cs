@@ -6,18 +6,11 @@ namespace TTvActionHub.LuaTools.Audio
     {
         public static AudioService? audio;
         
-        public static async Task PlaySoundFromDiscAsync(string path)
+        public static async Task PlaySoundAsync(string uri)
         {
-            if (audio == null) { throw new Exception("Audio service was not provided"); };
-
-            await audio.PlaySoundFromDiskAsync(path);
-        }
-
-        public static async Task PlaySoundFromUrlAsync(string url)
-        {
-            if (audio == null) { throw new Exception("Audio service was not provided"); };
-
-            await audio.PlaySoundFromUrlAsync(url);
+            if (string.IsNullOrEmpty(uri)) throw new ArgumentNullException(nameof(uri));
+            if (audio == null) throw new FieldAccessException("Audio service was not provided");
+            await audio.PlaySoundAsync(new Uri(uri));
         }
 
         public static void SetVolume(float volume) 

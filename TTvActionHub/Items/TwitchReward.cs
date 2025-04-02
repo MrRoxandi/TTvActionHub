@@ -9,7 +9,6 @@ namespace TTvActionHub.Items
 
         public void Execute(string sender, string[]? args)
         {
-
             try
             {
                 Function.Call(sender, args);

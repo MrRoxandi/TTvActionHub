@@ -71,9 +71,9 @@ namespace TTvActionHub.Logs.BackEnds
             return InternalLogAsync($"[WARN] {message}.");
         }
 
-        public Task Log(string type, string name, string message, string? err = null)
+        public Task Log(string type, string name, string message, Exception? err = null)
         {
-            return InternalLogAsync($"[{name}:{type}] {message} {err ?? ""}.");
+            return InternalLogAsync($"[{name}:{type}] {message}", err);
         }
 
 

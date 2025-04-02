@@ -53,22 +53,24 @@ namespace TTvActionHub
 
         private static void RunServices()
         {
-            var _commandservice = provider?.GetService<TwitchChatService>();
-            _commandservice?.Run();
+            var _chatservice = provider?.GetService<TwitchChatService>();
+            TwitchChat.Client = _chatservice!.Client;
+            TwitchChat.Channel = _chatservice!.Channel;
+            _chatservice!.Run();
 
-            var _rewardsservice = provider?.GetService<EventSubService>();
-            _rewardsservice?.Run();
+            var _eventsubservice = provider?.GetService<EventSubService>();
+            _eventsubservice!.Run();
 
             var _container = provider?.GetService<ContainerService>();
             Storage._service = _container;
-            _container?.Run();
+            _container!.Run();
 
             var actionsService = provider?.GetService<TimerActionsService>();
-            actionsService?.Run();
+            actionsService!.Run();
 
             var _audio = provider?.GetService<AudioService>();
             Sounds.audio = _audio;
-            _audio?.Run();
+            _audio!.Run();
 
         }
 

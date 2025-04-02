@@ -2,10 +2,10 @@ using System.Text;
 using NLua;
 using TTvActionHub.Items;
 using TTvActionHub.Logs;
-using TTvActionHub.Security;
 using TTvActionHub.Twitch;
 using TTvActionHub.LuaTools.Stuff;
 using System.Collections.Concurrent;
+using TTvActionHub.Authorization;
 
 namespace TTvActionHub
 {
@@ -78,43 +78,36 @@ namespace TTvActionHub
             } 
 
             (string? Login, string? ID, string? Token, string? RefreshToken) authInfo = new();
-
-            if (isForceRelog)
             {
+                AuthManager manager = new(_twitchApi, ClientSecret);
+                if (isForceRelog || !manager.LoadTwitchInfo())
+                {
                 authInfo = GetAuthInfoFromAPI();
             }
             else
                 {
-                var authManagerResult = AuthorizationManager.LoadInfo(ClientSecret);
-                if (authManagerResult is null)
-                    authInfo = GetAuthInfoFromAPI();
-                else authInfo = authManagerResult.Value;
-                var valid_task = _twitchApi.ValidateTokenAsync(authInfo.Token!);
-                valid_task.Wait();
-                if (!valid_task.Result)
-                    {
-                    var refresh_task = _twitchApi.RefreshAccessTokenAsync(authInfo.RefreshToken!);
-                    refresh_task.Wait();
-                    authInfo.Token = refresh_task.Result.AccessToken;
-                    authInfo.RefreshToken = refresh_task.Result.RefreshToken;
+                    if (!manager.IsValidAuthTokens())
+                        manager.UpdateAuthInfo();
+                    authInfo = manager.TwitchInfo;
                     }
                 }
 
-            if (authInfo.Token is not string token ||
-                authInfo.RefreshToken is not string rtoken ||
-                authInfo.Login is not string login ||
-                authInfo.ID is not string id)
+                if (string.IsNullOrEmpty(authInfo.Token)||
+                    string.IsNullOrEmpty(authInfo.RefreshToken) ||
+                    string.IsNullOrEmpty(authInfo.Login) ||
+                    string.IsNullOrEmpty(authInfo.ID))
             {
                 throw new Exception("For some reasong program failed to get auth info. If u see this error report it");
             }
             else
             {
+                    var (login, id, token, rtoken) = authInfo;
+                    manager.TwitchInfo = (login, id, token, rtoken);
                 _ttvInfo = new() { ID = id, Login = login, RefreshToken = rtoken, Token = token };
             }
+                manager.SaveTwitchInfo();
+            }
 
-            
-            AuthorizationManager.SaveInfo(ClientSecret, _ttvInfo.Login, _ttvInfo.ID, _ttvInfo.Token, _ttvInfo.RefreshToken);
-            
             if (luaConfig["opening-bracket"] is not string obracket || luaConfig["closing-bracket"] is not string cbracket)
             {
                 Logger.Warn($"{FieldAdress(configpath, "opening-bracket")} or {FieldAdress(configpath, "closing-bracket")} is not presented. Ignoring...");
@@ -148,7 +141,6 @@ namespace TTvActionHub
             LoadCommands(luaCommands, commandspath);
             LoadRewards(luaRewards, rewardspath);
             LoadTActions(luaTimerActions, timeractionspath);
-
             ShowConfigInfo();
 
             Logger.Info($"Configuration loaded successfully");
@@ -263,7 +255,7 @@ namespace TTvActionHub
 
                 _tActions.Add(new TimerAction() { Action = action, Name = keyObj.ToString()!, TimeOut = timeout });
 
-                Logger.Info($"Loaded TEvent: {keyObj}");
+                Logger.Info($"Loaded TimerAction: {keyObj}");
             }
         }
 

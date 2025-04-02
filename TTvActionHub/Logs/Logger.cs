@@ -27,7 +27,7 @@ namespace TTvActionHub.Logs
             _logger.Warn(message); 
         }
 
-        public static void Log(LOGTYPE type, string name, string message, string? err = null)
+        public static void Log(LOGTYPE type, string name, string message, Exception? err = null)
         {
             string res = type switch
             {
