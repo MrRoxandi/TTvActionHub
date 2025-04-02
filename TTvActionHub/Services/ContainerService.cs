@@ -104,7 +104,7 @@ namespace TTvActionHub.Services
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR,  ServiceName, "Error saving data", ex.Message);
+                Logger.Log(LOGTYPE.ERROR,  ServiceName, "Error saving data", ex);
             }
         }
 
@@ -130,7 +130,7 @@ namespace TTvActionHub.Services
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR,  ServiceName, "Error while loading data from disk", ex.Message);
+                Logger.Log(LOGTYPE.ERROR,  ServiceName, "Error while loading data from disk", ex);
                 _storage = new ConcurrentDictionary<string, string>();
             }
         }

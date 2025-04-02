@@ -95,7 +95,7 @@ namespace TTvActionHub.Twitch
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, "Error getting channel info from Twitch API.", ex.Message);
+                Logger.Log(LOGTYPE.ERROR, ServiceName, "Error getting channel info from Twitch API.", ex);
                 return (null, null);
             }
         }
@@ -106,22 +106,24 @@ namespace TTvActionHub.Twitch
             {
                 var result = await _api.Auth.GetAccessTokenFromCodeAsync(authorizationCode, _clientSecret, _redirectUrl, _clientId);
                 return (result.AccessToken, result.RefreshToken);
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, "Unable to get access token due to erro: ", ex.Message);
+                Logger.Log(LOGTYPE.ERROR, ServiceName, "Unable to get access token due to erro: ", ex);
                 return (null, null);
             }
         }
 
         public async Task<(string? AccessToken, string? RefreshToken)> RefreshAccessTokenAsync(string refreshToken)
         {
-            try { 
+            try
+            {
                 var result = await _api.Auth.RefreshAuthTokenAsync(refreshToken, _clientSecret, _clientId);
                 return (result.AccessToken, result.RefreshToken);
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, "Unable to refresh token due to error: ", ex.Message);
+                Logger.Log(LOGTYPE.ERROR, ServiceName, "Unable to refresh token due to error: ", ex);
                 return (null, null);
             }
         }
@@ -136,8 +138,8 @@ namespace TTvActionHub.Twitch
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.WARNING, "TwitchApi", "Token validation failed. Token may be expired.", ex.Message);
-                return false; 
+                Logger.Log(LOGTYPE.WARNING, "TwitchApi", "Token validation failed. Token may be expired.", ex);
+                return false;
             }
         }
     }

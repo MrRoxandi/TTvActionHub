@@ -77,10 +77,10 @@ namespace TTvActionHub
             builder.AppendLine();
             builder.AppendLine("local timeractions = {}");
             builder.AppendLine();
-            builder.AppendLine("timeractions['test'] = {}");
-            builder.AppendLine("timeractions['test']['action'] =\n" +
-                "\tfunction()\n\t\tTwitchChat.SendMessageAsync('Just a test -> test')\n\tend");
-            builder.AppendLine("timeractions['test']['timeout'] = 10000 -- 10000 ms");
+            builder.AppendLine("--timeractions['test'] = {}");
+            builder.AppendLine("--timeractions['test']['action'] =\n" +
+                "\t--function()\n\t\t--TwitchChat.SendMessageAsync('Just a test -> test')\n\t--end");
+            builder.AppendLine("--timeractions['test']['timeout'] = 10000 -- 10000 ms");
             builder.AppendLine();
             builder.AppendLine("return timeractions");
 
@@ -106,39 +106,11 @@ namespace TTvActionHub
             File.WriteAllText(file, builder.ToString());
         }
 
-        private static void GenerateChatHandlersFile(string conf_path)
-        {
-            var file = Path.Combine(conf_path, "chathandlers.lua");
-            if (File.Exists(file)) return;
-            var builder = new StringBuilder();
-
-            foreach (var lib in Libs)
-            {
-                builder.AppendLine($"local {lib.Split(").").Last()} = import {lib}");
-            }
-            builder.AppendLine();
-            builder.AppendLine("local chathandlers = {}");
-            builder.AppendLine();
-            builder.AppendLine("chathandlers['test'] = {}");
-            builder.AppendLine("chathandlers['test']['condition'] =\n" +
-                "\tfunction(sender, args)" +
-                "\n\t\tif(args == nil) then return false" +
-                "\n\t\telse return Funcs.CollectionToString(args).Contains('test')" +
-                "\n\t\tend" +
-                "\tend");
-            builder.AppendLine("chathandlers['test']['action'] =\n" +
-                "\tfunction(sender, args)\n\t\tTwitchChat.SendMessageAsync('@'..sender..' -> send test in message')\n\tend");
-            builder.AppendLine();
-            builder.AppendLine("return chathandlers");
-
-            File.WriteAllText(file, builder.ToString());
-        }
-
         public static bool CheckConfiguration()
         {
             var conf_path = Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "configs"));
             bool result = true;
-            foreach(string file in new string[] { "config.lua", "commands.lua", "rewards.lua", "timeractions.lua", "chathandlers.lua" })
+            foreach(string file in new string[] { "config.lua", "commands.lua", "rewards.lua", "timeractions.lua" })
             {
                 result &= File.Exists(Path.Combine(conf_path.FullName, file));  
             }
@@ -150,7 +122,6 @@ namespace TTvActionHub
             GenerateCommandsFile(conf_path.FullName);
             GenerateRewardsFile(conf_path.FullName);
             GenerateTimerActionsFile(conf_path.FullName);
-            GenerateChatHandlersFile(conf_path.FullName);
             GenerateMainFile(conf_path.FullName);
         }
     }

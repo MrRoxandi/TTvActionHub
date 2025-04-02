@@ -9,6 +9,9 @@ namespace TTvActionHub.Services
 {
     public class TwitchChatService: IService
     {
+        public TwitchClient Client { get => _client; }
+        public string Channel { get => _configuration.TwitchInfo.Login; }
+
         private readonly ConnectionCredentials _credentials;
         private readonly IConfig _configuration;
         private readonly TwitchClient _client;
@@ -19,20 +22,10 @@ namespace TTvActionHub.Services
             _client = new TwitchClient();
             _credentials = new ConnectionCredentials(config.TwitchInfo.Login, config.TwitchInfo.Token);
 
-            _client.OnDisconnected += (sender, args) =>
-            {
-                Logger.Log(LOGTYPE.INFO,  ServiceName, $"Service has disconnected");
-            };
+            _client.OnDisconnected += OnDisconnectedHandler;
+            _client.OnConnected += OnConnectedHandler;
 
-            _client.OnConnected += (sender, args) =>
-            {
-                Logger.Log(LOGTYPE.INFO,  ServiceName, $"Service has connected to channel {_configuration.TwitchInfo.Login}"); ;
-            };
-
-            if (_configuration.LogState)
-                _client.OnLog += (sender, args) => {
-                    Logger.Log(LOGTYPE.INFO,  ServiceName, args.Data);
-                };
+            if (_configuration.LogState) _client.OnLog += (sender, args) => Logger.Log(LOGTYPE.INFO,  ServiceName, args.Data);
 
             TwitchChat.Client = _client;
             TwitchChat.Channel = _configuration.TwitchInfo.Login;
@@ -40,6 +33,10 @@ namespace TTvActionHub.Services
             _client.OnChatCommandReceived += OnChatCommandReceived;
             
         }
+
+        private void OnConnectedHandler(object? sender, OnConnectedArgs e) => Logger.Log(LOGTYPE.INFO, ServiceName, $"Service has connected to channel {_configuration.TwitchInfo.Login}");
+
+        private void OnDisconnectedHandler(object? sender, TwitchLib.Communication.Events.OnDisconnectedEventArgs e) => Logger.Log(LOGTYPE.INFO, ServiceName, $"Service has disconnected");
 
         private void OnChatCommandReceived(object? sender, OnChatCommandReceivedArgs args) => Task.Run(() =>
         {

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0-windows10.0.22000.0</TargetFramework>
+    <TargetFramework>net9.0-windows10.0.22000.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -14,11 +14,13 @@
     <ApplicationIcon>logo.ico</ApplicationIcon>
     <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
 
-    <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>true</SelfContained>
+    <PublishSingleFile>false</PublishSingleFile>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier> <!-- Укажите целевую ОС и архитектуру -->
     <PublishTrimmed>false</PublishTrimmed> <!-- Опционально: для уменьшения размера, но может потребовать тестирования -->
     <ReadyToRun>true</ReadyToRun>
+	  <UseRidGraph>true</UseRidGraph>
+	  <Platforms>x64</Platforms>
+	  <EnableMsixTooling>true</EnableMsixTooling>
   </PropertyGroup>
 
   <ItemGroup>

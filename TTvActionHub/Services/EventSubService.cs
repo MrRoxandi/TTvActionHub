@@ -109,7 +109,7 @@ namespace TTvActionHub.Services
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, $"Unable to subscribe to [{type}:{version}] due to error:", ex.Message);
+                Logger.Log(LOGTYPE.ERROR, ServiceName, $"Unable to subscribe to [{type}:{version}] due to error:", ex);
                 return null;
             }
         }
