@@ -20,7 +20,7 @@ namespace TTvActionHub.Services
         private readonly CancellationTokenSource _serviceCancellationToken = new();
         private TaskCompletionSource<bool> _soundCompletionSource = new();
         private Task? _workerTask;
-        private string _currentPlayingFile = string.Empty; // Теперь хранит URL или путь к файлу
+        private string _currentPlayingFile = string.Empty; 
         private PlaybackState _playbackState = PlaybackState.Stopped;
 
         public AudioService()
