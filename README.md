@@ -1,12 +1,22 @@
-![Logo](readme-assets/logo.png)
+<div width="100%" display="flex" justify-content="center" align-items="center">
+    <table>
+    <tr>
+        <td>
+            <img src="readme-assets/logo.png" alt="Logo" width="100">
+        </td>
+        <td>
+            <h2>TTvActionHub</h2>
+        </td>
+    </tr>
+  </table>
+</div>
 
-# TTvActionHub
 
-> This project focuses on gathering all the most useful tools for Twitch streaming in one place.
-> Music playback.
-> Keyboard and mouse emulation.
-> Storing interesting data.
-> And all of this is tied to actions that can be triggered through Twitch channel points or Twitch commands (yes, your own personal chat bot).
+
+
+
+
+> This project consolidates essential Twitch streaming tools into one platform, including music playback, keyboard and mouse emulation, and data storage. All features are activated via Twitch channel points or commands using a personalized chat bot.
 
 ## Features
 
