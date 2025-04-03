@@ -138,7 +138,7 @@ namespace TTvActionHub.Twitch
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.WARNING, "TwitchApi", "Token validation failed. Token may be expired.", ex);
+                Logger.Log(LOGTYPE.WARNING, "TwitchApi", "Token validation failed.", ex);
                 return false;
             }
         }

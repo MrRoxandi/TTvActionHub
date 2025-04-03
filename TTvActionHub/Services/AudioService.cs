@@ -16,7 +16,7 @@ namespace TTvActionHub.Services
     {
         private MediaPlayer? _mediaPlayer;
         private LibVLC? _libVLC;
-        private readonly ConcurrentQueue<Uri?> _soundQueue = new();
+        private readonly ConcurrentQueue<Uri> _soundQueue = new();
         private readonly CancellationTokenSource _serviceCancellationToken = new();
         private TaskCompletionSource<bool> _soundCompletionSource = new();
         private Task? _workerTask;
@@ -45,8 +45,8 @@ namespace TTvActionHub.Services
             if (_playbackState == PlaybackState.Playing)
             {
                 _playbackState = PlaybackState.Stopped;
-                Logger.Log(LOGTYPE.ERROR, ServiceName, $"Error during playback for: {_currentPlayingFile}");
                 _soundCompletionSource.TrySetException(new Exception($"{ServiceName} failed to play audio"));
+                Logger.Log(LOGTYPE.ERROR, ServiceName, $"Error during playback for: {_currentPlayingFile}");
             }
         }
 
@@ -55,14 +55,18 @@ namespace TTvActionHub.Services
             if (_playbackState == PlaybackState.Playing)
             {
                 _playbackState = PlaybackState.Stopped;
+                if (!_soundCompletionSource.TrySetResult(true))
+                {
+                    _soundCompletionSource.TrySetException(new Exception($"{ServiceName} failed to set stop state"));
+                }
                 Logger.Log(LOGTYPE.INFO, ServiceName, $"Playback finished for: {_currentPlayingFile}");
-                _soundCompletionSource.TrySetResult(true);
             }
         }
 
         public void Run()
         {
             _workerTask = Task.Run(ProcessSoundQueueAsync, _serviceCancellationToken.Token);
+            _soundCompletionSource.TrySetResult(true);
             Logger.Log(LOGTYPE.INFO, ServiceName, "Sound service is running");
         }
 
@@ -128,77 +132,60 @@ namespace TTvActionHub.Services
 
         private async Task ProcessSoundQueueAsync()
         {
-            while (!_serviceCancellationToken.Token.IsCancellationRequested)
+            while (!_serviceCancellationToken.IsCancellationRequested)
             {
-                if (_soundQueue.TryDequeue(out var audioSourceUri))
+                if (_soundCompletionSource.Task.IsCompleted && _soundQueue.TryDequeue(out var audioUri))
                 {
-                    if (audioSourceUri == null) continue;
+                    // if for some reason audioUri is null. Skipping
+                    if (audioUri == null) continue;
                     try
                     {
-                        if (audioSourceUri.IsFile)
-                        {
-                            await InternalSoundFromDiskAsync(audioSourceUri, _serviceCancellationToken.Token);
-                        }
-                        else
-                        {
-                            await InternalSoundFromUriAsync(audioSourceUri, _serviceCancellationToken.Token);
-                        }
-                    }
-                    catch (Exception ex)
+                        // Handle audioUri here.
+                        await Task.Run(() => ProcessSoundUri(audioUri));
+
+                    } catch (Exception ex)
                     {
-                        if (ex is not OperationCanceledException)
-                            Logger.Log(LOGTYPE.ERROR, ServiceName, "Error processing sound request:", ex);
-                        else
-                            Logger.Log(LOGTYPE.INFO, ServiceName, "Sound processing canceled");
+                        Logger.Log(LOGTYPE.ERROR, ServiceName, "Error processing sound reques:", ex);
                     }
                 }
                 else
                 {
-                    // Wait if queue is empty
-                    await Task.Delay(100, _serviceCancellationToken.Token);
+                    // Wait if we cant get audioUri from queue.
+                    await Task.Delay(TimeSpan.FromMilliseconds(100), _serviceCancellationToken.Token);
                 }
             }
             Logger.Log(LOGTYPE.INFO, ServiceName, "Sound queue processing stopped");
         }
 
-        private async Task InternalSoundFromDiskAsync(Uri pathUri, CancellationToken token)
+        private async Task ProcessSoundUri(Uri audioUri)
         {
-            string path = pathUri.LocalPath;
+            string path = audioUri.LocalPath;
+            _currentPlayingFile = audioUri.OriginalString;
             try
             {
-                if (!File.Exists(path))
+                if (audioUri.IsFile)
                 {
-                    throw new FileNotFoundException($"File not found: {path}");
+                    if (!File.Exists(path))
+                    {
+                        throw new FileNotFoundException($"File not found: {path}");
+                    }
+                    using var media = new Media(_libVLC!, audioUri);
+                    await PlayMediaAsync(media);
+                } else
+                {
+                    using var media = new Media(_libVLC!, audioUri.OriginalString, FromType.FromLocation);
+                    await media.Parse(MediaParseOptions.ParseNetwork);
+                    await PlayMediaAsync(media);
                 }
-                _currentPlayingFile = path;
-                using var media = new Media(_libVLC!, pathUri);
-                await PlayMediaAsync(media, token);
             }
-            catch (Exception ex)
+            catch (Exception e)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, $"Error playing sound from disk: {path}", ex);
-                throw;
+                Logger.Log(LOGTYPE.ERROR, ServiceName, "Error ocured during processing ssound uri: ", e);
             }
+            
         }
 
-        private async Task InternalSoundFromUriAsync(Uri urlUri, CancellationToken token)
-        {
-            string url = urlUri.ToString();
-            try
-            {
-                _currentPlayingFile = url;
-                using var media = new Media(_libVLC!, urlUri); // Создаем Media напрямую из URL
-                await PlayMediaAsync(media, token);
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, $"Error playing sound from URL: {url}", ex);
-                throw;
-            }
-        }
-
-
-        private async Task PlayMediaAsync(Media media, CancellationToken token)
+        private async Task PlayMediaAsync(Media media)
         {
             if (_mediaPlayer == null)
             {
@@ -206,13 +193,17 @@ namespace TTvActionHub.Services
             }
             try
             {
-                _mediaPlayer.Media = media;
+                //_mediaPlayer.Media = media;
                 _playbackState = PlaybackState.Playing;
                 _soundCompletionSource = new();
-                _mediaPlayer.Play();
+                if (media.SubItems.Count > 0)
+                {
+                    _mediaPlayer.Play(media.SubItems.First());
+                } else
+                    _mediaPlayer.Play(media);
                 Logger.Log(LOGTYPE.INFO, ServiceName, $"Playback started for: {_currentPlayingFile}");
 
-                var comletedTask = await Task.WhenAny(_soundCompletionSource.Task, Task.Delay(Timeout.Infinite, token));
+                var comletedTask = await Task.WhenAny(_soundCompletionSource.Task, Task.Delay(Timeout.Infinite, _serviceCancellationToken.Token));
                 if (comletedTask == _soundCompletionSource.Task)
                 {
                     if (comletedTask.IsFaulted)
