@@ -1,14 +1,11 @@
 ﻿using System.Collections.Concurrent;
 using TTvActionHub.Logs;
 using TTvActionHub.Services;
-using ReadLineReboot;
 using Microsoft.Extensions.DependencyInjection;
 using Terminal.Gui;
 using NStack;
 using System.Text;
-using Microsoft.UI.Xaml.Shapes;
 using TTvActionHub.ShellItems;
-using SharpDX.DXGI;
 using TTvActionHub.Items;
 
 namespace TTvActionHub
@@ -34,6 +31,7 @@ namespace TTvActionHub
         private Toplevel? _top;
         private Window? _win;
         private FrameView? _headerFrame;
+        private FrameView? _commandInputFrame;
         private HeaderStatusView? _headerTextView;
         private ScrollableContentView? _bodyTextView;
         private TextField? _commandInput;
@@ -41,12 +39,16 @@ namespace TTvActionHub
         private StatusItem? _modeStatusItem;
 
         // --- Control Updates ---
-        private const int _UiUpdateIntervalMs = 250;
-        private readonly int _maxCmdHistory = 250;
+        private const int _UiUpdateIntervalMs = 150;
+        private readonly int _maxCmdHistory = 50;
         private IMainLoopDriver? _mainLoopDriver;
-        private List<ustring> _cmdHistory = [];
+        private List<ustring> _cmdOutputHistory = [];
         private object? _timeoutToken;
 
+        // --- Command line interactions ---
+        private List<string> _enteredCommandHistory = [];
+        private int _historyIndex = -1;
+        private ustring _currentTypedCommand = string.Empty;
 
         // --- Colors ---
 
@@ -78,10 +80,14 @@ namespace TTvActionHub
             };
             _inputColorScheme = new()
             {
-                Normal = Application.Driver.MakeAttribute(Color.Green, Color.Black),
-                Focus = Application.Driver.MakeAttribute(Color.Green, Color.Black),
+                Normal = Application.Driver.MakeAttribute(Color.BrightYellow, Color.Black),
+                Focus = Application.Driver.MakeAttribute(Color.BrightYellow, Color.Black),
             };
-            _statusColorScheme = Colors.Base;
+            _statusColorScheme = new()
+            {
+                Normal = Application.Driver.MakeAttribute(Color.Gray, Color.Black),
+                Focus = Application.Driver.MakeAttribute(Color.Gray, Color.Black)
+            };
 
             // --- Main window ---
 
@@ -122,11 +128,19 @@ namespace TTvActionHub
                 X = 0,
                 Y = Pos.Bottom(_headerFrame),
                 Width = Dim.Fill(),
-                Height = Dim.Fill(1), 
+                Height = Dim.Fill(3), 
                 ColorScheme = _bodyColorScheme
             };
 
             // --- Commands input ---
+            _commandInputFrame = new FrameView("Input")
+            {
+                X = 0,
+                Y = Pos.Bottom(_bodyTextView),
+                Width = Dim.Fill(),
+                Height = 3,
+                ColorScheme = _bodyColorScheme
+            };
 
             _commandInput = new TextField("")
             {
@@ -136,43 +150,113 @@ namespace TTvActionHub
                 Height = 1,
                 ColorScheme = _inputColorScheme
             };
+            _commandInputFrame.Add(_commandInput);
 
-            _commandInput.KeyPress += OnCommandInputKeyPress;
-
+            _commandInput.KeyDown += OnCommandInputKeyDown;
+            _commandInput.Text = ustring.Make("> ");
+            _commandInput.CursorPosition = _commandInput.Text.Length;
             _modeStatusItem = new StatusItem(Key.Null, "Mode: CMD", null);
 
             _statusBar = new StatusBar([
                 _modeStatusItem,
                 new StatusItem(Key.F1, "~F1~ Help", () => ShowHelpDialog()),
                 new StatusItem(Key.F2, "~F2~ Logs", () => ToggleLogView(true)),
-                new StatusItem(Key.F3, "~F3~ Cmds", () => ToggleLogView(false)),
-                new StatusItem(Key.CtrlMask | Key.Q, "~^Q~ Quit", () => RequestStop()),
+                new StatusItem(Key.F3, "~F3~ Cmds", () => ToggleLogView(false))
             ])
             {
                 ColorScheme = _statusColorScheme,
                 Visible = true
             };
 
-            _win.Add(_headerFrame, _bodyTextView, _commandInput);
+            _win.Add(_headerFrame, _bodyTextView, _commandInputFrame);
             _top.Add(_win, _statusBar);
         }
 
-        private void OnCommandInputKeyPress(View.KeyEventEventArgs args)
+        private void OnCommandInputKeyDown(View.KeyEventEventArgs args)
         {
-            if (args.KeyEvent.Key == Key.Enter)
+            var key = args.KeyEvent.Key;
+            if (key == Key.Enter)
             {
-                args.Handled = true; 
-                var inputText = _commandInput?.Text ?? ustring.Empty;
-                _commandInput!.Text = ""; 
+                args.Handled = true;
+                var inputText = _commandInput?.Text.ToString()?[2..] ?? string.Empty;
+                _commandInput!.Text = ustring.Make("> ");
+                _commandInput!.CursorPosition = _commandInput.Text.Length;
 
-                if (!ustring.IsNullOrEmpty(inputText))
+                if (!string.IsNullOrWhiteSpace(inputText))
                 {
                     CmdOut($"> {inputText}");
-                    bool keepRunning = ExecInnerCommand(inputText.ToString());
+
+                    if (_enteredCommandHistory.Count == 0 || _enteredCommandHistory[^1] != inputText)
+                    {
+                        _enteredCommandHistory.Add(inputText);
+                        if (_enteredCommandHistory.Count > _maxCmdHistory)
+                        {
+                            _enteredCommandHistory.RemoveAt(0);
+                        }
+                    }
+                    _historyIndex = -1; 
+                    _currentTypedCommand = string.Empty;
+
+                    bool keepRunning = ExecInnerCommand(inputText);
                     if (!keepRunning) { RequestStop(); }
                 }
             }
-            // Other keys...
+            // --- Commands history: backwards ---
+            else if (key == Key.CursorUp) 
+            {
+                args.Handled = true;
+                if (_enteredCommandHistory.Count > 0)
+                {
+                    if (_historyIndex == -1)
+                    {
+                        _currentTypedCommand = _commandInput?.Text ?? string.Empty; 
+                        _historyIndex = _enteredCommandHistory.Count - 1; 
+                    }
+                    else if (_historyIndex > 0)
+                    {
+                        _historyIndex--; 
+                    }
+                    if (_historyIndex >= 0)
+                    {
+                        _commandInput!.Text = ustring.Make($"> {_enteredCommandHistory[_historyIndex]}");
+                        _commandInput.CursorPosition = _commandInput.Text.Length;
+                    }
+                }
+            }
+            // --- Commands history: forward ---
+            else if (key == Key.CursorDown)
+            {
+                args.Handled = true;
+                if (_historyIndex != -1) // only if we are in histor 
+                {
+                    if (_historyIndex < _enteredCommandHistory.Count - 1)
+                    {
+                        _historyIndex++; 
+                        _commandInput!.Text = ustring.Make($"> {_enteredCommandHistory[_historyIndex]}");
+                    }
+                    else 
+                    {
+                        _historyIndex = -1;
+                        _commandInput!.Text = _currentTypedCommand;
+                    }
+                    _commandInput.CursorPosition = _commandInput.Text.Length; 
+                }
+            }
+            else if (key == Key.Esc)
+            {
+                if (_historyIndex != -1)
+                {
+                    args.Handled = true;
+                    _commandInput!.Text = _currentTypedCommand;
+                    _commandInput.CursorPosition = _commandInput.Text.Length;
+                    _historyIndex = -1;
+                }
+            }
+            else if (_historyIndex != -1 && !(args.KeyEvent.IsShift || args.KeyEvent.IsCtrl || args.KeyEvent.IsAlt))
+            {
+                _historyIndex = -1;
+                
+            }
         }
 
         private void RequestStop()
@@ -252,13 +336,13 @@ namespace TTvActionHub
                 {
                     if (message != null)
                     {
-                        _cmdHistory.Add(ustring.Make(message));
+                        _cmdOutputHistory.Add(ustring.Make(message));
                         added = true;
                     }
                 }
-                if (_cmdHistory.Count > _maxCmdHistory)
+                if (_cmdOutputHistory.Count > _maxCmdHistory)
                 {
-                    _cmdHistory.RemoveRange(0, _cmdHistory.Count - _maxCmdHistory);
+                    _cmdOutputHistory.RemoveRange(0, _cmdOutputHistory.Count - _maxCmdHistory);
                     needsUpdate = true; 
                 }
                 if (added) needsUpdate = true; 
@@ -270,7 +354,7 @@ namespace TTvActionHub
             }
             else if (needsUpdate)
             { 
-                _bodyTextView.SetLines(_cmdHistory);
+                _bodyTextView.SetLines(_cmdOutputHistory);
             }
 
         }
@@ -299,7 +383,7 @@ namespace TTvActionHub
         public void CmdClear()
         {
             while (_commandsOutPutQueue.TryDequeue(out _)) { }
-            _cmdHistory.Clear();
+            _cmdOutputHistory.Clear();
             if (!_showLogs && _bodyTextView != null)
             {
                 Application.MainLoop.Invoke(() => _bodyTextView.ClearLines());
@@ -311,7 +395,7 @@ namespace TTvActionHub
             if (_showLogs == showLogs) return;
             _showLogs = showLogs;
             _modeStatusItem!.Title = $"Mode: {(_showLogs ? "LOGS" : "CMD")}";
-            if (_bodyTextView != null) { _bodyTextView.ClearLines(); } 
+            _bodyTextView?.ClearLines(); 
             _statusBar?.SetNeedsDisplay();
         }
 
