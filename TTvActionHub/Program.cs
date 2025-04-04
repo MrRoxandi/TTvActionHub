@@ -48,9 +48,9 @@ namespace TTvActionHub
                 collection.AddSingleton<IConfig, Configuration>(sp => new Configuration(ConfigurationPath));
 
                 collection.AddSingleton<IService, TwitchChatService>();
-                //collection.AddSingleton<IService, EventSubService>();     
+                collection.AddSingleton<IService, EventSubService>();
                 collection.AddSingleton<IService, TimerActionsService>();
-                //collection.AddSingleton<IService, ContainerService>();    
+                collection.AddSingleton<IService, ContainerService>();
                 collection.AddSingleton<IService, AudioService>();
                 // ---------------------------------------------------------
 
@@ -59,11 +59,12 @@ namespace TTvActionHub
                 collection.AddSingleton<Shell>(sp =>
                 {
                     var config = sp.GetRequiredService<IConfig>();
-                    return new Shell(config, RestartServiceByName, RestartAllRunningServices, sp);
+                    return new Shell(config, StartServiceByName, StopServiceByName, sp);
                 });
 
                 provider = collection.BuildServiceProvider();
                 Logger.Info("Dependency Injection configured.");
+                InitializeStaticLuaBridges();
             }
             catch (Exception ex)
             {
@@ -71,7 +72,6 @@ namespace TTvActionHub
                 Logger.Error("FATAL: Failed to configure Dependency Injection:", ex);
                 return;
             }
-
             shell = provider.GetService<Shell>();
             if (shell == null)
             {
@@ -79,14 +79,14 @@ namespace TTvActionHub
                 Logger.Error("FATAL: Unable to initialize Shell.");
                 return;
             }
+
             IDisposable? shellDisposable = shell as IDisposable;
             try
             {
                 shell.InitializeUI();
 
                 Logger.Info("Starting services...");
-                StartServices(); 
-                InitStaticExternLibs();
+                InitAllServices(); 
                 Logger.Info("Service startup process finished.");
 
                 // --- Main loop (Terminal.Gui) ---
@@ -101,7 +101,7 @@ namespace TTvActionHub
             finally
             {
                 Logger.Info("Stopping services...");
-                StopServices();
+                DeInitAllServices();
                 Logger.Info("Service shutdown process finished.");
 
                 shellDisposable?.Dispose(); 
@@ -114,7 +114,9 @@ namespace TTvActionHub
 
         // --- SERVICE MANAGEMENT METHODS ---
 
-        private static void StartServices()
+        // --- First run for all services. Calls only once ---
+
+        private static void InitAllServices()
         {
             if (provider == null || shell == null)
             {
@@ -132,51 +134,40 @@ namespace TTvActionHub
                     Logger.Warn($"Service of type {service.GetType().Name} has missing ServiceName. Skipping.");
                     continue;
                 }
-
-                // Thread safe check and insertion
-                if(runningServices.TryAdd(serviceName, service))
+                shell.AddService(serviceName);
+                shell.CmdOut($"Attemting to start {serviceName}...");
+                Logger.Info($"Attemting to start {serviceName}...");
+                try
                 {
-                    shell.AddService(serviceName);
-                    shell.CmdOut($"Attemting to start {serviceName}...");
-                    Logger.Info($"Attemting to start {serviceName}...");
-
-                    try
+                    service.StatusChanged += OnServiceStatusChangedHandler;
+                    service.Run();
+                    bool state = service.IsRunning;
+                    shell.UpdateServicesStates(serviceName, state);
+                    if (state)
                     {
-                        service.StatusChanged += OnServiceStatusChangedHandler;
-                        service.Run();
-                        bool currentStatus = service.IsRunning; 
-                        shell.UpdateServicesStates(serviceName, currentStatus); 
-                        if (currentStatus)
-                        {
-                            shell.CmdOut($"{serviceName} run command issued, service reports running.");
-                            Logger.Info($"{serviceName} run command issued, service reports running.");
-                        }
-                        else
-                        {
-                            shell.CmdOut($"{serviceName} run command issued, but service reports not running immediately.");
-                            Logger.Warn($"{serviceName} run command issued, but service reports not running immediately.");
-                        }
+                        shell.CmdOut($"{serviceName} run command issued, service reports running.");
+                        Logger.Info($"{serviceName} run command issued, service reports running.");
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        Logger.Error($"Failed to start {serviceName}:", ex);
-                        shell.CmdOut($"ERROR starting {serviceName}: {ex.Message}");
-                        shell.UpdateServicesStates(serviceName, false);
-                        service.StatusChanged -= OnServiceStatusChangedHandler;
-                        runningServices.TryRemove(serviceName, out _);
+                        shell.CmdOut($"{serviceName} run command issued, but service reports not running immediately.");
+                        Logger.Warn($"{serviceName} run command issued, but service reports not running immediately.");
                     }
-                } else
+                    runningServices.TryAdd(serviceName, service);
+                }
+                catch (Exception ex)
                 {
-                    Logger.Warn($"Service {serviceName} was already in running list during startup. Skipping duplicate start.");
-                    if (runningServices.TryGetValue(serviceName, out var existingService))
-                    {
-                        shell.UpdateServicesStates(serviceName, existingService.IsRunning);
-                    }
+                    Logger.Error($"Failed to start {serviceName}:", ex);
+                    shell.CmdOut($"Error starting {serviceName}: {ex.Message}");
+                    shell.UpdateServicesStates(serviceName, false);
+                    service.StatusChanged -= OnServiceStatusChangedHandler;
                 }
             }
         }
 
-        private static void StopServices()
+        // --- Last stop for all services. Calls only once ---
+
+        private static void DeInitAllServices()
         {
             if (provider == null || shell == null)
             {
@@ -211,113 +202,97 @@ namespace TTvActionHub
             shell.CmdOut("Service shutdown process finished.");
         }
 
-        private static void RestartServiceByName(string serviceName)
+        private static void StopServiceByName(string name)
         {
-            if (shell == null || provider == null) return;
-            // Needed to be locked for hard work (:/)
-            lock (serviceManagementLock)
+            if (provider == null || shell == null)
             {
-                shell.CmdOut($"Attempting to restart service: {serviceName}...");
-                Logger.Info($"Restart requested for service: {serviceName}");
-                IService? serviceInstance;
-                bool wasRunning = runningServices.TryGetValue(serviceName, out serviceInstance);
-
-                if (serviceInstance == null && !wasRunning)
-                {
-                    // Trying find in DI if service was not running at all
-                    serviceInstance = provider.GetServices<IService>()
-                        .FirstOrDefault(s => s.ServiceName.Equals(serviceName, StringComparison.OrdinalIgnoreCase));
-                    if (serviceInstance == null)
-                    {
-                        shell.CmdOut($"ERROR: Service '{serviceName}' not found in registry.");
-                        Logger.Error($"Cannot restart: Service '{serviceName}' not found in DI container.");
-                        return;
-                    }
-                    Logger.Info($"Service '{serviceName}' was not running. Will attempt to start.");
-                }
-                else if (serviceInstance == null && wasRunning) 
-                {
-                    // VERY STRANGE SITUATION ???
-                    Logger.Error($"Inconsistent state for service '{serviceName}' during restart. Aborting.");
-                    shell.CmdOut($"ERROR: Inconsistent state for {serviceName}. Restart aborted.");
-                    
-                    runningServices.TryRemove(serviceName, out _);
-                    return;
-                }
-
-                if (wasRunning && serviceInstance != null)
-                {
-                    shell.CmdOut($"Stopping {serviceName}...");
-                    Logger.Info($"Stopping {serviceName} for restart...");
-                    try
-                    {
-                        serviceInstance.StatusChanged -= OnServiceStatusChangedHandler;
-                        serviceInstance.Stop();
-
-                        if (!runningServices.TryRemove(serviceName, out _))
-                        {
-                            Logger.Warn($"Service {serviceName} was not found in running list during removal for restart.");
-                        }
-                        shell.UpdateServicesStates(serviceName, false);
-                        shell.CmdOut($"{serviceName} stopped.");
-                        Logger.Info($"{serviceName} stopped successfully.");
-                    }
-                    catch (Exception ex)
-                    {
-                        shell.UpdateServicesStates(serviceName, false);
-                        shell.CmdOut($"ERROR stopping {serviceName}: {ex.Message}. Restart aborted.");
-                        Logger.Error($"Failed to stop {serviceName} during restart:", ex);
-                        runningServices.TryRemove(serviceName, out _);
-                    }
-                }
-
-                Thread.Sleep(20); // Smol break to drink coffe
-
-                // --- Starting up serivice ---
-
-                if (serviceInstance == null)
-                {
-                    Logger.Error($"Cannot start service '{serviceName}' during restart: instance is null.");
-                    shell.CmdOut($"ERROR: Could not obtain instance for {serviceName}. Start aborted.");
-                    return;
-                }
-
-                shell.CmdOut($"Starting {serviceName}...");
-                Logger.Info($"Starting {serviceName} as part of restart...");
+                Logger.Warn("Cannot stop services: Provider or Shell is not initialized.");
+                return;
+            }
+            var finded = runningServices.TryRemove(name, out var service);
+            if (service == null || !finded)
+            {
+                shell.CmdOut($"Unable to get service with name: {name}");
+                Logger.Error($"Unable to get service with name: {name}");
+                return;
+            }
+            else
+            {
+                shell.CmdOut($"Attempting to stop {service.ServiceName}...");
+                Logger.Info($"Attempting to stop {service.ServiceName}...");
                 try
                 {
-                    runningServices.TryAdd(serviceName, serviceInstance);
-                    serviceInstance.StatusChanged += OnServiceStatusChangedHandler;
-                    serviceInstance.Run();
-
-                    bool currentStatusRestart = serviceInstance.IsRunning;
-                    shell.UpdateServicesStates(serviceName, currentStatusRestart);
-                    if (currentStatusRestart)
-                    {
-                        shell.CmdOut($"{serviceName} started successfully."); 
-                        Logger.Info($"{serviceName} started successfully after restart request.");
-                    }
-                    else
-                    {
-                        shell.CmdOut($"WARNING: {serviceName} started but reported not running immediately after restart.");
-                        Logger.Warn($"{serviceName} reports not running immediately after restart Run().");
-                    }
+                    service.StatusChanged -= OnServiceStatusChangedHandler;
+                    service.Stop();
+                    shell.UpdateServicesStates(service.ServiceName, false);
+                    shell.CmdOut($"{service.ServiceName} has stopped");
+                    Logger.Info($"{service.ServiceName} has stopped");
                 }
                 catch (Exception ex)
                 {
-                    shell.UpdateServicesStates(serviceName, false);
-                    shell.CmdOut($"ERROR starting {serviceName}: {ex.Message}");
-                    Logger.Error($"Failed to start {serviceName} during restart:", ex);
-
-                    serviceInstance.StatusChanged -= OnServiceStatusChangedHandler;
-                    runningServices.TryRemove(serviceName, out _);
+                    shell.UpdateServicesStates(name, false); // Anyway we get ex during stopping :/
+                    shell.CmdOut($"Error during stopping service {name}.");
+                    Logger.Error($"Error during stopping service {name}.", ex);
                 }
             }
         }
 
-        private static void RestartAllRunningServices()
+        private static void StartServiceByName(string name)
         {
-            throw new NotImplementedException();
+            if (shell == null || provider == null)
+            {
+                Logger.Warn("Cannot start services: Provider or Shell is not initialized.");
+                return;
+            }
+
+            var finded = runningServices.TryGetValue(name, out var service);
+            if (finded && service != null)
+            {
+                if (service.IsRunning)
+                {
+                    shell.CmdOut($"Service {name} already running");
+                    Logger.Warn($"Service {name} already running");
+                    return;
+                }
+                runningServices.TryRemove(service.ServiceName, out _);
+            }
+            // --- Attempting to find service ---
+            service = provider.GetServices<IService>().FirstOrDefault(
+                sv => sv.ServiceName.Equals(name, StringComparison.OrdinalIgnoreCase));
+            if (service == default(IService))
+            {
+                shell.CmdOut($"Unable to start service: {name}. Looks like it dosn't registred");
+                Logger.Warn($"Unable to start service: {name}. Looks like it dosn't registred");
+                return;
+            }
+            shell.CmdOut($"Attempting to start service: {name}...");
+            Logger.Warn($"Unable to start service: {name}...");
+            try
+            {
+                service.StatusChanged += OnServiceStatusChangedHandler;
+                service.Run();
+                var isrunning = service.IsRunning;
+                shell.UpdateServicesStates(service.ServiceName, isrunning);
+                if (isrunning)
+                {
+                    shell.CmdOut($"{service.ServiceName} run command issued, service reports running.");
+                    Logger.Info($"{service.ServiceName} run command issued, service reports running.");
+                }
+                else
+                {
+                    shell.CmdOut($"{service.ServiceName} run command issued, but service reports not running immediately.");
+                    Logger.Warn($"{service.ServiceName} run command issued, but service reports not running immediately.");
+                }
+                runningServices.TryAdd(service.ServiceName, service);
+                UpdateStaticLuaBridges(service);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Failed to start {service.ServiceName}:", ex);
+                shell.CmdOut($"Error starting {service.ServiceName}: {ex.Message}");
+                shell.UpdateServicesStates(service.ServiceName, false);
+                service.StatusChanged -= OnServiceStatusChangedHandler;
+            }
         }
 
         // --- SERVICE STATUS EVENT HANDLER ---
@@ -354,25 +329,47 @@ namespace TTvActionHub
             }
         }
 
-        public static void InitStaticExternLibs()
+        private static void InitializeStaticLuaBridges()
         {
-            runningServices.TryGetValue("TwitchChat", out var tcServ);
-            if(tcServ is not TwitchChatService tcs) 
+            try
             {
-                throw new NullReferenceException(nameof(TwitchChatService));
-            }
+                Logger.Info("Initializing static bridges for Lua...");
+
+                var allServices = provider!.GetServices<IService>();
+                foreach (var service in allServices)
+                {
+                    if (service is TwitchChatService ttvServ)
+                    {
+                        TwitchChat.Client = ttvServ!.Client;
+                        TwitchChat.Channel = ttvServ!.Channel;
+                    }
+                    else if (service is AudioService audioServ)
+                        Sounds.audio = audioServ!;
+                    else if (service is ContainerService containerServ)
+                        Storage.Container = containerServ!;
+                }
+            } catch (Exception ex)
             {
-                TwitchChat.Client = tcs.Client;
-                TwitchChat.Channel = tcs.Channel;
+                Logger.Error("FATAL: Failed to initialize static Lua bridges:", ex);
+                throw new InvalidOperationException("Failed to initialize static Lua bridges. See logs for details.", ex);
             }
-            runningServices.TryGetValue("AudioService", out var auServ);
-            if(auServ is not AudioService aus)
+        }
+
+        private static void UpdateStaticLuaBridges(IService s)
+        {
+            shell!.CmdOut($"Updating static bridges for {s.ServiceName}...");
+            Logger.Info($"Updating static bridges for {s.ServiceName}...");
+
+            if (s is TwitchChatService ttvServ)
             {
-                throw new NullReferenceException(nameof(AudioService));
+                TwitchChat.Client = ttvServ!.Client;
+                TwitchChat.Channel = ttvServ!.Channel;
             }
-            {
-                Sounds.audio = aus;
-            }
+            else if (s is AudioService audioServ)
+                Sounds.audio = audioServ!;
+            else if (s is ContainerService containerServ)
+                Storage.Container = containerServ!;
+            Logger.Info("Static bridges updated successfully.");
         }
     }
 }

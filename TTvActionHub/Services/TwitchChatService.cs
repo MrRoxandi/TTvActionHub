@@ -20,7 +20,7 @@ namespace TTvActionHub.Services
 
         private ConnectionCredentials? _credentials;
         private readonly IConfig _configuration = config;
-        private TwitchClient? _client;
+        private TwitchClient? _client;  
 
         public void Run()
         {

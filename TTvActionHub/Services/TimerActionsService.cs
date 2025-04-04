@@ -15,7 +15,7 @@ namespace TTvActionHub.Services
                 Logger.Log(LOGTYPE.INFO, ServiceName, "Nothing to run. Skipping...");
                 return;
             }
-            foreach (var e in _config.TActions)
+            foreach (var (_, e) in _config.TActions)
             {
                 Logger.Log(LOGTYPE.INFO, ServiceName, $"Running [{e.Name}] action");
                 e.Run();
@@ -31,7 +31,7 @@ namespace TTvActionHub.Services
                 Logger.Log(LOGTYPE.INFO, ServiceName, "Nothing to stop. Skipping...");
                 return;
             }
-            foreach (var e in _config.TActions)
+            foreach (var (_, e) in _config.TActions)
             {
                 if (!e.IsRunning) continue;
                 Logger.Log(LOGTYPE.INFO, ServiceName, $"Stopping [{e.Name}] action");
@@ -43,7 +43,7 @@ namespace TTvActionHub.Services
 
         public string ServiceName { get => "TimerActions"; }
 
-        public bool IsRunning => _config.TActions.Any((e) => e.IsRunning);
+        public bool IsRunning => _config.TActions.Any((e) => e.Value.IsRunning);
 
         protected virtual void OnStatusChanged(bool isRunning, string? message = null)
         {

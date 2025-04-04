@@ -5,26 +5,70 @@ using TwitchLib.EventSub.Websockets;
 
 namespace TTvActionHub.Services
 {
-    public class EventSubService : IService
+    public class EventSubService(IConfig config) : IService
     {
-        private readonly IConfig _configuration;
-        private readonly EventSubWebsocketClient _client;
+        public event EventHandler<ServiceStatusEventArgs>? StatusChanged;
+        public string ServiceName => "EventSubService"; 
+        public bool IsRunning => !(_client == null) ;
 
-        public event EventHandler<ServiceStatusEventArgs> StatusChanged;
+        private volatile bool _stopRequested = false;
 
-        public EventSubService(IConfig configuration)
+        private readonly IConfig _configuration = config;
+        private EventSubWebsocketClient? _client;
+
+        public void Run()
         {
-            _configuration = configuration;
-            _client = new();
-            _client.WebsocketConnected += WebsocketConnectedHandler;
-            _client.WebsocketDisconnected += WebsocketDisconnectedHandler;
-            _client.ErrorOccurred += ErrorOccurredHandler;
-            _client.ChannelPointsCustomRewardRedemptionAdd += ChannelPointsCustomRewardRedemptionAddHandler;
+            _stopRequested = false;
+            if(_client == null)
+            {
+                _client = new();
+                _client.WebsocketConnected += WebsocketConnectedHandler;
+                _client.WebsocketDisconnected += WebsocketDisconnectedHandler;
+                _client.ErrorOccurred += ErrorOccurredHandler;
+                _client.ChannelPointsCustomRewardRedemptionAdd += ChannelPointsCustomRewardRedemptionAddHandler;
+                Logger.Log(LOGTYPE.INFO, ServiceName, "Initializing and connecting...");
+                try
+                {
+                    _client.ConnectAsync();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LOGTYPE.ERROR, ServiceName, "Failed to start.", ex);
+                    OnStatusChanged(false, $"Startup failed: {ex.Message}");
+                }
+            } else 
+            {
+                Logger.Log(LOGTYPE.WARNING, ServiceName, "Look like already connected...");
+                OnStatusChanged(true);
+            }
+            
         }
 
-        private Task ChannelPointsCustomRewardRedemptionUpdate(object sender, TwitchLib.EventSub.Websockets.Core.EventArgs.Channel.ChannelPointsCustomRewardRedemptionArgs args)
+        public void Stop()
         {
-            throw new NotImplementedException();
+            _stopRequested = true;
+            Logger.Log(LOGTYPE.INFO, ServiceName, "Disconnecting...");
+            if (_client != null) 
+            {
+                try
+                {
+                    _client.DisconnectAsync();
+                    _client.WebsocketConnected -= WebsocketConnectedHandler;
+                    _client.WebsocketDisconnected -= WebsocketDisconnectedHandler;
+                    _client.ErrorOccurred -= ErrorOccurredHandler;
+                    _client.ChannelPointsCustomRewardRedemptionAdd -= ChannelPointsCustomRewardRedemptionAddHandler;
+                    _client = null;
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LOGTYPE.ERROR, ServiceName, "Failed to stop.", ex);
+                    OnStatusChanged(true, $"Shutdown failed: {ex.Message}");
+                }
+            } else
+            {
+                Logger.Log(LOGTYPE.WARNING, ServiceName, "Look like already disconnected...");
+                OnStatusChanged(false);
+            }
         }
 
         private Task ChannelPointsCustomRewardRedemptionAddHandler(object sender, TwitchLib.EventSub.Websockets.Core.EventArgs.Channel.ChannelPointsCustomRewardRedemptionArgs args)
@@ -55,12 +99,16 @@ namespace TTvActionHub.Services
                 value.Execute(rewardResiever, rewardArgs);
             });
 
-        private Task ErrorOccurredHandler(object sender, TwitchLib.EventSub.Websockets.Core.EventArgs.ErrorOccuredArgs args)
-        {
-            throw new NotImplementedException();
-        }
+        private Task ErrorOccurredHandler(object sender, TwitchLib.EventSub.Websockets.Core.EventArgs.ErrorOccuredArgs args) =>
+            Task.Run(() => Logger.Log(LOGTYPE.ERROR, ServiceName, "While working, occured an error", args.Exception));
+            // Maybe should to restart, but for now will kip it like this
 
-        private async Task WebsocketDisconnectedHandler(object sender, EventArgs args) => await Task.Run(() => Logger.Log(LOGTYPE.INFO, ServiceName, "Disconected from EventSub"));
+        private async Task WebsocketDisconnectedHandler(object sender, EventArgs args)
+        {
+            Logger.Log(LOGTYPE.INFO, ServiceName, $"Service has disconnected");
+            OnStatusChanged(false, "Disconnected");
+            await HandleReconnect();
+        } 
 
         private async Task WebsocketConnectedHandler(object sender, TwitchLib.EventSub.Websockets.Core.EventArgs.WebsocketConnectedArgs args) 
         {
@@ -116,17 +164,43 @@ namespace TTvActionHub.Services
             }
         }
 
-        public void Run()
+        private Task HandleReconnect()
         {
-            _client.ConnectAsync();
+            if (!_stopRequested)
+            {
+                Logger.Log(LOGTYPE.INFO, ServiceName, "Attempting to reconnect in 5 seconds...");
+                Task.Delay(5000).ContinueWith(_ =>
+                {
+                    if (!_stopRequested)
+                    {
+                        Logger.Log(LOGTYPE.INFO, ServiceName, "Reconnecting...");
+                        try
+                        {
+                            _client?.ReconnectAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log(LOGTYPE.ERROR, ServiceName, "Reconnect failed.", ex);
+                            OnStatusChanged(false, $"Reconnect failed: {ex.Message}");
+                        }
+                    }
+                }
+                );
+            }
+            return Task.CompletedTask;
         }
 
-        public void Stop() {
-            _client.DisconnectAsync();
+        protected virtual void OnStatusChanged(bool isRunning, string? message = null)
+        {
+            try
+            {
+                StatusChanged?.Invoke(this, new ServiceStatusEventArgs(ServiceName, isRunning, message));
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LOGTYPE.ERROR, ServiceName, "Error invoking StatusChanged event handler.", ex);
+            }
+
         }
-
-        public string ServiceName { get => "EventSubService"; }
-
-        public bool IsRunning => throw new NotImplementedException();
     }
 }

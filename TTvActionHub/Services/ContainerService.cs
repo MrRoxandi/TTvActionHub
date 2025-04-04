@@ -6,10 +6,13 @@ namespace TTvActionHub.Services
 {
     public class ContainerService: IService
     {
+        public event EventHandler<ServiceStatusEventArgs>? StatusChanged;
+        public string ServiceName => "Container"; 
+        public bool IsRunning => _runningState;
+
         private ConcurrentDictionary<string, string> _storage = new();
         private readonly string _fullpath;
-
-        public event EventHandler<ServiceStatusEventArgs> StatusChanged;
+        private bool _runningState;
 
         public ContainerService() 
         {
@@ -28,21 +31,33 @@ namespace TTvActionHub.Services
             }
         }
 
+        protected virtual void OnStatusChanged(bool isRunning, string? message = null)
+        {
+            try
+            {
+                StatusChanged?.Invoke(this, new ServiceStatusEventArgs(ServiceName, isRunning, message));
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LOGTYPE.ERROR, ServiceName, "Error invoking StatusChanged event handler.", ex);
+            }
+
+        }
+
         public void Run()
         {
-            
+            _runningState = true;
+            OnStatusChanged(true);
             Logger.Log(LOGTYPE.INFO,  ServiceName, "Service is running");
         }
 
         public void Stop()
         {
-            SaveDataToDisk().Wait(); // Ensure data is saved before stopping
+            SaveDataToDisk(); // Ensure data is saved before stopping
+            _runningState = false;
+            OnStatusChanged(false);
             Logger.Log(LOGTYPE.INFO,  ServiceName, "Service is stopped");
         }
-
-        public string ServiceName { get => "ContainerService"; }
-
-        public bool IsRunning => throw new NotImplementedException();
 
         public void AddOrUpdateItem<T>(string name, T value)
         {
@@ -93,7 +108,7 @@ namespace TTvActionHub.Services
 
         public async Task<bool> ContainsAsync(string name) => await Task.Run(() => _storage.ContainsKey(name));
 
-        private async Task SaveDataToDisk()
+        private void SaveDataToDisk()
         {
             try
             {
@@ -103,7 +118,7 @@ namespace TTvActionHub.Services
                     PropertyNameCaseInsensitive = true
                 };
                 string jsonData = JsonSerializer.Serialize(_storage, options);
-                await File.WriteAllTextAsync(_fullpath, jsonData);
+                File.WriteAllText(_fullpath, jsonData);
                 Logger.Log(LOGTYPE.INFO,  ServiceName, "Data was saved successfully");
             }
             catch (Exception ex)

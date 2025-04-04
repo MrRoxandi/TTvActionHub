@@ -11,14 +11,15 @@ using TTvActionHub.Items;
 namespace TTvActionHub
 {
    public class Shell(IConfig config,
-       Action<string>? restartServiceCallBack = null,
-       Action? restartServicesCallBack = null,
+       Action<string>? startServicesCallBack = null,
+       Action<string>? stopServiceCallBack = null,
        IServiceProvider? serviceProvider = null) : IDisposable
    {
         // --- Main config and dependencies ---
         private readonly IConfig _config = config;
-        private readonly Action<string>? _restartServiceCallback = restartServiceCallBack;
-        private readonly Action? _restartAllServicesCallback = restartServicesCallBack;
+        private readonly List<string> _allowedFieldsToLookInConfig = ["commands", "rewards", "actions"];
+        private readonly Action<string>? _startServiceCallBack = startServicesCallBack;
+        private readonly Action<string>? _stopServiceCallBack = stopServiceCallBack;
         private readonly IServiceProvider? _serviceProvider = serviceProvider;
 
         // --- UI states ---
@@ -56,11 +57,6 @@ namespace TTvActionHub
         private ColorScheme? _bodyColorScheme;
         private ColorScheme? _inputColorScheme;
         private ColorScheme? _statusColorScheme;
-        private Terminal.Gui.Attribute _colorError;
-        private Terminal.Gui.Attribute _colorWarning;
-        private Terminal.Gui.Attribute _colorInfo;
-        private Terminal.Gui.Attribute _colorDefault;
-        private Terminal.Gui.Attribute _colorSuccess;
                 
         public void InitializeUI()
         {
@@ -411,98 +407,132 @@ namespace TTvActionHub
             switch (commandName)
             {
                 case "": return true;
-                case "exit": return false;
-                case "clear": CmdClear(); CmdOut("Command output cleared."); return true;
-                case "logs": ToggleLogView(true); CmdOut("Switched to logs view."); return true;
                 case "cmd": ToggleLogView(false); CmdOut("Switched to command output view."); return true;
-                case "restart": HandleRestartCommand(argument); return true; // TODO: Fix bugs
+                case "logs": ToggleLogView(true); CmdOut("Switched to logs view."); return true;
+                case "clear": CmdClear(); CmdOut("Command output cleared."); return true;
+                case "start": HandleStartCommand(argument); return true;
+                case "stop": HandleStopCommand(argument); return true;
+                case "list": HandleListCommand(argument); return true;
                 case "help": ShowHelpDialog(); return true;
+                case "exit": return false;
                 default: CmdOut($"Unknown command: '{input}'. Type 'help' for available commands."); return true;
             }
         }
 
-        private void HandleRestartCommand(string argument)
+        private void HandleListCommand(string argument)
         {
-            if (string.IsNullOrWhiteSpace(argument))
+            if (string.IsNullOrEmpty(argument))
             {
-                CmdOut("Usage: restart <service_name>|all");
+                CmdOut($"Usage: list [<field>|{string.Join('|', _allowedFieldsToLookInConfig)}]");
                 return;
             }
-
-            string target = argument.Trim();
-
-            if (target.Equals("all", StringComparison.OrdinalIgnoreCase))
+            var target = argument.Trim();
+            if (!_allowedFieldsToLookInConfig.Contains(target))
             {
-                if (_restartAllServicesCallback != null)
+                CmdOut($"Unable to find: {target}");
+                CmdOut($"Usage: list [<field>|{string.Join('|', _allowedFieldsToLookInConfig)}]");
+                return;
+            }
+            //"commands", "rewards", "actions"
+            switch (target)
+            {
+                case "commands":
+                    CmdOut($"Commands: [{string.Join(',', _config.Commands.Keys)}]");
+                    return;
+                case "rewards":
+                    CmdOut($"Commands: [{string.Join(',', _config.Rewards.Keys)}]");
+                    return;
+                case "actions":
+                    CmdOut($"Commands: [{string.Join(',', _config.TActions.Keys)}]");
+                    return;
+                default:
+                    CmdOut("How tf did u get here???");
+                    return;
+            }
+        }
+
+        private void HandleStopCommand(string argument)
+        {
+            if (string.IsNullOrEmpty(argument))
+            {
+                CmdOut($"Usage: stop [<service_name>|{string.Join('|', _serviceStates.Keys)}]");
+                return;
+            }
+            var target = argument.Trim();
+            var serviceName = _serviceStates.FirstOrDefault(
+                kvp => kvp.Key.Equals(target, StringComparison.OrdinalIgnoreCase)).Key;
+            if (serviceName == default)
+            {
+                CmdOut($"Unable to find service: {serviceName}");
+                return;
+            }
+            if(_stopServiceCallBack != null)
+            {
+                try
                 {
-                    CmdOut($"Initiating restart for all running services...");
-                    try 
-                    { 
-                        _restartAllServicesCallback(); 
-                    } 
-                    catch (Exception ex) 
-                    { 
-                        HandleCallbackError("restart all", ex); 
-                    }
-                    // Updating headers
+                    _stopServiceCallBack(serviceName);
                 }
-                else { CmdOut("ERROR: 'Restart All' functionality is not configured."); }
+                catch (Exception ex)
+                {
+                    HandleCallbackError($"stop {serviceName}", ex);
+                }
+            } else
+            {
+                CmdOut($"Stop service functionality is not configured. Ignoring...");
+            }
+        }
+
+        private void HandleStartCommand(string argument)
+        {
+            if (string.IsNullOrEmpty(argument))
+            {
+                CmdOut($"Usage: start [<service_name>|{string.Join('|', _serviceStates.Keys)}]");
+                return;
+            }
+            var target = argument.Trim();
+            var serviceName = _serviceStates.FirstOrDefault(
+                kvp => kvp.Key.Equals(target, StringComparison.OrdinalIgnoreCase)).Key;
+            if (serviceName == default)
+            {
+                CmdOut($"Unable to find service: {serviceName}");
+                return;
+            }
+            if (_startServiceCallBack != null)
+            {
+                try
+                {
+                    _startServiceCallBack(serviceName);
+                }
+                catch (Exception ex)
+                {
+                    HandleCallbackError($"start {serviceName}", ex);
+                }
             }
             else
             {
-                var serviceName = GetServiceNameCaseSensitive(target);
-                if (serviceName == null)
-                {
-                    CmdOut($"ERROR: Service '{target}' not found or not registered.");
-                    return;
-                }
-
-                if (_restartServiceCallback != null)
-                {
-                    CmdOut($"Initiating restart for service: {serviceName}...");
-                    try 
-                    { 
-                        _restartServiceCallback(serviceName); 
-                    }
-                    catch (Exception ex) 
-                    { 
-                        HandleCallbackError($"restart {serviceName}", ex); 
-                    }
-                }
-                else { CmdOut($"ERROR: 'Restart Service' functionality is not configured."); }
+                CmdOut($"Start service functionality is not configured. Ignoring...");
             }
-            
         }
 
-        private void ShowHelpDialog()
+        private static void ShowHelpDialog()
         {
             var builder = new StringBuilder();
             builder.AppendLine("Available commands:");
-            builder.AppendLine("restart <name> - Restart the specified service");
-            builder.AppendLine("help - Shows this help message (or press F1)");
+            builder.AppendLine("stop <name> - Attempt to stop the specified service");
+            builder.AppendLine("start <name> - Attempt to start specified service");
             builder.AppendLine("clear - Clears the command output area");
             builder.AppendLine("logs - Switch view to application logs");
             builder.AppendLine("cmd - Switch view to command output");
+            builder.AppendLine("list <name> - Show list of values");
             builder.AppendLine("exit - Stops services and exits");
-            MessageBox.Query("Help", builder.ToString(), "Ok");
+            builder.AppendLine("help - Shows this help message");
+            MessageBox.Query("Avalible commands", builder.ToString(), "Ok");
         }
 
         private void HandleCallbackError(string actionName, Exception ex)
         {
-            CmdOut($"ERROR during '{actionName}' execution: {ex.Message}");
+            CmdOut($"Error during '{actionName}' execution: {ex.Message}");
             Logger.Error($"Exception during '{actionName}' callback execution from Shell:", ex);
-        }
-
-        private string? GetServiceNameCaseSensitive(string name)
-        {
-            var kvp = _serviceStates.FirstOrDefault(p => p.Key.Equals(name, StringComparison.OrdinalIgnoreCase));
-            if (!kvp.Equals(default(KeyValuePair<string, bool>))) return kvp.Key;
-            if (_serviceProvider != null)
-            {
-                var service = _serviceProvider.GetServices<IService>().FirstOrDefault(s => s.ServiceName.Equals(name, StringComparison.OrdinalIgnoreCase));
-                return service?.ServiceName;
-            }
-            return null;
         }
 
         public void Dispose()
