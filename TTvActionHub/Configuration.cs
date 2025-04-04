@@ -29,6 +29,7 @@ namespace TTvActionHub
 
         private readonly long _stdCooldown;
         private readonly bool _logsState;
+        private readonly bool _forceRelog;
 
         private readonly ConcurrentDictionary<string, Command> _commands;
         private readonly ConcurrentDictionary<string, TwitchReward> _rewards;
@@ -40,76 +41,30 @@ namespace TTvActionHub
         private static string FieldAdress(string confpath, string field) => $"In [{confpath}] field [{field}]";
         private static string ParamAdress(string confpath, string field, string param) => $"In [{confpath}] parameter [{param}] in field [{field}]";
 
-        public Configuration(string configs_path)
+        public Configuration(string configsPath)
         {
 
             var lua = new Lua();
             lua.State.Encoding = Encoding.UTF8;
             lua.LoadCLRPackage();
 
-            var configpath = Path.Combine(configs_path, "config.lua");
-            var commandspath = Path.Combine(configs_path, "commands.lua");
-            var rewardspath = Path.Combine(configs_path, "rewards.lua");
-            var timeractionspath = Path.Combine(configs_path, "timeractions.lua");
-
-            var config_state = lua.DoFile(configpath);
-            var commands_state = lua.DoFile(commandspath);
-            var rewards_state = lua.DoFile(rewardspath);
-            var timeraction_state = lua.DoFile(timeractionspath);
-            
-            if (config_state[0] is not LuaTable luaConfig)
-                throw new Exception($"Returned result from {configpath} was not a valid table. Check syntax.");
-
-            if (commands_state[0] is not LuaTable luaCommands)
-                throw new Exception($"Returned result from {commandspath} was not a valid table. Check syntax.");
-
-            if (rewards_state[0] is not LuaTable luaRewards)
-                throw new Exception($"Returned result from {rewardspath} was not a valid table. Check syntax.");
-
-            if (timeraction_state[0] is not LuaTable luaTimerActions)
-                throw new Exception($"Returned result from {timeractionspath} was not a valid table. Check syntax.");
+            ReadConfigs(configsPath, lua, ["config", "commands", "rewards", "timeractions"], out var luaConfigsStates);
 
             _twitchApi = new TwitchApi(ClientId, ClientSecret, RedirectUrl);
 
+            var luaConfig = luaConfigsStates["config"];
             if (luaConfig["force-relog"] is not bool isForceRelog)
             {
-                Logger.Warn($"{FieldAdress(configpath, "force-relog")} is not presented. Will be used default value: [{false}].");
-                isForceRelog = false;
+                Logger.Warn($"In {FieldAdress("config", "force-relog")} is not presented. Will be used default value: [{false}].");
+                _forceRelog = false;
             } 
+            else _forceRelog = isForceRelog;
 
-            (string? Login, string? ID, string? Token, string? RefreshToken) authInfo = new();
-            {
-                AuthManager manager = new(_twitchApi, ClientSecret);
-                if (isForceRelog || !manager.LoadTwitchInfo())
-                {
-                authInfo = GetAuthInfoFromAPI();
-            }
-            else
-                {
-                    if (!manager.IsValidAuthTokens())
-                        manager.UpdateAuthInfo();
-                    authInfo = manager.TwitchInfo;
-                    }
-
-                if (string.IsNullOrEmpty(authInfo.Token)||
-                    string.IsNullOrEmpty(authInfo.RefreshToken) ||
-                    string.IsNullOrEmpty(authInfo.Login) ||
-                    string.IsNullOrEmpty(authInfo.ID))
-            {
-                throw new Exception("For some reasong program failed to get auth info. If u see this error report it");
-            }
-            else
-            {
-                    var (login, id, token, rtoken) = authInfo;
-                    manager.TwitchInfo = (login, id, token, rtoken);
-                _ttvInfo = new() { ID = id, Login = login, RefreshToken = rtoken, Token = token };
-            }
-                manager.SaveTwitchInfo();
-            }
+            _ttvInfo = AuthWithTwitch();
 
             if (luaConfig["opening-bracket"] is not string obracket || luaConfig["closing-bracket"] is not string cbracket)
             {
-                Logger.Warn($"{FieldAdress(configpath, "opening-bracket")} or {FieldAdress(configpath, "closing-bracket")} is not presented. Ignoring...");
+                Logger.Warn($"{FieldAdress("config", "opening-bracket")} or {FieldAdress("config", "closing-bracket")} is not presented. Ignoring...");
                 obracket = String.Empty;
                 cbracket = String.Empty;
             }
@@ -119,7 +74,7 @@ namespace TTvActionHub
 
             if (luaConfig["logs"] is not bool logState)
             {
-                Logger.Warn($"{FieldAdress(configpath, "logs")} is not presented. Will be used default value: [{true}].");
+                Logger.Warn($"{FieldAdress("config", "logs")} is not presented. Will be used default value: [{true}].");
                 logState = true;
             }
             
@@ -128,26 +83,23 @@ namespace TTvActionHub
             if (luaConfig["timeout"] is not long timeOut)
             {
                 timeOut = 30 * 1000; // 30 seconds in milliseconds
-                Logger.Warn($"{FieldAdress(configpath, "timeout")} is not presented. Will be used default value: {timeOut}");
+                Logger.Warn($"{FieldAdress("config", "timeout")} is not presented. Will be used default value: {timeOut}");
             }
             
             _stdCooldown = timeOut;
 
-            _commands = [];
-            _rewards = [];
-            _tActions = [];
+            _commands = LoadCommands(luaConfigsStates["commands"], "commands"); ;
+            _rewards = LoadRewards(luaConfigsStates["rewards"], "rewards"); ;
+            _tActions = LoadTActions(luaConfigsStates["timeractions"], "timeractions"); ;
 
-            LoadCommands(luaCommands, commandspath);
-            LoadRewards(luaRewards, rewardspath);
-            LoadTActions(luaTimerActions, timeractionspath);
-            ShowConfigInfo();
-
+            LogConfigStatus();
+            //lua?.Dispose();
             Logger.Info($"Configuration loaded successfully");
         }
 
-        private (string? Login, string? ID, string? Token, string? RefreshToken) GetAuthInfoFromAPI()
+        private (string Login, string ID, string Token, string RefreshToken) GetAuthInfoFromAPI()
         {
-            (string? Login, string? ID, string? Token, string? RefreshToken) authInfo = new();
+            (string Login, string ID, string Token, string RefreshToken) authInfo = new();
             var authTask = _twitchApi.GetAuthorizationInfo();
             authTask.Wait();
             if (authTask.IsCompleted)
@@ -172,13 +124,13 @@ namespace TTvActionHub
             return authInfo;
         }
 
-        private void LoadCommands(LuaTable? cmds, string path)
+        private ConcurrentDictionary<string, Command> LoadCommands(LuaTable? cmds, string path)
         {
-            
+            var commands = new ConcurrentDictionary<string, Command>();
             if (cmds is null)
             {
                 Logger.Warn($"Table from file {path} is empty. Ignoring...");
-                return;
+                return commands;
             }
 
             foreach (var keyObj in cmds.Keys)
@@ -206,39 +158,44 @@ namespace TTvActionHub
                     perm = Users.USERLEVEL.VIEWIER;
                 }
                             
-                _commands.TryAdd(keyObj.ToString()!, new Command { Function = action, Perm = perm, TimeOut = timer });
+                commands.TryAdd(keyObj.ToString()!, new Command { Function = action, Perm = perm, TimeOut = timer });
                 Logger.Info($"Loaded comand: {keyObj}");
             }
+
+            return commands;
         }
 
-        private void LoadRewards(LuaTable? rewards, string path)
+        private ConcurrentDictionary<string, TwitchReward> LoadRewards(LuaTable? rwrds, string path)
         {
-            if (rewards is null)
+            var rewards = new ConcurrentDictionary<string, TwitchReward>();
+            if (rwrds is null)
             {
                 Logger.Warn($"Table from file {path} is empty. Ignoring...");
-                return;
+                return rewards;
             }
             
-            foreach (var keyObj in rewards.Keys)
+            foreach (var keyObj in rwrds.Keys)
             {
-                if (rewards[keyObj] is not LuaTable table)
+                if (rwrds[keyObj] is not LuaTable table)
                     throw new Exception($"{ParamAdress(path, "rewards", keyObj.ToString()!)} is not a reward. Check syntax.");
 
                 if (table["action"] is not LuaFunction action)
                     throw new Exception($"{ParamAdress(path, keyObj.ToString()!, "action")} is not a action. Check syntax.");
                 
-                _rewards.TryAdd(keyObj.ToString()!, new TwitchReward { Function = action });
+                rewards.TryAdd(keyObj.ToString()!, new TwitchReward { Function = action });
 
                 Logger.Info($"Loaded reward: {keyObj}");
             }
+            return rewards;
         }
 
-        private void LoadTActions(LuaTable? events, string path)
+        private ConcurrentDictionary<string, TimerAction> LoadTActions(LuaTable? events, string path)
         {
+            var actions = new ConcurrentDictionary<string, TimerAction>();
             if (events is null)
             {
                 Logger.Warn($"Table from file {path} is empty. Ignoring...");
-                return;
+                return actions;
             }
 
             foreach (var keyObj in events.Keys)
@@ -252,13 +209,14 @@ namespace TTvActionHub
                 else if (timeout <= 0)
                     throw new Exception($"{ParamAdress(path, keyObj.ToString()!, "timeout")} is not valid time. Allowed values (>= 1).");
 
-                _tActions.TryAdd(keyObj.ToString()!, new TimerAction() { Action = action, Name = keyObj.ToString()!, TimeOut = timeout });
+                actions.TryAdd(keyObj.ToString()!, new TimerAction() { Action = action, Name = keyObj.ToString()!, TimeOut = timeout });
 
                 Logger.Info($"Loaded TimerAction: {keyObj}");
             }
+            return actions;
         }
 
-        private void ShowConfigInfo()
+        private void LogConfigStatus()
         {
             Logger.Info($"Login: {_ttvInfo.Login}");
             Logger.Info($"ID: {_ttvInfo.ID}");
@@ -272,5 +230,59 @@ namespace TTvActionHub
 
         }
 
+        private void ReadConfigs(string configsPath, Lua lua, IEnumerable<string> confNames, out Dictionary<string, LuaTable> outTable)
+        {
+            outTable = [];
+            foreach (var confName in confNames)
+            {
+                var confPath = Path.Combine(configsPath, $"{confName}.lua");
+                var confState = lua.DoFile(confPath);
+                if (confState[0] is not LuaTable table)
+                {
+                    throw new Exception($"Returned result form {confPath} was not a valid table. Checl syntax");
+                }
+                outTable.Add(confName, table);
+            }
+        }
+
+        private (string Login, string ID, string Token, string RefreshToken) AuthWithTwitch()
+        {
+            AuthManager manager = new(_twitchApi, ClientSecret);
+            if (_forceRelog || !manager.LoadTwitchInfo())
+            {
+                var result = GetAuthInfoFromAPI();
+                manager.TwitchInfo = result;
+                manager.SaveTwitchInfo();
+                return result;
+            }
+            if (!manager.IsValidAuthTokens())
+            {
+                try
+                {
+                    var refreshTask = _twitchApi.RefreshAccessTokenAsync(manager.TwitchInfo.RefreshToken);
+                    refreshTask.Wait();
+                    var (token, rtoken) = refreshTask.Result;
+                    if(token == null || rtoken == null)
+                    {
+                        manager.TwitchInfo = GetAuthInfoFromAPI();
+                    } else
+                    {
+                        manager.TwitchInfo.Token = token;
+                        manager.TwitchInfo.RefreshToken = rtoken;
+                    }
+                    manager.UpdateTwitchInfo();
+                } catch (Exception ex)
+                {
+                    Logger.Error($"Unable to update Twitch Info with manager due to error", ex);
+                    Logger.Info($"Getting new Twitch Info from browser");
+                    manager.TwitchInfo = GetAuthInfoFromAPI();
+                }
+                finally
+                {
+                    manager.SaveTwitchInfo();
+                }
+            }
+            return manager.TwitchInfo;
+        }
     }
 }
