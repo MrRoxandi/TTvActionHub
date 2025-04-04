@@ -90,7 +90,6 @@ namespace TTvActionHub
                         manager.UpdateAuthInfo();
                     authInfo = manager.TwitchInfo;
                     }
-                }
 
                 if (string.IsNullOrEmpty(authInfo.Token)||
                     string.IsNullOrEmpty(authInfo.RefreshToken) ||

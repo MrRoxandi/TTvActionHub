@@ -16,5 +16,7 @@ namespace TTvActionHub.Logs
 
         public Task Log(string type, string name, string message, Exception? err = null);
 
+        public IEnumerable<string> GetLastLogs();
+
     }
 }

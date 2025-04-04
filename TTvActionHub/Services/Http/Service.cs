@@ -10,6 +10,8 @@ namespace TTvActionHub.Services.Http
         Thread thread;
         bool running = true;
 
+        public event EventHandler<ServiceStatusEventArgs> StatusChanged;
+
         public Service(string adress = "http://localhost", string port = "8888")
         {
             thread = new Thread(this.ThreadStart);
@@ -74,5 +76,6 @@ namespace TTvActionHub.Services.Http
 
         public string ServiceName { get => throw new NotImplementedException(); }
 
+        public bool IsRunning => throw new NotImplementedException();
     }
 }

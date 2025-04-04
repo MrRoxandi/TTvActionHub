@@ -9,6 +9,8 @@ namespace TTvActionHub.Services
         private ConcurrentDictionary<string, string> _storage = new();
         private readonly string _fullpath;
 
+        public event EventHandler<ServiceStatusEventArgs> StatusChanged;
+
         public ContainerService() 
         {
             var _dir = Path.Combine(Directory.GetCurrentDirectory(), "container");
@@ -39,6 +41,8 @@ namespace TTvActionHub.Services
         }
 
         public string ServiceName { get => "ContainerService"; }
+
+        public bool IsRunning => throw new NotImplementedException();
 
         public void AddOrUpdateItem<T>(string name, T value)
         {

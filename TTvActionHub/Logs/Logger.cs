@@ -10,7 +10,7 @@ namespace TTvActionHub.Logs
 
     internal static class Logger
     {
-        private static readonly ILogger _logger = new ConsoleFileLogger();
+        private static readonly ILogger _logger = new MainLogger();
 
         public static void Error(string message, Exception? err = null)
         {
@@ -39,6 +39,8 @@ namespace TTvActionHub.Logs
 
             _logger.Log(res, name, message, err);
         }
+
+        public static IEnumerable<string> LastLogs() => _logger.GetLastLogs();
 
     }
 }

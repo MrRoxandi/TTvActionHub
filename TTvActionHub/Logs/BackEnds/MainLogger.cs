@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Primitives;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,14 +9,15 @@ using System.Threading.Tasks;
 
 namespace TTvActionHub.Logs.BackEnds
 {
-    internal class ConsoleFileLogger : ILogger, IDisposable
+    internal class MainLogger : ILogger, IDisposable
     {
         private string _filepath;
         private StreamWriter _writer;
         private object _lock = new object();
         private bool _disposed = false;
+        private List<string> _lastLogs = [];
 
-        public ConsoleFileLogger()
+        public MainLogger()
         {
             var dir = Path.Combine(Directory.GetCurrentDirectory(), "logs");
             Directory.CreateDirectory(dir);
@@ -37,7 +39,7 @@ namespace TTvActionHub.Logs.BackEnds
             }
             else
             {
-                consoleMessage = $"{message} {err.Message} (full trace in file)\n";
+                consoleMessage = $"{message} {err.Message} (full trace in file)"; 
                 fileMessage = $"{message}\n" +
                     $"\tErorr message: {err.Message}\n" +
                     $"\tStack trace: {err.StackTrace}\n";
@@ -47,12 +49,23 @@ namespace TTvActionHub.Logs.BackEnds
                 lock (_lock)
                 {
                     _writer.Write(fileMessage);
+                    _lastLogs.Add(consoleMessage);
+
+                    if (_lastLogs.Count > 200) 
+                    {
+                        _lastLogs.RemoveRange(0, _lastLogs.Count - 200);
+                    }
                 }
-                await Task.Run(() => Console.WriteLine(consoleMessage));
+                await Task.CompletedTask; 
+            }
+            catch (ObjectDisposedException)
+            {
+                await Task.CompletedTask; 
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Logger error]: {ex}");
+                Console.WriteLine($"[CRITICAL LOGGER ERROR]: Failed to write log. {ex}");
+                await Task.CompletedTask; 
             }
         }
 
@@ -76,6 +89,13 @@ namespace TTvActionHub.Logs.BackEnds
             return InternalLogAsync($"[{name}:{type}] {message}", err);
         }
 
+        public IEnumerable<string> GetLastLogs()
+        {
+            lock (_lock)
+            {
+                return [.. _lastLogs];
+            }
+        }
 
         public void Dispose()
         {

@@ -35,6 +35,8 @@
     <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
     <PackageReference Include="NLua" Version="1.7.4" />
     <PackageReference Include="NVorbis" Version="0.10.5" />
+    <PackageReference Include="ReadLine.Reboot" Version="3.4.1" />
+    <PackageReference Include="Terminal.Gui" Version="1.18.0" />
     <PackageReference Include="TwitchLib" Version="3.5.3" />
     <PackageReference Include="TwitchLib.Api.Core.Enums" Version="3.9.0" />
     <PackageReference Include="TwitchLib.EventSub.Core" Version="2.5.2" />

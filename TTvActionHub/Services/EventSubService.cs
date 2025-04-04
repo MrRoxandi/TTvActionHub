@@ -10,6 +10,8 @@ namespace TTvActionHub.Services
         private readonly IConfig _configuration;
         private readonly EventSubWebsocketClient _client;
 
+        public event EventHandler<ServiceStatusEventArgs> StatusChanged;
+
         public EventSubService(IConfig configuration)
         {
             _configuration = configuration;
@@ -124,5 +126,7 @@ namespace TTvActionHub.Services
         }
 
         public string ServiceName { get => "EventSubService"; }
+
+        public bool IsRunning => throw new NotImplementedException();
     }
 }
