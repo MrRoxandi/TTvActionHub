@@ -64,7 +64,6 @@ namespace TTvActionHub
 
                 provider = collection.BuildServiceProvider();
                 Logger.Info("Dependency Injection configured.");
-                InitializeStaticLuaBridges();
             }
             catch (Exception ex)
             {
@@ -88,6 +87,8 @@ namespace TTvActionHub
                 Logger.Info("Starting services...");
                 InitAllServices(); 
                 Logger.Info("Service startup process finished.");
+
+                InitializeStaticLuaBridges();
 
                 // --- Main loop (Terminal.Gui) ---
                 Logger.Info("Starting interactive shell UI...");
