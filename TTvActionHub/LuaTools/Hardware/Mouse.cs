@@ -1,5 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using TTvActionHub.BackEnds.Hardware;
 
 namespace TTvActionHub.LuaTools.Hardware
 {
@@ -14,22 +15,28 @@ namespace TTvActionHub.LuaTools.Hardware
             Right = 2,
         }
 
-        public struct Point(int x, int y)
-        {
-            public int x = x;
-            public int y = y;
-        }
-
         public static void Press(MouseButton button)
         {
-            var code = GetKeyCode(button, true);
-            mouse_event((int)code, 0, 0, 0, 0);
+            var input = InputWrapper.ConstructMouseButtonDown((NativeInputs.MouseButton)button);
+            InputWrapper.DispatchInput([input]);
+        }
+
+        public static void XPress(int xid)
+        {
+            var input = InputWrapper.ConstuctXMouseButtonDown(xid);
+            InputWrapper.DispatchInput([input]);
         }
 
         public static void Release(MouseButton button)
         {
-            var code = GetKeyCode(button, false);
-            mouse_event((int)code, 0, 0, 0, 0);
+            var input = InputWrapper.ConstructMouseButtonUp((NativeInputs.MouseButton)button);
+            InputWrapper.DispatchInput([input]);
+        }
+
+        public static void XRelease(int xid)
+        {
+            var input = InputWrapper.ConstuctXMouseButtonUp(xid);
+            InputWrapper.DispatchInput([input]);
         }
 
         public static void Hold(MouseButton button, int timeDelay = 1000)
@@ -39,6 +46,13 @@ namespace TTvActionHub.LuaTools.Hardware
             Release(button);
         }
 
+        public static void XHold(int xid, int timeDelay = 1000)
+        {
+            XPress(xid);
+            Thread.Sleep(timeDelay);
+            XRelease(xid);
+        }
+
         public static void Click(MouseButton button)
         {
             Press(button);
@@ -46,77 +60,25 @@ namespace TTvActionHub.LuaTools.Hardware
             Release(button);
         }
 
-        public static Point GetPosition()
+        public static void XClick(int xid)
         {
-            var gotPoint = GetCursorPos(out Point currentMousePoint);
-            if (!gotPoint) { currentMousePoint = new(0, 0); }
-            return currentMousePoint;
+            XPress(xid);
+            Thread.Sleep(100);
+            XRelease(xid);
         }
 
-        public static void SetPosition(Point p)
-        {
-            SetCursorPos(p.x, p.y);
-        }
 
         public static void SetPostion(int x, int y)
         {
-            SetCursorPos(x, y);
+            var input = InputWrapper.ConstructAbsoluteMouseMove(x, y);
+            InputWrapper.DispatchInput([input]);
         }
 
         public static void Move(int dx, int dy)
         {
-            mouse_event((int)KeyCodes.Move, dx, dy, 0, 0);
+            var input = InputWrapper.ConstructRelativeMouseMove(dx, dy);
+            InputWrapper.DispatchInput([input]);
         }
-
-        public static void Move(Point point)
-        {
-            mouse_event((int)KeyCodes.Move, point.x, point.y, 0, 0);
-        }
-
-        // --- Private (backend) methods ---
-
-        private enum KeyCodes : byte
-        {
-            LeftDown = 0x00000002,
-            LeftUp = 0x00000004,
-            MiddleDown = 0x00000020,
-            MiddleUp = 0x00000040,
-            Move = 0x00000001,
-            RightDown = 0x00000008,
-            RightUp = 0x00000010
-        }
-
-        [DllImport("user32.dll")]
-        private static extern void mouse_event(int dwFlags, int dx, int dy, int dwData, int dwExtraInfo);
-        
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool GetCursorPos(out Point lpMousePoint);
-
-        [DllImport("user32.dll", EntryPoint = "SetCursorPos")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        private static extern bool SetCursorPos(int x, int y);
-
-        private static KeyCodes GetKeyCode(MouseButton button, bool pressed)
-            => button switch
-            {
-                MouseButton.Left => pressed switch
-                {
-                    true => KeyCodes.LeftDown,
-                    _ => KeyCodes.LeftUp,
-                },
-                MouseButton.Middle => pressed switch
-                {
-                    true => KeyCodes.MiddleDown,
-                    _ => KeyCodes.MiddleUp,
-                },
-                MouseButton.Right => pressed switch
-                {
-                    true => KeyCodes.RightDown,
-                    _ => KeyCodes.RightUp,
-                },
-                _ => throw new IndexOutOfRangeException($"Undefined Key: {nameof(button)}")
-            };
 
     }
 }

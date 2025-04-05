@@ -174,6 +174,10 @@ namespace TTvActionHub
             if (key == Key.Enter)
             {
                 args.Handled = true;
+                if(_commandInput?.Text.Length < 2)
+                {
+                    _commandInput.Text = ustring.Make("> ");
+                } 
                 var inputText = _commandInput?.Text.ToString()?[2..] ?? string.Empty;
                 _commandInput!.Text = ustring.Make("> ");
                 _commandInput!.CursorPosition = _commandInput.Text.Length;

@@ -100,7 +100,7 @@ namespace TTvActionHub
                 var lineStr = lineUstr.ToString(); 
 
                 
-                Terminal.Gui.Attribute currentAttribute = ParseLineForAttribute(lineStr);
+                Terminal.Gui.Attribute currentAttribute = ParseLineForAttribute(lineStr!);
                 driver.SetAttribute(currentAttribute);
 
                 
