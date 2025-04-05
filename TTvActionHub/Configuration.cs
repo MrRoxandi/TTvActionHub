@@ -1,11 +1,13 @@
 using System.Text;
 using NLua;
+using System.Text;
 using TTvActionHub.Items;
 using TTvActionHub.Logs;
 using TTvActionHub.Twitch;
+using TTvActionHub.Authorization;
 using TTvActionHub.LuaTools.Stuff;
 using System.Collections.Concurrent;
-using TTvActionHub.Authorization;
+using TwitchLib.Api.Core.Exceptions;
 
 namespace TTvActionHub
 {
@@ -24,34 +26,38 @@ namespace TTvActionHub
         public (string obr, string cbr) Brackets { get => new(_obracket, _cbracket); }
         public TwitchApi TwitchApi { get => _twitchApi; }
 
-        private readonly (string Login, string ID, string Token, string RefreshToken) _ttvInfo;
+        private (string Login, string ID, string Token, string RefreshToken) _ttvInfo;
         private readonly TwitchApi _twitchApi;
 
         private readonly long _stdCooldown;
         private readonly bool _logsState;
         private readonly bool _forceRelog;
 
-        private readonly ConcurrentDictionary<string, Command> _commands;
-        private readonly ConcurrentDictionary<string, TwitchReward> _rewards;
-        private readonly ConcurrentDictionary<string, TimerAction> _tActions;
+        private ConcurrentDictionary<string, Command> _commands;
+        private ConcurrentDictionary<string, TwitchReward> _rewards;
+        private ConcurrentDictionary<string, TimerAction> _tActions;
 
         private readonly string _obracket;
         private readonly string _cbracket;
 
+        private readonly string _configsPath;
+        private readonly Lua? _lua;
         private static string FieldAdress(string confpath, string field) => $"In [{confpath}] field [{field}]";
         private static string ParamAdress(string confpath, string field, string param) => $"In [{confpath}] parameter [{param}] in field [{field}]";
 
         public Configuration(string configsPath)
         {
 
-            var lua = new Lua();
-            lua.State.Encoding = Encoding.UTF8;
-            lua.LoadCLRPackage();
+            _lua = new Lua();
+            _lua.State.Encoding = Encoding.UTF8;
+            _lua.LoadCLRPackage();
+            _configsPath = configsPath;
 
-            ReadConfigs(configsPath, lua, ["config", "commands", "rewards", "timeractions"], out var luaConfigsStates);
+            ReadConfigs(_configsPath, _lua, ["config", "commands", "rewards", "timeractions"], out var luaConfigsStates);
 
             _twitchApi = new TwitchApi(ClientId, ClientSecret, RedirectUrl);
-
+            // --- Main field for config ---
+            // --- They will not be readed again after reload ---
             var luaConfig = luaConfigsStates["config"];
             if (luaConfig["force-relog"] is not bool isForceRelog)
             {
@@ -60,8 +66,6 @@ namespace TTvActionHub
             } 
             else _forceRelog = isForceRelog;
 
-            _ttvInfo = AuthWithTwitch();
-
             if (luaConfig["opening-bracket"] is not string obracket || luaConfig["closing-bracket"] is not string cbracket)
             {
                 Logger.Warn($"{FieldAdress("config", "opening-bracket")} or {FieldAdress("config", "closing-bracket")} is not presented. Ignoring...");
@@ -69,16 +73,11 @@ namespace TTvActionHub
                 cbracket = String.Empty;
             }
 
-            _obracket = obracket;
-            _cbracket = cbracket;
-
             if (luaConfig["logs"] is not bool logState)
             {
                 Logger.Warn($"{FieldAdress("config", "logs")} is not presented. Will be used default value: [{true}].");
                 logState = true;
             }
-            
-            _logsState = logState;
             
             if (luaConfig["timeout"] is not long timeOut)
             {
@@ -86,15 +85,32 @@ namespace TTvActionHub
                 Logger.Warn($"{FieldAdress("config", "timeout")} is not presented. Will be used default value: {timeOut}");
             }
             
+            _obracket = obracket;
+            _cbracket = cbracket;
+            _logsState = logState;
             _stdCooldown = timeOut;
 
+            // --- Reloadable fields ---
+
+            _ttvInfo = AuthWithTwitch();
             _commands = LoadCommands(luaConfigsStates["commands"], "commands"); ;
             _rewards = LoadRewards(luaConfigsStates["rewards"], "rewards"); ;
             _tActions = LoadTActions(luaConfigsStates["timeractions"], "timeractions"); ;
 
             LogConfigStatus();
-            //lua?.Dispose();
+            
             Logger.Info($"Configuration loaded successfully");
+        }
+
+        public void ReloadConfig() 
+        {
+            ReadConfigs(_configsPath, _lua!, ["commands", "rewards", "timeractions"], out var luaConfigsStates);
+            _ttvInfo = AuthWithTwitch();
+            _commands = LoadCommands(luaConfigsStates["commands"], "commands"); ;
+            _rewards = LoadRewards(luaConfigsStates["rewards"], "rewards"); ;
+            _tActions = LoadTActions(luaConfigsStates["timeractions"], "timeractions"); ;
+
+            LogConfigStatus();
         }
 
         private (string Login, string ID, string Token, string RefreshToken) GetAuthInfoFromAPI()
@@ -106,7 +122,7 @@ namespace TTvActionHub
             {
                 var (Token, RefreshToken) = authTask.Result;
                 if (string.IsNullOrEmpty(Token) || string.IsNullOrEmpty(RefreshToken))
-                    throw new Exception("Unable to get Authorization information");
+                    throw new BadRequestException("Unable to get Authorization information");
                 authInfo.Token = Token;
                 authInfo.RefreshToken = RefreshToken;
             }
@@ -116,7 +132,7 @@ namespace TTvActionHub
             {
                 var (Login, ID) = channelInfoTask.Result;
                 if (string.IsNullOrEmpty(Login) || string.IsNullOrEmpty(ID))
-                    throw new Exception("Unable to get channel information");
+                    throw new BadRequestException("Unable to get channel information");
                 authInfo.Login = Login;
                 authInfo.ID = ID;
             }
@@ -255,22 +271,18 @@ namespace TTvActionHub
                 manager.SaveTwitchInfo();
                 return result;
             }
-            if (!manager.IsValidAuthTokens())
+            var validationTask = manager.IsValidTokensAsync();
+            validationTask.Wait();
+            if (!validationTask.Result)
             {
                 try
                 {
-                    var refreshTask = _twitchApi.RefreshAccessTokenAsync(manager.TwitchInfo.RefreshToken);
+                    var refreshTask = manager.UpdateAuthInfoAsync();
                     refreshTask.Wait();
-                    var (token, rtoken) = refreshTask.Result;
-                    if(token == null || rtoken == null)
+                    if (!refreshTask.Result)
                     {
                         manager.TwitchInfo = GetAuthInfoFromAPI();
-                    } else
-                    {
-                        manager.TwitchInfo.Token = token;
-                        manager.TwitchInfo.RefreshToken = rtoken;
                     }
-                    manager.UpdateTwitchInfo();
                 } catch (Exception ex)
                 {
                     Logger.Error($"Unable to update Twitch Info with manager due to error", ex);
@@ -284,5 +296,6 @@ namespace TTvActionHub
             }
             return manager.TwitchInfo;
         }
+    
     }
 }
