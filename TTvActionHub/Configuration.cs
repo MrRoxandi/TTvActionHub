@@ -53,7 +53,7 @@ namespace TTvActionHub
             _lua.LoadCLRPackage();
             _configsPath = configsPath;
 
-            ReadConfigs(_configsPath, _lua, ["config", "commands", "rewards", "timeractions"], out var luaConfigsStates);
+            ReadConfigs(_configsPath, ["config", "commands", "rewards", "timeractions"], out var luaConfigsStates);
 
             _twitchApi = new TwitchApi(ClientId, ClientSecret, RedirectUrl);
             // --- Main field for config ---
@@ -104,7 +104,7 @@ namespace TTvActionHub
 
         public void ReloadConfig() 
         {
-            ReadConfigs(_configsPath, _lua!, ["commands", "rewards", "timeractions"], out var luaConfigsStates);
+            ReadConfigs(_configsPath, ["commands", "rewards", "timeractions"], out var luaConfigsStates);
             _ttvInfo = AuthWithTwitch();
             _commands = LoadCommands(luaConfigsStates["commands"], "commands"); ;
             _rewards = LoadRewards(luaConfigsStates["rewards"], "rewards"); ;
@@ -246,13 +246,13 @@ namespace TTvActionHub
 
         }
 
-        private void ReadConfigs(string configsPath, Lua lua, IEnumerable<string> confNames, out Dictionary<string, LuaTable> outTable)
+        private void ReadConfigs(string configsPath, IEnumerable<string> confNames, out Dictionary<string, LuaTable> outTable)
         {
             outTable = [];
             foreach (var confName in confNames)
             {
                 var confPath = Path.Combine(configsPath, $"{confName}.lua");
-                var confState = lua.DoFile(confPath);
+                var confState = _lua!.DoFile(confPath);
                 if (confState[0] is not LuaTable table)
                 {
                     throw new Exception($"Returned result form {confPath} was not a valid table. Checl syntax");

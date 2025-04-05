@@ -1,150 +1,122 @@
 ﻿using System.Runtime.InteropServices;
+using System.Windows.Forms;
 
 namespace TTvActionHub.LuaTools.Hardware
 {
     public static class Mouse
     {
-        public enum MouseButton
+        // --- Public methods ---
+
+        public enum MouseButton : byte
         {
-            Left,
-            Right,
-            Middle
+            Left = 0,
+            Middle = 1,
+            Right = 2,
         }
 
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern bool SetCursorPos(int x, int y);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
-
-        [DllImport("user32.dll")]
-        private static extern bool GetCursorPos(out POINT lpPoint);
-
-        private const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
-        private const uint MOUSEEVENTF_LEFTUP = 0x0004;
-        private const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
-        private const uint MOUSEEVENTF_RIGHTUP = 0x0010;
-        private const uint MOUSEEVENTF_MIDDLEDOWN = 0x0020;
-        private const uint MOUSEEVENTF_MIDDLEUP = 0x0040;
-        private const uint MOUSEEVENTF_WHEEL = 0x0800;
-        private const uint INPUT_MOUSE = 0;
-
-        [StructLayout(LayoutKind.Sequential)]
-        private struct INPUT
+        public struct Point(int x, int y)
         {
-            public uint type;
-            public MOUSEINPUT mi;
+            public int x = x;
+            public int y = y;
         }
 
-        [StructLayout(LayoutKind.Sequential)]
-        private struct MOUSEINPUT
+        public static void Press(MouseButton button)
         {
-            public int dx;
-            public int dy;
-            public uint mouseData;
-            public uint dwFlags;
-            public uint time;
-            public nint dwExtraInfo;
+            var code = GetKeyCode(button, true);
+            mouse_event((int)code, 0, 0, 0, 0);
         }
 
-        [StructLayout(LayoutKind.Sequential)]
-        private struct POINT
+        public static void Release(MouseButton button)
         {
-            public int X;
-            public int Y;
+            var code = GetKeyCode(button, false);
+            mouse_event((int)code, 0, 0, 0, 0);
         }
 
-        public static void SetPosition(int x, int y)
-        {
-            if (!SetCursorPos(x, y))
-                throw new InvalidOperationException("Failed to move cursor.");
-        }
-
-        public static async Task MoveAsync(int targetX, int targetY, int steps = 50, int delay = 5)
-        {
-            if (!GetCursorPos(out POINT startPos))
-                throw new InvalidOperationException("Failed to get cursor position.");
-
-            int startX = startPos.X;
-            int startY = startPos.Y;
-
-            for (int i = 0; i <= steps; i++)
-            {
-                int x = startX + (targetX - startX) * i / steps;
-                int y = startY + (targetY - startY) * i / steps;
-                SetCursorPos(x, y);
-                await Task.Delay(delay);
-            }
-        }
-
-        public static async Task HoldAsync(MouseButton button, int timeDelay = 1000)
+        public static void Hold(MouseButton button, int timeDelay = 1000)
         {
             Press(button);
-            await Task.Delay(timeDelay);
+            Thread.Sleep(timeDelay);
             Release(button);
         }
 
         public static void Click(MouseButton button)
         {
             Press(button);
+            Thread.Sleep(100);
             Release(button);
         }
 
-        public static void Press(MouseButton button)
+        public static Point GetPosition()
         {
-            SendMouseEvent(GetDownFlag(button));
+            var gotPoint = GetCursorPos(out Point currentMousePoint);
+            if (!gotPoint) { currentMousePoint = new(0, 0); }
+            return currentMousePoint;
         }
 
-        public static void Release(MouseButton button)
+        public static void SetPosition(Point p)
         {
-            SendMouseEvent(GetUpFlag(button));
+            SetCursorPos(p.x, p.y);
         }
 
-        public static void Scroll(int delta)
+        public static void SetPostion(int x, int y)
         {
-            SendMouseEvent(MOUSEEVENTF_WHEEL, delta);
+            SetCursorPos(x, y);
         }
 
-        private static uint GetDownFlag(MouseButton button)
+        public static void Move(int dx, int dy)
         {
-            return button switch
+            mouse_event((int)KeyCodes.Move, dx, dy, 0, 0);
+        }
+
+        public static void Move(Point point)
+        {
+            mouse_event((int)KeyCodes.Move, point.x, point.y, 0, 0);
+        }
+
+        // --- Private (backend) methods ---
+
+        private enum KeyCodes : byte
+        {
+            LeftDown = 0x00000002,
+            LeftUp = 0x00000004,
+            MiddleDown = 0x00000020,
+            MiddleUp = 0x00000040,
+            Move = 0x00000001,
+            RightDown = 0x00000008,
+            RightUp = 0x00000010
+        }
+
+        [DllImport("user32.dll")]
+        private static extern void mouse_event(int dwFlags, int dx, int dy, int dwData, int dwExtraInfo);
+        
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool GetCursorPos(out Point lpMousePoint);
+
+        [DllImport("user32.dll", EntryPoint = "SetCursorPos")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetCursorPos(int x, int y);
+
+        private static KeyCodes GetKeyCode(MouseButton button, bool pressed)
+            => button switch
             {
-                MouseButton.Left => MOUSEEVENTF_LEFTDOWN,
-                MouseButton.Right => MOUSEEVENTF_RIGHTDOWN,
-                MouseButton.Middle => MOUSEEVENTF_MIDDLEDOWN,
-                _ => throw new ArgumentOutOfRangeException(nameof(button))
-            };
-        }
-
-        private static uint GetUpFlag(MouseButton button)
-        {
-            return button switch
-            {
-                MouseButton.Left => MOUSEEVENTF_LEFTUP,
-                MouseButton.Right => MOUSEEVENTF_RIGHTUP,
-                MouseButton.Middle => MOUSEEVENTF_MIDDLEUP,
-                _ => throw new ArgumentOutOfRangeException(nameof(button))
-            };
-        }
-
-        private static void SendMouseEvent(uint flags, int data = 0)
-        {
-            var input = new INPUT
-            {
-                type = INPUT_MOUSE,
-                mi = new MOUSEINPUT
+                MouseButton.Left => pressed switch
                 {
-                    dx = 0,
-                    dy = 0,
-                    mouseData = (uint)data,
-                    dwFlags = flags,
-                    time = 0,
-                    dwExtraInfo = nint.Zero
-                }
+                    true => KeyCodes.LeftDown,
+                    _ => KeyCodes.LeftUp,
+                },
+                MouseButton.Middle => pressed switch
+                {
+                    true => KeyCodes.MiddleDown,
+                    _ => KeyCodes.MiddleUp,
+                },
+                MouseButton.Right => pressed switch
+                {
+                    true => KeyCodes.RightDown,
+                    _ => KeyCodes.RightUp,
+                },
+                _ => throw new IndexOutOfRangeException($"Undefined Key: {nameof(button)}")
             };
 
-            if (SendInput(1, [input], Marshal.SizeOf<INPUT>()) == 0)
-                throw new InvalidOperationException("Failed to send mouse input.");
-        }
     }
 }
