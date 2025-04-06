@@ -1,6 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using System.Windows.Forms;
-using TTvActionHub.BackEnds.Hardware;
+﻿using TTvActionHub.BackEnds.Hardware;
 
 namespace TTvActionHub.LuaTools.Hardware
 {

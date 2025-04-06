@@ -111,7 +111,7 @@ namespace TTvActionHub.LuaTools.Hardware
 
         public static void HoldKey(Key k, int duration = 1000)
         {
-            if(duration < 100)
+            if(duration < 200)
             {
                 TypeKey(k);
                 return;

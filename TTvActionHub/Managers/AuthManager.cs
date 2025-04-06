@@ -1,11 +1,9 @@
-﻿using Microsoft.VisualBasic.Logging;
-using System.Net.Sockets;
-using System.Security.Cryptography;
-using System.Text;
+﻿using System.Text;
 using TTvActionHub.Logs;
 using TTvActionHub.Twitch;
+using System.Security.Cryptography;
 
-namespace TTvActionHub.Authorization
+namespace TTvActionHub.Managers
 {
     public class AuthManager
     {

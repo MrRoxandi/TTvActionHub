@@ -1,20 +1,32 @@
-﻿using TTvActionHub.Items;
+﻿using System.Collections.Concurrent;
+using TTvActionHub.Items;
 using TTvActionHub.Logs;
+using TTvActionHub.Managers;
 using TwitchLib.Api.Helix.Models.EventSub;
 using TwitchLib.EventSub.Websockets;
 
 namespace TTvActionHub.Services
 {
-    public class EventSubService(IConfig config) : IService
+    public class EventSubService : IService
     {
+        public ConcurrentDictionary<string, TwitchReward>? Rewards { get; set; }
         public event EventHandler<ServiceStatusEventArgs>? StatusChanged;
         public string ServiceName => "EventSubService"; 
         public bool IsRunning => !(_client == null) ;
-
         private volatile bool _stopRequested = false;
 
-        private readonly IConfig _configuration = config;
+        private readonly LuaConfigManager _configManager;
+        private readonly IConfig _configuration;
+
         private EventSubWebsocketClient? _client;
+
+        public EventSubService(IConfig config, LuaConfigManager manager)
+        {
+            _configuration = config;
+            _configManager = manager;
+            var rewards = _configManager.LoadRewards() ?? throw new Exception($"Bad configuration for {ServiceName}");
+            Rewards = rewards;
+        }
 
         public void Run()
         {
@@ -71,6 +83,16 @@ namespace TTvActionHub.Services
             }
         }
 
+        public bool UpdateConfiguration()
+        {
+            if (_configManager.LoadRewards() is not ConcurrentDictionary<string, TwitchReward> rwds)
+            {
+                return false;
+            }
+            Rewards = rwds;
+            return true;
+        }
+
         private Task ChannelPointsCustomRewardRedemptionAddHandler(object sender, TwitchLib.EventSub.Websockets.Core.EventArgs.Channel.ChannelPointsCustomRewardRedemptionArgs args)
             => Task.Run(() =>
             {
@@ -79,19 +101,11 @@ namespace TTvActionHub.Services
                 var rewardResiever = _event.UserName;
                 var rewardArgsStr = _event.UserInput;
 
-                if (!_configuration.Rewards.TryGetValue(rewardTitle, out TwitchReward? value))
-                    return;
+                if (Rewards == null) return;
 
-                var (obr, cbr) = _configuration.Brackets;
-                if (!string.IsNullOrEmpty(rewardArgsStr) && !string.IsNullOrEmpty(obr) && !string.IsNullOrEmpty(cbr))
-                {
-                    var start = rewardArgsStr.IndexOf(obr, StringComparison.Ordinal);
-                    var stop = rewardArgsStr.IndexOf(cbr, StringComparison.Ordinal);
-                    if (start == -1 || stop == -1)
-                        rewardArgsStr = "";
-                    else
-                        rewardArgsStr = rewardArgsStr.Substring(start + 1, stop - start - 1);
-                }
+                var result = Rewards.TryGetValue(rewardTitle, out TwitchReward? value);
+                if (!result || value == null) return;
+
                 rewardArgsStr = rewardArgsStr.Replace("\U000e0000", "").Trim();
                 Logger.Log(LOGTYPE.INFO, ServiceName, $"Received reward: {rewardTitle} from {rewardResiever} with args: {rewardArgsStr}");
 
@@ -150,10 +164,10 @@ namespace TTvActionHub.Services
                     version: version,
                     condition: new()
                     {
-                        {"broadcaster_user_id", _configuration.TwitchInfo.ID }
+                        {"broadcaster_user_id", _configuration.ID }
                     },
                     method: TwitchLib.Api.Core.Enums.EventSubTransportMethod.Websocket,
-                    websocketSessionId: _client.SessionId
+                    websocketSessionId: _client!.SessionId
                     );
                 return result;
             }

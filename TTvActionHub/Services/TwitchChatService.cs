@@ -1,26 +1,40 @@
 ﻿using TwitchLib.Communication.Events;
+using System.Collections.Concurrent;
 using TTvActionHub.LuaTools.Stuff;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
+using TTvActionHub.Managers;
 using TTvActionHub.Items;
 using TTvActionHub.Logs;
 using TwitchLib.Client;
 
 namespace TTvActionHub.Services
 {
-    public class TwitchChatService(IConfig config) : IService
+    public class TwitchChatService : IService, IUpdatableConfiguration
     {
         public TwitchClient? Client { get => _client; }
-        public string Channel { get => _configuration.TwitchInfo.Login; }
-
+        public string Channel { get => _configuration.Login; }
+        
+        public ConcurrentDictionary<string, TwitchCommand>? Commands { get; set; }
         public event EventHandler<ServiceStatusEventArgs>? StatusChanged;
-        public string ServiceName => "TwitchChat";
         public bool IsRunning => _client?.IsConnected ?? false;
-        private volatile bool _stopRequested = false;
+        public string ServiceName => "TwitchChat";
+        
 
+        private readonly LuaConfigManager _configManager;
+        private readonly IConfig _configuration;
+
+        private volatile bool _stopRequested = false;
         private ConnectionCredentials? _credentials;
-        private readonly IConfig _configuration = config;
         private TwitchClient? _client;  
+
+        public TwitchChatService(IConfig config, LuaConfigManager manager)
+        {
+            _configManager = manager;
+            _configuration = config;
+            var commands = _configManager.LoadCommands() ?? throw new Exception($"Bad configuration for {ServiceName}");
+            Commands = commands;
+        }
 
         public void Run()
         {
@@ -28,7 +42,7 @@ namespace TTvActionHub.Services
             if (_client == null)
             {
                 _client = new TwitchClient();
-                _credentials = new ConnectionCredentials(_configuration.TwitchInfo.Login, _configuration.TwitchInfo.Token);
+                _credentials = new ConnectionCredentials(_configuration.Login, _configuration.Token);
 
                 _client.OnChatCommandReceived += OnChatCommandReceived;
                 _client.OnConnectionError += OnConnectionErrorHandler;
@@ -46,7 +60,7 @@ namespace TTvActionHub.Services
                     OnStatusChanged(true);
                     return;
                 }
-                _client.Initialize(_credentials, _configuration.TwitchInfo.Login);
+                _client.Initialize(_credentials, _configuration.Login);
                 _client.Connect();
             }
             catch (Exception ex)
@@ -92,9 +106,19 @@ namespace TTvActionHub.Services
             }
         }
 
+        public bool UpdateConfiguration()
+        {
+            if (_configManager.LoadCommands() is not ConcurrentDictionary<string, TwitchCommand> cmds)
+            {
+                return false;
+            }
+            Commands = cmds;
+            return true;
+        }
+
         private void OnConnectedHandler(object? sender, OnConnectedArgs e)
         {
-            Logger.Log(LOGTYPE.INFO, ServiceName, $"Service has connected to channel {_configuration.TwitchInfo.Login}");
+            Logger.Log(LOGTYPE.INFO, ServiceName, $"Service has connected to channel {_configuration.Login}");
             OnStatusChanged(true);
         }
 
@@ -164,18 +188,11 @@ namespace TTvActionHub.Services
             var chatMessage = args.Command.ChatMessage;
             var cmdSender = chatMessage.Username;
 
-            if (!_configuration.Commands.TryGetValue(cmd, out Command? value)) return;
-            var (obr, cbr) = _configuration.Brackets;
+            if (Commands == null) return;
 
-            if (!string.IsNullOrEmpty(obr) && !string.IsNullOrEmpty(cbr))
-            {
-                var start = cmdArgStr.IndexOf(obr, StringComparison.Ordinal);
-                var stop = cmdArgStr.IndexOf(cbr, StringComparison.Ordinal);
-                if (start == -1 || stop == -1)
-                    cmdArgStr = "";
-                else
-                    cmdArgStr = cmdArgStr.Substring(start + 1, stop - start - 1);
-            }
+            var result = Commands.TryGetValue(cmd, out TwitchCommand? value);
+            if (!result || value == null) return;
+
             cmdArgStr = cmdArgStr.Replace("\U000e0000", "").Trim();
             Logger.Log(LOGTYPE.INFO, ServiceName, $"Received command: {cmd} from {cmdSender} with args: {cmdArgStr}");
 
