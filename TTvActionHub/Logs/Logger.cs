@@ -1,5 +1,5 @@
 ﻿using TTvActionHub.Logs;
-using TTvActionHub.Logs.BackEnds;
+using TTvActionHub.BackEnds;
 
 namespace TTvActionHub.Logs
 {

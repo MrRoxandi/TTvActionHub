@@ -6,8 +6,9 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TTvActionHub.Logs;
 
-namespace TTvActionHub.Logs.BackEnds
+namespace TTvActionHub.BackEnds
 {
     internal class MainLogger : ILogger, IDisposable
     {

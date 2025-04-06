@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using TTvActionHub.BackEnds.Hardware;
 
 namespace TTvActionHub.LuaTools.Hardware
 {
@@ -9,10 +10,10 @@ namespace TTvActionHub.LuaTools.Hardware
         public enum Key : byte
         {
             /// --- Numbers line ---
-            D0 = 0x30, D1 = 0x31, D2 = 0x32, 
-            D3 = 0x33, D4 = 0x34, D5 = 0x35, 
-            D6 = 0x36, D7 = 0x37, D8 = 0x38, 
-            D9 = 0x39, 
+            D0 = 0x30, D1 = 0x31, D2 = 0x32,
+            D3 = 0x33, D4 = 0x34, D5 = 0x35,
+            D6 = 0x36, D7 = 0x37, D8 = 0x38,
+            D9 = 0x39,
             // --- Alphabet ---
             A = 0x41, B = 0x42, C = 0x43,
             D = 0x44, E = 0x45, F = 0x46,
@@ -24,15 +25,15 @@ namespace TTvActionHub.LuaTools.Hardware
             V = 0x56, W = 0x57, X = 0x58,
             Y = 0x59, Z = 0x5A,
             // --- Numpad ---
-            NumLock = 0x90, NumPad0 = 0x60, 
-            NumPad1 = 0x61, NumPad2 = 0x62, 
-            NumPad3 = 0x63, NumPad4 = 0x64, 
-            NumPad5 = 0x65, NumPad6 = 0x66, 
-            NumPad7 = 0x67, NumPad8 = 0x68, 
-            NumPad9 = 0x69, Multiply = 0x6A, 
+            NumLock = 0x90, NumPad0 = 0x60,
+            NumPad1 = 0x61, NumPad2 = 0x62,
+            NumPad3 = 0x63, NumPad4 = 0x64,
+            NumPad5 = 0x65, NumPad6 = 0x66,
+            NumPad7 = 0x67, NumPad8 = 0x68,
+            NumPad9 = 0x69, Multiply = 0x6A,
             Separator = 0x6C, Add = 0x6B,
-            Subtract = 0x6D, Decimal = 0x6E, 
-                Divide = 0x6F, 
+            Subtract = 0x6D, Decimal = 0x6E,
+            Divide = 0x6F,
             // --- Function keys ---
             F1 = 0x70, F2 = 0x71, F3 = 0x72,
             F4 = 0x73, F5 = 0x74, F6 = 0x75,
@@ -74,18 +75,31 @@ namespace TTvActionHub.LuaTools.Hardware
             PageDown = 0x22,    End = 0x23,
             Home = 0x24,        PrintScreen = 0x2C,
             Insert = 0x2D,      Delete = 0x2E,
-            Scroll = 0x91, 
-                                    
+            Scroll = 0x91,
+
         }
 
         public static void PressKey(Key k)
         {
-            keybd_event((byte)k, 0, KEYEVENTF_EXTENDEDKEY, UIntPtr.Zero);
+            var input = InputWrapper.ConstructKeyDown((NativeInputs.KeyCode)k);
+            InputWrapper.DispatchInput([input]);
         }
 
         public static void ReleaseKey(Key k)
         {
-            keybd_event((byte)k, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            var input = InputWrapper.ConstructKeyUp((NativeInputs.KeyCode)k);
+            InputWrapper.DispatchInput([input]);
+        }
+
+        public static void TypeMessage(string message)
+        {
+            List<NativeInputs.INPUT> inputs = [];
+            foreach(char c in message)
+            {
+                inputs.Add(InputWrapper.ConstructCharDown(c));
+                inputs.Add(InputWrapper.ConstructCharUp(c));
+            }
+            InputWrapper.DispatchInput(inputs);
         }
 
         public static void TypeKey(Key key)
@@ -95,19 +109,21 @@ namespace TTvActionHub.LuaTools.Hardware
             ReleaseKey(key);
         }
 
-        public static void HoldKey(Key k, int duration = 50)
+        public static void HoldKey(Key k, int duration = 1000)
         {
-            PressKey(k);
-            Thread.Sleep(duration);
-            ReleaseKey(k);
+            if(duration < 100)
+            {
+                TypeKey(k);
+                return;
+            }
+            var durStep = duration / 100;
+            for(var totalDuration = 0; totalDuration < duration; totalDuration += durStep)
+            {
+                PressKey(k);
+                Thread.Sleep(durStep);
+                ReleaseKey(k);
+            }
         }
-        // --- Private (backend) block ---
-        private const int KEYEVENTF_EXTENDEDKEY = 0x1;
-        private const int KEYEVENTF_KEYUP = 0x2;
 
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
-
-        
     }
 }
