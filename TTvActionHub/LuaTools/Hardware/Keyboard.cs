@@ -81,16 +81,25 @@ namespace TTvActionHub.LuaTools.Hardware
 
         public static void PressKey(Key k)
         {
-            //keybd_event((byte)k, 0, KEYEVENTF_EXTENDEDKEY, UIntPtr.Zero);
             var input = InputWrapper.ConstructKeyDown((NativeInputs.KeyCode)k);
             InputWrapper.DispatchInput([input]);
         }
 
         public static void ReleaseKey(Key k)
         {
-            //keybd_event((byte)k, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
             var input = InputWrapper.ConstructKeyUp((NativeInputs.KeyCode)k);
             InputWrapper.DispatchInput([input]);
+        }
+
+        public static void TypeMessage(string message)
+        {
+            List<NativeInputs.INPUT> inputs = [];
+            foreach(char c in message)
+            {
+                inputs.Add(InputWrapper.ConstructCharDown(c));
+                inputs.Add(InputWrapper.ConstructCharUp(c));
+            }
+            InputWrapper.DispatchInput(inputs);
         }
 
         public static void TypeKey(Key key)
@@ -100,19 +109,21 @@ namespace TTvActionHub.LuaTools.Hardware
             ReleaseKey(key);
         }
 
-        public static void HoldKey(Key k, int duration = 50)
+        public static void HoldKey(Key k, int duration = 1000)
         {
-            PressKey(k);
-            Thread.Sleep(duration);
-            ReleaseKey(k);
+            if(duration < 100)
+            {
+                TypeKey(k);
+                return;
+            }
+            var durStep = duration / 100;
+            for(var totalDuration = 0; totalDuration < duration; totalDuration += durStep)
+            {
+                PressKey(k);
+                Thread.Sleep(durStep);
+                ReleaseKey(k);
+            }
         }
-        // --- Private (backend) block ---
-        private const int KEYEVENTF_EXTENDEDKEY = 0x1;
-        private const int KEYEVENTF_KEYUP = 0x2;
-
-        [DllImport("user32.dll", SetLastError = true)]
-        private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
-
 
     }
 }

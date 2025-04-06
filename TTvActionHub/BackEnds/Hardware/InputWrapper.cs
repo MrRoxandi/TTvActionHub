@@ -8,7 +8,7 @@ namespace TTvActionHub.BackEnds.Hardware
     {
         public static bool IsExtendedKey(KeyCode keyCode)
         {
-            if (keyCode == KeyCode.Alt || keyCode == KeyCode.LAlt || keyCode == KeyCode.LAlt ||
+            if (keyCode == KeyCode.Alt || keyCode == KeyCode.LAlt || keyCode == KeyCode.RAlt ||
                 keyCode == KeyCode.Control || keyCode == KeyCode.RControl || keyCode == KeyCode.LControl ||
                 keyCode == KeyCode.Delete || keyCode == KeyCode.Home || keyCode == KeyCode.End ||
                 keyCode == KeyCode.Right || keyCode == KeyCode.Up || keyCode == KeyCode.Left ||

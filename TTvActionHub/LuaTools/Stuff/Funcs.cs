@@ -6,54 +6,23 @@
 
         public static int RandomNumber(int? min, int? max)
         {
-            if (min is int a && max is int b)
-                return rng.Next(a, b + 1);
-            else
-            {
-                if (min is null) throw new ArgumentNullException(nameof(min));
-                else throw new ArgumentNullException(nameof(max));
-            }
+            ArgumentNullException.ThrowIfNull(min, nameof(min));
+            ArgumentNullException.ThrowIfNull(max, nameof(max));
+            return rng.Next(min.Value, max.Value + 1);
         }
 
         public static double RandomDouble(double? min, double? max)
         {
-            if (min is double a && max is double b)
-                return rng.NextDouble() * (b - a) + a;
-            else
-            {
-                if (min is null) throw new ArgumentNullException(nameof(min));
-                else throw new ArgumentNullException(nameof(max));
-            }
-        }
-
-        public static async Task<int> RandomNumberAsync(int? min, int? max)
-        {
-            return await Task.Run(() => RandomNumber(min, max));
-        }
-
-        public static async Task<double> RandomDoubleAsync(double? min, double? max)
-        {
-            return await Task.Run(() => RandomDouble(min, max));
+            ArgumentNullException.ThrowIfNull(min, nameof(min));
+            ArgumentNullException.ThrowIfNull(max, nameof(max));
+            return rng.NextDouble() * (max.Value - min.Value) + min.Value;
         }
 
         public static string RandomElement(IEnumerable<string>? elements)
         {
-            if(elements is IEnumerable<string> elems)
-            {
-                if (!elems.Any()) return string.Empty;
-                return elems.ElementAt(rng.Next(elems.Count()));
-            }
-            else throw new ArgumentNullException(nameof(elements));
-        }
-
-        public static async Task<string> RandomElementAsync(IEnumerable<string>? collection)
-        {
-            if (collection is IEnumerable<string> col)
-            {
-                if (!col.Any()) return await Task.Run(() => string.Empty);
-                return await Task.Run(() => col.ElementAt(rng.Next(col.Count())));
-            }
-            else throw new ArgumentNullException(nameof(collection));
+            ArgumentNullException.ThrowIfNull(elements, nameof(elements));
+            if(!elements.Any()) return string.Empty;
+            return elements.ElementAt(rng.Next(elements.Count()));
         }
 
         public static List<string> Shuffle(IEnumerable<string>? elements)
@@ -68,38 +37,16 @@
             else throw new ArgumentNullException(nameof(elements));
         }
 
-        public static async Task<List<string>> ShuffleAsync(IEnumerable<string>? elements)
-        {
-            if (elements is IEnumerable<string> elems)
-            {
-                if (!elems.Any()) return await Task.Run(() => new List<string>());
-                return await Task.Run(() =>
-                {
-                    Span<string> span = new([.. elems]);
-                    rng.Shuffle(span);
-                    return span.ToArray().ToList();
-                });
-            }
-            else throw new ArgumentNullException(nameof(elements));
-        }
-
         public static string RandomString(int length)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
             return new string([.. Enumerable.Repeat(chars, length).Select(s => s[rng.Next(s.Length)])]);
         }
 
-        public static async Task<string> RandomStringAsync(int length)
+        public static void Delay(int? delay)
         {
-            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-            return await Task.Run(() => new string([.. Enumerable.Repeat(chars, length).Select(s => s[rng.Next(s.Length)])]));
-        }
-
-        public static async Task DelayAsync(int? delay)
-        {
-            if (delay is int d)
-                await Task.Delay(d);
-            else throw new ArgumentNullException(nameof(delay));
+            ArgumentNullException.ThrowIfNull(delay, nameof(delay));
+            Thread.Sleep(delay!.Value);
         }
 
         public struct Point(int x, int y)
@@ -113,29 +60,12 @@
             return new Point(RandomNumber(minX, maxX), RandomNumber(minY, maxY));
         }
 
-        public static async Task<Point> RandomPositionAsync(int? minX, int? maxX, int? minY, int? maxY)
-        {
-            return await Task.Run(() => new Point(RandomNumber(minX, maxX), RandomNumber(minY, maxY)));
-        }
-
         public static string CollectionToString(IEnumerable<string>? elements, string sep = " ")
         {
-            if(elements is IEnumerable<string> elems)
-            {
-                if(!elems.Any()) return string.Empty;
-                else return string.Join(sep, elems);
-            }
-            else throw new ArgumentNullException(nameof(elements));
+            ArgumentNullException.ThrowIfNull(elements, nameof(elements));
+            if (!elements.Any()) return string.Empty;
+            return string.Join(sep, elements);
         }
 
-        public static async Task<string> CollectionToStringAsync(IEnumerable<string>? collection, string sep = " ")
-        {
-            if (collection is IEnumerable<string> list)
-            {
-                if (!list.Any()) return await Task.Run(() => string.Empty);
-                else return await Task.Run(() => string.Join(sep, list));
-            }
-            else throw new ArgumentNullException(nameof(collection));
-        }
     }
 }
