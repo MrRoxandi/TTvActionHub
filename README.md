@@ -2,7 +2,7 @@
     <table>
     <tr>
         <td>
-            <img src="readme-assets/logo.png" alt="Logo" width="100">
+            <img src="readme-assets/loog.png" alt="Logo" width="100">
         </td>
         <td>
             <h2>TTvActionHub</h2>
