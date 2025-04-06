@@ -81,12 +81,16 @@ namespace TTvActionHub.LuaTools.Hardware
 
         public static void PressKey(Key k)
         {
-            keybd_event((byte)k, 0, KEYEVENTF_EXTENDEDKEY, UIntPtr.Zero);
+            //keybd_event((byte)k, 0, KEYEVENTF_EXTENDEDKEY, UIntPtr.Zero);
+            var input = InputWrapper.ConstructKeyDown((NativeInputs.KeyCode)k);
+            InputWrapper.DispatchInput([input]);
         }
 
         public static void ReleaseKey(Key k)
         {
-            keybd_event((byte)k, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            //keybd_event((byte)k, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+            var input = InputWrapper.ConstructKeyUp((NativeInputs.KeyCode)k);
+            InputWrapper.DispatchInput([input]);
         }
 
         public static void TypeKey(Key key)
