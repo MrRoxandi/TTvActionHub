@@ -151,7 +151,7 @@ namespace TTvActionHub.Managers
             return rewards;
         }
 
-        public ConcurrentDictionary<string, TimerAction>? LoadTActions()
+         public ConcurrentDictionary<string, TimerAction>? LoadTActions()
         {
             var fileName = "timeractions.lua";
             var fileResult = ParseLuaFile(fileName);
@@ -238,14 +238,14 @@ namespace TTvActionHub.Managers
             var filePath = Path.Combine(ConfigsPath, "commands.lua");
             if (File.Exists(filePath)) return;
             StringBuilder builder = new();
-            Bridges.ForEach(bridge => builder.AppendLine($"local {bridge.Split(')').Last()} = import {bridge}"));
+            Bridges.ForEach(bridge => builder.AppendLine($"local {bridge.Split(").").Last()} = import {bridge}"));
             builder.AppendLine();
             builder.AppendLine("local commands = {}");
             builder.AppendLine();
             builder.AppendLine("commands['test'] = {}");
             builder.AppendLine("commands['test']['action'] = ");
             builder.AppendLine("\tfunction(sender, args)");
-            builder.AppendLine("\t\ttTwitchChat.SendMessage('@'..sender..' -> test')");
+            builder.AppendLine("\t\tTwitchChat.SendMessage('@'..sender..' -> test')");
             builder.AppendLine("\tend");
             builder.AppendLine("commands['test']['timeout'] = 1000 -- 1000 ms");
             builder.AppendLine("commands['test']['perm'] = Users.USERLEVEL.VIEWIER");
@@ -259,7 +259,7 @@ namespace TTvActionHub.Managers
             var filePath = Path.Combine(ConfigsPath, "rewards.lua");
             if (File.Exists(filePath)) return;
             StringBuilder builder = new();
-            Bridges.ForEach(bridge => builder.AppendLine($"local {bridge.Split(')').Last()} = import {bridge}"));
+            Bridges.ForEach(bridge => builder.AppendLine($"local {bridge.Split(").").Last()} = import {bridge}"));
             builder.AppendLine();
             builder.AppendLine("local rewards = {}");
             builder.AppendLine();
@@ -278,7 +278,7 @@ namespace TTvActionHub.Managers
             var filePath = Path.Combine(ConfigsPath, "rewards.lua");
             if (File.Exists(filePath)) return;
             StringBuilder builder = new();
-            Bridges.ForEach(bridge => builder.AppendLine($"local {bridge.Split(')').Last()} = import {bridge}"));
+            Bridges.ForEach(bridge => builder.AppendLine($"local {bridge.Split(").").Last()} = import {bridge}"));
             builder.AppendLine();
             builder.AppendLine("local timeractions = {}");
             builder.AppendLine();

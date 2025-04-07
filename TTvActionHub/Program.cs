@@ -100,17 +100,25 @@ namespace TTvActionHub
             IDisposable? shellDisposable = shell as IDisposable;
             try
             {
+                Console.WriteLine("Initializing Shell UI...");
+                Logger.Info("Initializing Shell UI...");
                 shell.InitializeUI();
 
-                Logger.Info("Starting services...");
-                InitAllServices(); 
-                Logger.Info("Service startup process finished.");
+                Console.WriteLine("Initializ services...");
+                Logger.Info("Initializ services...");
+
+                InitAllServices();
+
+                Console.WriteLine("Initializ static lua bridges...");
+                Logger.Info("Initializ static lua bridges...");
 
                 InitializeStaticLuaBridges();
-
+                
                 // --- Main loop (Terminal.Gui) ---
                 Logger.Info("Starting interactive shell UI...");
-                shell.Run(); 
+                shell.Run();
+                //Task.Run(shell.Run);
+
                 Logger.Info("Shell UI exited.");
             }
             catch (Exception ex)
@@ -341,7 +349,8 @@ namespace TTvActionHub
             try
             {
                 service.StatusChanged += OnServiceStatusChangedHandler;
-                service.Run();
+                // service.Run()
+                Task.Run(service.Run);
                 var isrunning = service.IsRunning;
                 shell.UpdateServicesStates(service.ServiceName, isrunning);
                 if (isrunning)
