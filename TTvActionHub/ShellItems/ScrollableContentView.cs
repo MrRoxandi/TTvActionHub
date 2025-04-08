@@ -1,16 +1,16 @@
 ﻿using Terminal.Gui;
 using NStack;
 using System.Text;
-using System.Buffers; 
+using System.Buffers;
 
-namespace TTvActionHub
+namespace TTvActionHub.ShellItems
 {
     public class ScrollableContentView : View
     {
         
         private List<ustring> _lines = [];
         private int _topLine = 0;
-        private Shell _shellRef;
+        //private Shell _shellRef;
 
         private Terminal.Gui.Attribute _colorError;
         private Terminal.Gui.Attribute _colorWarning;
@@ -19,9 +19,9 @@ namespace TTvActionHub
         private Terminal.Gui.Attribute _colorAlert;
         private Terminal.Gui.Attribute _colorInput;
 
-        public ScrollableContentView(Shell shell)
+        public ScrollableContentView()
         {
-            _shellRef = shell;
+            //_shellRef = shell;
             CanFocus = true;
             InitializeColors();
             KeyPress += HandleKeyPress;
@@ -31,7 +31,11 @@ namespace TTvActionHub
         {
             try
             {
-                var bg = ColorScheme?.Normal.Background ?? Color.Black;
+                var bg = Colors.Base.Normal.Background;
+                if (ColorScheme != null)
+                {
+                    bg = ColorScheme.Normal.Background;
+                }
                 _colorError = Application.Driver.MakeAttribute(Color.Red, bg);
                 _colorWarning = Application.Driver.MakeAttribute(Color.BrightYellow, bg);
                 _colorInfo = Application.Driver.MakeAttribute(Color.Gray, bg);
@@ -97,7 +101,7 @@ namespace TTvActionHub
 
                 Move(0, viewRow); 
                 var lineUstr = _lines[currentLineIndex];
-                var lineStr = lineUstr.ToString(); 
+                var lineStr = lineUstr.ToString() ?? string.Empty; 
 
                 
                 Terminal.Gui.Attribute currentAttribute = ParseLineForAttribute(lineStr!);
@@ -154,6 +158,29 @@ namespace TTvActionHub
                 case Key.End: ScrollToBottom(); args.Handled = true; break;
                 default: args.Handled = false; break;
             }
+        }
+
+        public override bool OnMouseEvent(MouseEvent mouseEvent)
+        {
+            if (mouseEvent.View == this)
+            {
+                if (_lines.Count <= Bounds.Height)
+                {
+                    return false;
+                }
+                if (mouseEvent.Flags.HasFlag(MouseFlags.WheeledDown))
+                {
+                    ScrollDown();
+                    return true; // Событие обработано
+                }
+                if (mouseEvent.Flags.HasFlag(MouseFlags.WheeledUp))
+                {
+                    ScrollUp();
+                    return true; // Событие обработано
+                }
+            }
+
+            return base.OnMouseEvent(mouseEvent);
         }
     }
 }

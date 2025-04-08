@@ -107,7 +107,7 @@ namespace TTvActionHub
                 ColorScheme = _headerColorScheme
             };
             
-            _headerTextView = new HeaderStatusView(this)
+            _headerTextView = new HeaderStatusView()
             {
                 X = 0,
                 Y = 0,
@@ -119,7 +119,7 @@ namespace TTvActionHub
 
             // --- Body --- (Logs / Cmds)
 
-            _bodyTextView = new ScrollableContentView(this)
+            _bodyTextView = new ScrollableContentView()
             {
                 X = 0,
                 Y = Pos.Bottom(_headerFrame),
