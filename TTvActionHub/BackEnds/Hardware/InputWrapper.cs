@@ -1,4 +1,5 @@
-﻿using System.Runtime.InteropServices;
+﻿using Microsoft.UI.Xaml.Automation;
+using System.Runtime.InteropServices;
 using Windows.Management.Deployment;
 using static TTvActionHub.BackEnds.Hardware.NativeInputs;
 
@@ -176,6 +177,22 @@ namespace TTvActionHub.BackEnds.Hardware
             button.Data.Mouse.dwFlags = (UInt32)MouseFlag.XDown;
             button.Data.Mouse.mouseData = (UInt32)xButtonId;
             return button;
+        }
+
+        public static INPUT ConstructVWheelScroll(int distance)
+        {
+            var scroll = new INPUT { Type = (UInt32)InputType.Mouse };
+            scroll.Data.Mouse.dwFlags = (UInt32)MouseFlag.VerticalWheel;
+            scroll.Data.Mouse.mouseData = (UInt32)distance;
+            return scroll;
+        }
+
+        public static INPUT ConstructHWheelScroll(int distance)
+        {
+            var scroll = new INPUT { Type = (UInt32)InputType.Mouse };
+            scroll.Data.Mouse.dwFlags = (UInt32)MouseFlag.HorizontalWheel;
+            scroll.Data.Mouse.mouseData = (UInt32)distance;
+            return scroll;
         }
 
         public static void DispatchInput(INPUT[] inputs)

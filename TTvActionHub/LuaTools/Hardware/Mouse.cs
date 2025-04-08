@@ -65,6 +65,17 @@ namespace TTvActionHub.LuaTools.Hardware
             XRelease(xid);
         }
 
+        public static void HScroll(int distance)
+        {
+            var input = InputWrapper.ConstructHWheelScroll(distance);
+            InputWrapper.DispatchInput([input]);
+        }
+
+        public static void VScroll(int distance)
+        {
+            var input = InputWrapper.ConstructVWheelScroll(distance);
+            InputWrapper.DispatchInput([input]);
+        }
 
         public static void SetPostion(int x, int y)
         {
