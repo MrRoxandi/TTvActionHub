@@ -10,7 +10,7 @@
 
 ```lua
 local TwitchChat = import('TTvActionHub', 'TTvActionHub.Stuff').TwitchChat
-local name = "Someone"
+local name = 'Someone'
 
-TwitchChat.SendMessage("Hello " .. name)
+TwitchChat.SendMessage('Hello ' .. name)
 ```
