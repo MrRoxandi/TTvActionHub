@@ -1,54 +1,70 @@
-## Documentation for the Mouse Module in `TTvActionHub.LuaTools.Hardware`
+## Documentation for the 'Mouse' module in `TTvActionHub.LuaTools.Hardware`
 
-This module provides functions for emulating mouse actions such as moving the cursor, clicks, and scrolling.
+This module provides functions for emulating mouse actions, such as moving the cursor, clicking, and scrolling.
 
-### Types
+### Connecting in the configuration file
 
-#### `MouseButton`
-
-An enumeration representing the mouse buttons.
-
-| Value    | Description   |
-| -------- | ------------- |
-| `Left`   | Left button   |
-| `Right`  | Right button  |
-| `Middle` | Middle button |
-
-### Functions
-
-| Function                                                             | Description                                                                                                                                                                                                                                          |
-| -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SetPosition(int x, int y)`                                          | Sets the mouse cursor position to the specified coordinates `x` and `y` on the screen.                                                                                                                                                               |
-| `MoveAsync(int targetX, int targetY, int steps = 50, int delay = 5)` | Asynchronously moves the mouse cursor from the current position to the specified coordinates `targetX` and `targetY`. The `steps` parameter determines the number of steps for the movement, and `delay` is the delay in milliseconds between steps. |
-| `HoldAsync(MouseButton button, int timeDelay = 1000)`                | Asynchronously holds the specified mouse button (`button`) pressed for the given time (`timeDelay` in milliseconds), and then releases it.                                                                                                           |
-| `Click(MouseButton button)`                                          | Simulates a single click of the specified mouse button (`button`).                                                                                                                                                                                   |
-| `Press(MouseButton button)`                                          | Simulates pressing the specified mouse button (`button`) (does not release it).                                                                                                                                                                      |
-| `Release(MouseButton button)`                                        | Simulates releasing the pressed mouse button (`button`).                                                                                                                                                                                             |
-| `Scroll(int delta)`                                                  | Simulates scrolling with the mouse wheel. The `delta` value determines the direction and amount of scrolling. A positive value scrolls up, a negative value scrolls down.                                                                            |
-
-**Notes:**
-
-- All functions ending with `Async` are executed asynchronously, without blocking the main program thread.
-- The `x` and `y` coordinates in the `SetPosition` and `MoveAsync` functions represent coordinates on the screen.
-- To use functions with mouse buttons, you must specify the corresponding value from the `MouseButton` enumeration.
-
-### Example usage in `config.lua`
+Module connection example:
 
 ```lua
 local Mouse = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Mouse
+```
 
--- Setting the cursor position
-Mouse.SetPosition(100, 200)
+Example of getting the code for the left mouse button and simulating a single click:
 
--- Asynchronously moving the cursor with a smooth transition
-Mouse.MoveAsync(500, 500, 100, 10)
+```lua
+local button = Mouse.Button.Left -- Get the code for the left mouse button
+Mouse.Click(button)
+```
 
--- Clicking the left mouse button
-Mouse.Click(Mouse.MouseButton.Left)
+### Available mouse buttons for simulation:
 
--- Holding the right mouse button for 2 seconds
-Mouse.HoldAsync(Mouse.MouseButton.Right, 2000)
+Currently, all available standard buttons are located in the `Button` field of the `Mouse` module. Below is a list of them:
 
--- Scrolling down
-Mouse.Scroll(-120)
+1.  **Standard mouse buttons**:
+    `Left`, `Right`, `Middle`
+2.  **Additional mouse buttons**:
+    Additional mouse buttons are handled specially and do not have explicit names (values). They are referenced by an ID number.
+
+### Available mouse simulation methods
+
+Methods for interacting with the main mouse buttons:
+
+| Method                              | Description                                                      |
+| ----------------------------------- | ---------------------------------------------------------------- |
+| `Press(Button button)`              | Simulates pressing the `button` (but does not release it)        |
+| `Release(Button button)`            | Simulates releasing the `button`                                 |
+| `Click(Button button)`              | Simulates a quick single press and release of the `button`       |
+| `Hold(Button button, int duration)` | Simulates holding down the `button` for the specified `duration` |
+
+Methods for interacting with additional mouse buttons, where `xid` is the number of the additional button starting from **1**:
+
+| Method                         | Description                                                       |
+| ------------------------------ | ----------------------------------------------------------------- |
+| `XPress(int xid)`              | Simulates pressing the additional button `xid` (does not release) |
+| `XRelease(int xid)`            | Simulates releasing the additional button `xid`                   |
+| `XClick(int xid)`              | Simulates a quick single press and release of button `xid`        |
+| `XHold(int xid, int duration)` | Simulates holding down the additional button `xid`                |
+
+Methods for interacting with the mouse pointer:
+
+| Method                      | Description                                                 |
+| --------------------------- | ----------------------------------------------------------- |
+| `SetPosition(int x, int y)` | Simulates setting the cursor to the specified coordinates   |
+| `Move(int dx, int dy)`      | Simulates moving the cursor by the specified offset amounts |
+
+**Clarification**: The coordinates for the pointer correspond to your monitor's resolution.
+
+Methods for interacting with the mouse wheel (scrolling):
+
+| Method                  | Description                    |
+| ----------------------- | ------------------------------ |
+| `VScroll(int distance)` | Simulates vertical scrolling   |
+| `HScroll(int distance)` | Simulates horizontal scrolling |
+
+Example using 'SetPosition' in the configuration file:
+
+```lua
+local Mouse = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Mouse
+Mouse.SetPosition(560, 20)
 ```
