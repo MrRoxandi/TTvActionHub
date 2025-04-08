@@ -30,7 +30,7 @@ namespace TTvActionHub.Services
             if (TActions.IsEmpty)
             {
                 Logger.Log(LOGTYPE.INFO, ServiceName, "Nothing to run. Skipping...");
-                OnStatusChanged(false);
+                OnStatusChanged(true);
                 return;
             }
             foreach (var (_, e) in TActions)
@@ -71,13 +71,27 @@ namespace TTvActionHub.Services
             {
                 return false;
             }
+            if (TActions != null && !TActions.IsEmpty)
+            {
+                foreach (var (_, e) in TActions)
+                {
+                    if (!e.IsRunning) continue;
+                    Logger.Log(LOGTYPE.INFO, ServiceName, $"Stopping [{e.Name}] action");
+                    e.Stop();
+                }
+            }
             TActions = tActions;
+            foreach (var (_, e) in TActions)
+            {
+                Logger.Log(LOGTYPE.INFO, ServiceName, $"Running [{e.Name}] action");
+                e.Run();
+            }
             return true;
         }
 
         public string ServiceName { get => "TimerActions"; }
 
-        public bool IsRunning => TActions != null && !TActions.IsEmpty && TActions.Any(kvp => kvp.Value.IsRunning);
+        public bool IsRunning => TActions != null;
 
         protected virtual void OnStatusChanged(bool isRunning, string? message = null)
         {
