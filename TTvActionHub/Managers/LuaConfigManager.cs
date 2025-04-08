@@ -68,7 +68,7 @@ namespace TTvActionHub.Managers
             if (fileResult is not LuaTable cmds) return null;
             if (cmds.Keys.Count == 0)
             {
-                Logger.Warn($"Table from file {fileName} is empty. Ignoring...");
+                Logger.Log(LOGTYPE.WARNING, ServiceName, $"Table from file {fileName} is empty. Ignoring...");
                 return [];
             }
 
@@ -122,7 +122,7 @@ namespace TTvActionHub.Managers
             if (fileResult is not LuaTable rwds) return null;
             if (rwds.Keys.Count == 0)
             {
-                Logger.Warn($"Table from file {fileName} is empty. Ignoring...");
+                Logger.Log(LOGTYPE.WARNING, ServiceName, $"Table from file {fileName} is empty. Ignoring...");
                 return [];
             }
 
@@ -158,7 +158,7 @@ namespace TTvActionHub.Managers
             if (fileResult is not LuaTable tactions) return null;
             if (tactions.Keys.Count == 0)
             {
-                Logger.Warn($"Table from file {fileName} is empty. Ignoring...");
+                Logger.Log(LOGTYPE.WARNING, ServiceName, $"Table from file {fileName} is empty. Ignoring...");
                 return [];
             }
             var actions = new ConcurrentDictionary<string, TimerAction>();
@@ -275,7 +275,7 @@ namespace TTvActionHub.Managers
 
         private static void GenerateTimerActionsFile()
         {
-            var filePath = Path.Combine(ConfigsPath, "rewards.lua");
+            var filePath = Path.Combine(ConfigsPath, "timeractions.lua");
             if (File.Exists(filePath)) return;
             StringBuilder builder = new();
             Bridges.ForEach(bridge => builder.AppendLine($"local {bridge.Split(").").Last()} = import {bridge}"));

@@ -27,18 +27,18 @@ namespace TTvActionHub
             Logger.Info("Application starting...");
             if (!LuaConfigManager.CheckConfiguration())
             {
-                Logger.Warn($"Cannot find config in {ConfigurationPath}. Generating...");
-                Console.WriteLine($"Cannot find config in {ConfigurationPath}. Generating...");
+                Logger.Warn($"Cannot find all configs in {ConfigurationPath}. Generating...");
+                Console.WriteLine($"Cannot find all configs in {ConfigurationPath}. Generating...");
                 try
                 {
                     LuaConfigManager.GenerateAllConfigs();
-                    Logger.Info($"Configuration generated. Please review the files and restart the program.");
-                    Console.WriteLine($"Configuration generated. Please review the files and restart the program.");
+                    Logger.Info($"Configurations generated. Please review the files and restart the program.");
+                    Console.WriteLine($"Configurations generated. Please review the files and restart the program.");
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error("Failed to generate configuration:", ex);
-                    Console.WriteLine($"Failed to generate configuration: {ex.Message}");
+                    Logger.Error("Failed to generate configurations:", ex);
+                    Console.WriteLine($"Failed to generate configurations: {ex.Message}");
                 }
                 Console.WriteLine("Press Enter to exit.");
                 Console.ReadLine();
