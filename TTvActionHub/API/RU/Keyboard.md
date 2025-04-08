@@ -1,43 +1,58 @@
 ## Документация для модуля Keyboard в `TTvActionHub.LuaTools.Hardware`
 
-### Клавиши, или же ключи...
+### Подключение в файле конфигурации
 
-На текущий момент времени доступны следующие клавиши:
-
-1. **Функциональные клавиши:**
-   `F1`,`F2`,`F3`,`F4`,`F5`,`F6`,`F7`,`F8`,`F9`,`F10`,`F11`,`F12`
-2. **Алфавит:**
-   `A`, `B`, `C`, `D`, `E`, `F`, `G`, `H`, `I`, `J`, `K`, `L`, `M`, `N`, `O`, `P`, `Q`, `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z`
-3. **Цифровая клавиатура:**
-   `NUM_0`, `NUM_1`, `NUM_2`, `NUM_3`, `NUM_4`, `NUM_5`, `NUM_6`, `NUM_7`, `NUM_8`, `NUM_9`
-4. **Специальные клавиши:**
-   `ENTER`, `ESCAPE`, `BACKSPACE`, `TAB`, `SPACE`, `SHIFT`, `CONTROL`, `ALT`, `CAPS_LOCK`
-5. **Стрелки:**
-   `LEFT`, `UP`, `RIGHT`, `DOWN`
-
-Пример использования в `config.lua`
+Пример подключение модуля:
 
 ```lua
 local Keyboard = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Keyboard
-
-local key = Keyboard.KeyCodes.B -- Получение кода клавиши 'B'
 ```
 
-## Эмуляция клавиатуры
+Пример получения кода клавиши 'B' и разование нажатие этой клавиши:
 
-| Метод                                         | Описание                                                              |
-| --------------------------------------------- | --------------------------------------------------------------------- |
-| `PressKey(Key key)`                           | Имитирует нажатие клавиши (не отпускает обратно)                      |
-| `ReleaseKey(Key key)`                         | Отпускает нажатую клавишу                                             |
-| `TypeKeyAsync(Key key)`                       | Имитирует краткое нажатие на клавишу (нажал, отпустил)                |
-| `HoldKeyAsync(Key key, int timeDelay = 1000)` | Удерживает клавишу в течение заданного времени (по умолчанию 1000 мс) |
+```lua
+local key = Keyboard.Key.B -- Получение кода клавиши 'B'
+Keyboard.TypeKey(key)
+```
 
-Пример использования в `config.lua`
+### Доступные клавиши для симуляции...
+
+На текущий момент времени все доступные клавиши находятся в поле `Key` модуля `Keyboard`, ниже приведен их список:
+
+1. **Числовая строка**:
+   `D0`, `D1`, `D2`, `D3`, `D4`, `D5`, `D6`, `D7`, `D8`, `D9`
+2. **Алфавит**:
+   `A`, `B`, `C`, `D`, `E`, `F`, `G`, `H`, `I`, `J`, `K`, `L`,`M`,
+   `N`, `O`, `P`, `Q`, `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z`
+3. **Цифровая клавиатура**:
+   `NumLock`, `NumPad0`, `NumPad1`, `NumPad2`, `NumPad3`, `NumPad4`,
+   `NumPad5`, `NumPad6`, `NumPad7`, `NumPad8`, `NumPad9`, `Multiply`,
+   `Separator`, `Add`, `Subtract`, `Decimal`, `Divide`
+4. **Функциональные клавиши:**
+   `F1`, `F2`, `F3`, `F4`, `F5`, `F6`, `F7`, `F8`, `F9`,
+   `F10`, `F11`, `F12`, `F13`, `F14`, `F15`, `F16`, `F17`,
+   `F18`, `F19`, `F20`, `F21`, `F22`, `F23`, `F24`
+5. **Специальные клавиши**:
+   `Shift`, `RShiftKey`, `LShiftKey`, `Alt`, `LAlt`, `RAlt`, `Control`, `LControlKey`, `RControlKey`
+6. **Дополнительные клавиши**:
+   `LWin`, `RWin`, `Backspace`, `Tab`, `LineFeed`, `Clear`, `Enter`, `Pause`, `CapsLock`, `Escape`, `Space`, `PageUp`, `PageDown`, `End`, `Home`, `PrintScreen`, `Insert`, `Delete`, `Scroll`, `Sleep`,
+7. **Стрекли**:
+   `Up`, `Right`, `Left`, `Down`
+
+### Доступные методы симуляции клавиатуры
+
+| Метод                                    | Описание                                                              |
+| ---------------------------------------- | --------------------------------------------------------------------- |
+| `PressKey(Key key)`                      | Имитирует нажатие клавиши (не отпускает обратно)                      |
+| `ReleaseKey(Key key)`                    | Отпускает нажатую клавишу                                             |
+| `TypeKey(Key key)`                       | Имитирует краткое нажатие на клавишу (нажал, отпустил)                |
+| `TypeMessage(string message)`            | Имитирует набор сообщения по заданой строке                           |
+| `HoldKey(Key key, int timeDelay = 1000)` | Удерживает клавишу в течение заданного времени (по умолчанию 1000 мс) |
+
+Пример использования `TypeMessage` в файле конфигурации:
 
 ```lua
 local Keyboard = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Keyboard
 
-local key = Keyboard.KeyCodes.B -- Получение кода клавиши 'B'
-
-Keyboard.TypeKeyAsync(key) -- Имитация краткого нажатия клавиши 'B'
+Keyboard.TypeMessage('Пример текста!') -- Имитация краткого нажатия клавиши 'B'
 ```
