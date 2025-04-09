@@ -1,27 +1,27 @@
 ﻿using System.Collections.Concurrent;
-using TTvActionHub.Logs;
-using TTvActionHub.Services;
-using Microsoft.Extensions.DependencyInjection;
-using Terminal.Gui;
-using NStack;
-using System.Text;
 using TTvActionHub.ShellItems;
-using TTvActionHub.Items;
+using TTvActionHub.Logs;
+using Terminal.Gui;
+using System.Text;
+using NStack;
 
 namespace TTvActionHub
 {
    public class Shell(IConfig config,
        Action<string>? startServicesCallBack = null,
        Action<string>? stopServiceCallBack = null,
-       IServiceProvider? serviceProvider = null) : IDisposable
+       Action<string>? reloadServiceCallBack = null,
+       Func<string, string[]?>? listServiceCallBack = null) : IDisposable
    {
+
+        //public ConcurrentDictionary<string, IService>? RunningServices { get; set; }
+
         // --- Main config and dependencies ---
         private readonly IConfig _config = config;
-        private readonly List<string> _allowedFieldsToLookInConfig = ["commands", "rewards", "actions"];
+        private readonly Action<string>? _reloadServiceCallBack = reloadServiceCallBack;
         private readonly Action<string>? _startServiceCallBack = startServicesCallBack;
         private readonly Action<string>? _stopServiceCallBack = stopServiceCallBack;
-        private readonly IServiceProvider? _serviceProvider = serviceProvider;
-
+        private readonly Func<string, string[]?>? _listServiceCallBack = listServiceCallBack;
         // --- UI states ---
         private readonly ConcurrentDictionary<string, bool> _serviceStates = new(StringComparer.OrdinalIgnoreCase); // Service -> Status (Running = true)
         private readonly ConcurrentQueue<string> _commandsOutPutQueue = [];
@@ -107,7 +107,7 @@ namespace TTvActionHub
                 ColorScheme = _headerColorScheme
             };
             
-            _headerTextView = new HeaderStatusView(this)
+            _headerTextView = new HeaderStatusView()
             {
                 X = 0,
                 Y = 0,
@@ -119,7 +119,7 @@ namespace TTvActionHub
 
             // --- Body --- (Logs / Cmds)
 
-            _bodyTextView = new ScrollableContentView(this)
+            _bodyTextView = new ScrollableContentView()
             {
                 X = 0,
                 Y = Pos.Bottom(_headerFrame),
@@ -416,7 +416,8 @@ namespace TTvActionHub
                 case "clear": CmdClear(); CmdOut("Command output cleared."); return true;
                 case "start": HandleStartCommand(argument); return true;
                 case "stop": HandleStopCommand(argument); return true;
-                case "list": HandleListCommand(argument); return true;
+                case "info": HandleListCommand(argument); return true;
+                case "reload": HandleReloadCommand(argument); return true;
                 case "help": ShowHelpDialog(); return true;
                 case "exit": return false;
                 default: CmdOut($"Unknown command: '{input}'. Type 'help' for available commands."); return true;
@@ -427,32 +428,43 @@ namespace TTvActionHub
         {
             if (string.IsNullOrEmpty(argument))
             {
-                CmdOut($"Usage: list [<field>|{string.Join('|', _allowedFieldsToLookInConfig)}]");
+                CmdOut($"Usage: list [<service>|{string.Join('|', _serviceStates.Keys)}]");
                 return;
             }
             var target = argument.Trim();
-            if (!_allowedFieldsToLookInConfig.Contains(target))
+            var serviceName = _serviceStates.FirstOrDefault(
+                kvp => kvp.Key.Equals(target, StringComparison.OrdinalIgnoreCase)).Key;
+            if (serviceName == default)
             {
                 CmdOut($"Unable to find: {target}");
-                CmdOut($"Usage: list [<field>|{string.Join('|', _allowedFieldsToLookInConfig)}]");
+                CmdOut($"Usage: list [<field>|{string.Join('|', _serviceStates.Keys)}]");
                 return;
             }
-            //"commands", "rewards", "actions"
-            switch (target)
+            if (_listServiceCallBack != null)
             {
-                case "commands":
-                    CmdOut($"Commands: [{string.Join(',', _config.Commands.Keys)}]");
+                try
+                {
+                    var information = _listServiceCallBack(serviceName);
+                    if (information == null) return;
+                    if (information.Length == 0)
+                    {
+                        CmdOut($"Service: {serviceName} -> Actions: empty");
+                        return;
+                    }
+                    CmdOut($"Service: {serviceName} -> Actions: [{string.Join(',', information)}]");
+                } 
+                catch (Exception ex)
+                {
+                    HandleCallbackError($"info {serviceName}", ex);
                     return;
-                case "rewards":
-                    CmdOut($"Commands: [{string.Join(',', _config.Rewards.Keys)}]");
-                    return;
-                case "actions":
-                    CmdOut($"Commands: [{string.Join(',', _config.TActions.Keys)}]");
-                    return;
-                default:
-                    CmdOut("How tf did u get here???");
-                    return;
+                }
+            } 
+            else
+            {
+                CmdOut($"Getting info about service is not configured. Ignoring...");
+                return;
             }
+
         }
 
         private void HandleStopCommand(string argument)
@@ -518,18 +530,53 @@ namespace TTvActionHub
             }
         }
 
+        private void HandleReloadCommand(string argument)
+        {
+            if (string.IsNullOrEmpty(argument))
+            {
+                CmdOut($"Usage: reload [<service_name>|{string.Join('|', _serviceStates.Keys)}]");
+                return;
+            }
+
+            var target = argument.Trim();
+            var serviceName = _serviceStates.FirstOrDefault(
+                kvp => kvp.Key.Equals(target, StringComparison.OrdinalIgnoreCase)).Key;
+            if (serviceName == default)
+            {
+                CmdOut($"Unable to find service: {serviceName}");
+                return;
+            }
+
+            if (_reloadServiceCallBack != null)
+            {
+                try
+                {
+                    _reloadServiceCallBack(serviceName);
+                }
+                catch (Exception ex)
+                {
+                    HandleCallbackError($"reload {serviceName}", ex);
+                }
+            }
+            else
+            {
+                CmdOut($"Reload service functionality is not configured. Ignoring...");
+            }
+        }
+
         private static void ShowHelpDialog()
         {
             var builder = new StringBuilder();
             builder.AppendLine("Available commands:");
+            builder.AppendLine("reload <name> - Attempt to reload configuration of specified service");
             builder.AppendLine("stop <name> - Attempt to stop the specified service");
             builder.AppendLine("start <name> - Attempt to start specified service");
+            builder.AppendLine("info <name> - Show info about service");
             builder.AppendLine("clear - Clears the command output area");
             builder.AppendLine("logs - Switch view to application logs");
             builder.AppendLine("cmd - Switch view to command output");
-            builder.AppendLine("list <name> - Show list of values");
-            builder.AppendLine("exit - Stops services and exits");
             builder.AppendLine("help - Shows this help message");
+            builder.AppendLine("exit - Stops services and exits");
             MessageBox.Query("Avalible commands", builder.ToString(), "Ok");
         }
 

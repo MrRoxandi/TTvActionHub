@@ -1,17 +1,16 @@
-## Documentation for the TwitchChat Module in `TTvActionHub.LuaTools.Stuff`
+## Documentation for the 'TwitchChat' module in `TTvActionHub.LuaTools.Stuff`
 
-Well... There's nothing particularly amazing here, just sending messages to the Twitch chat on your behalf :/
+Well... There's nothing really fancy here, just sending messages to Twitch chat from your account :/
 
-| Method                             | Description                                                        |
-| ---------------------------------- | ------------------------------------------------------------------ |
-| `SendMessage(string message)`      | Sends a message to the chat from your account                      |
-| `SendMessageAsync(string message)` | Sends a message to the chat from your account in asynchronous mode |
+| Method                        | Description                                   |
+| ----------------------------- | --------------------------------------------- |
+| `SendMessage(string message)` | Sends a message to the chat from your account |
 
-Example usage in `config.lua`:
+Usage example in the configuration file:
 
 ```lua
 local TwitchChat = import('TTvActionHub', 'TTvActionHub.Stuff').TwitchChat
-local name = "Someone"
+local name = 'Someone'
 
-TwitchChat.SendMessage("Hello " .. name)
+TwitchChat.SendMessage('Hello ' .. name)
 ```

@@ -7,15 +7,13 @@ namespace TTvActionHub.ShellItems
     public class HeaderStatusView : View
     {
         private IEnumerable<KeyValuePair<string, bool>> _serviceStatesData = Enumerable.Empty<KeyValuePair<string, bool>>();
-        private Shell _shellRef; 
-
+        
         private Terminal.Gui.Attribute _attrSuccess;
         private Terminal.Gui.Attribute _attrError;
         private Terminal.Gui.Attribute _attrNormal;
 
-        public HeaderStatusView(Shell shell)
+        public HeaderStatusView()
         {
-            _shellRef = shell; 
             CanFocus = false; 
             InitializeColors();
         }

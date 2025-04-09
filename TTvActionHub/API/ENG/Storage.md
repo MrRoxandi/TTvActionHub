@@ -1,90 +1,91 @@
-## Documentation for the Storage Module in `TTvActionHub.LuaTools.Stuff`
+## Documentation for the 'Storage' module in `TTvActionHub.LuaTools.Stuff`
 
-This module provides access to internal data storage, allowing scripts to save and retrieve information.
+This module provides an interface for a simple key-value data storage within the application. It allows saving, retrieving, checking for existence, and deleting data using a string key (name). Data is typically stored for the duration of the current application session, but it will be saved to disk when the service is stopped.
 
-### Functions
+### Connecting in the configuration file
 
-| Function                                       | Description                                                                                                                                       | Return Value |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| `Contains(string name)`                        | Checks if a value with the specified name exists in the storage.                                                                                  | `bool`       |
-| `ContainsAsync(string name)`                   | Asynchronously checks if a value with the specified name exists in the storage.                                                                   | `bool`       |
-| `InsertValueAsync<T>(string name, T value)`    | Asynchronously adds or updates a value of the specified type `T` in the storage.                                                                  | `void`       |
-| `InsertValue<T>(string name, T value)`         | Adds or updates a value of the specified type `T` in the storage.                                                                                 | `void`       |
-| `GetValueAsync<T>(string name)`                | Asynchronously retrieves a value of the specified type `T` from the storage. Returns `null` if the value is not found or the type does not match. | `T?`         |
-| `GetValue<T>(string name)`                     | Retrieves a value of the specified type `T` from the storage. Returns `null` if the value is not found or the type does not match.                | `T?`         |
-| `RemoveValueAsync(string name)`                | Asynchronously removes a value with the specified name from the storage.                                                                          | `bool`       |
-| `RemoveValue(string name)`                     | Removes a value with the specified name from the storage.                                                                                         | `bool`       |
-| `InsertIntAsync(string name, int value)`       | Asynchronously adds or updates an integer value in the storage.                                                                                   | `void`       |
-| `InsertInt(string name, int value)`            | Adds or updates an integer value in the storage.                                                                                                  | `void`       |
-| `GetIntAsync(string name)`                     | Asynchronously retrieves an integer value from the storage. Returns `null` if the value is not found.                                             | `int?`       |
-| `GetInt(string name)`                          | Retrieves an integer value from the storage. Returns `null` if the value is not found.                                                            | `int?`       |
-| `InsertCharAsync(string name, char value)`     | Asynchronously adds or updates a character in the storage.                                                                                        | `void`       |
-| `InsertChar(string name, char value)`          | Adds or updates a character in the storage.                                                                                                       | `void`       |
-| `GetCharAsync(string name)`                    | Asynchronously retrieves a character from the storage. Returns `null` if the value is not found.                                                  | `char?`      |
-| `GetChar(string name)`                         | Retrieves a character from the storage. Returns `null` if the value is not found.                                                                 | `char?`      |
-| `InsertBoolAsync(string name, bool value)`     | Asynchronously adds or updates a boolean value in the storage.                                                                                    | `void`       |
-| `InsertBool(string name, bool value)`          | Adds or updates a boolean value in the storage.                                                                                                   | `void`       |
-| `GetBoolAsync(string name)`                    | Asynchronously retrieves a boolean value from the storage. Returns `null` if the value is not found.                                              | `bool?`      |
-| `GetBool(string name)`                         | Retrieves a boolean value from the storage. Returns `null` if the value is not found.                                                             | `bool?`      |
-| `InsertStringAsync(string name, string value)` | Asynchronously adds or updates a string value in the storage.                                                                                     | `void`       |
-| `InsertString(string name, string value)`      | Adds or updates a string value in the storage.                                                                                                    | `void`       |
-| `GetStringAsync(string name)`                  | Asynchronously retrieves a string value from the storage. Returns `null` if the value is not found.                                               | `string?`    |
-| `GetString(string name)`                       | Retrieves a string value from the storage. Returns `null` if the value is not found.                                                              | `string?`    |
-| `InsertDoubleAsync(string name, double value)` | Asynchronously adds or updates a double-precision floating-point value in the storage.                                                            | `void`       |
-| `InsertDouble(string name, double value)`      | Adds or updates a double-precision floating-point value in the storage.                                                                           | `void`       |
-| `GetDoubleAsync(string name)`                  | Asynchronously retrieves a double-precision floating-point value from the storage. Returns `null` if the value is not found.                      | `double?`    |
-| `GetDouble(string name)`                       | Retrieves a double-precision floating-point value from the storage. Returns `null` if the value is not found.                                     | `double?`    |
+Module connection example:
 
-**Notes:**
+```lua
+local Storage = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Storage
+```
 
-- All functions ending with `Async` are executed asynchronously, without blocking the main program thread. It is recommended to use asynchronous versions of functions to improve performance.
-- The type `T` in the functions `InsertValueAsync<T>`, `InsertValue<T>`, `GetValueAsync<T>`, and `GetValue<T>` must be specified explicitly. The types `int`, `char`, `bool`, `string`, and `double` are supported. For other data types, use `InsertValueAsync` and `GetValueAsync` with explicit type specification.
-- Before using any function, make sure that the storage service is initialized. This is usually done automatically by the program, but it's good to keep in mind.
-- To get the result from asynchronous functions, you need to use `.Result`. For example: `local myVariable = Storage.GetStringAsync("myVariable").Result`
-
-### Example usage in `config.lua`
+### Usage Example
 
 ```lua
 local Storage = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Storage
 
--- Saving a string value
-Storage.InsertStringAsync("myVariable", "Hello, World!")
+-- Save username (string)
+Storage.InsertString('username', 'CoolUser123')
 
--- Retrieving a string value
-local myVariable = Storage.GetString("myVariable")
-if myVariable then
-  print("Value of myVariable: " .. myVariable)
+-- Save score (integer)
+Storage.InsertInt('score', 1500)
+
+-- Save activation flag (boolean)
+Storage.InsertBool('isEnabled', true)
+
+-- Check if the 'score' value exists
+if Storage.Contains('score') then
+    -- Get the 'score' value
+    local currentScore = Storage.GetInt('score')
+    if currentScore then -- Make sure the value was retrieved (not nil)
+        print('Current score: ' .. currentScore)
+        -- Increase the score and save it back
+        Storage.InsertInt('score', currentScore + 100)
+    else
+        print('Failed to retrieve score (perhaps a different data type was saved).')
+    end
 else
-  print("Variable myVariable not found")
+    print('Score record not found.')
 end
 
--- Saving an integer value
-Storage.InsertInt("myNumber", 42)
+-- Get the username
+local user = Storage.GetString('username')
+print('Username: ' .. (user or 'Not set')) -- Will print 'CoolUser123' or 'Not set' if the key is not found
 
--- Retrieving an integer value
-local myNumber = Storage.GetInt("myNumber")
-if myNumber then
-  print("Value of myNumber: " .. myNumber)
+-- Remove the activation flag
+local wasRemoved = Storage.RemoveValue('isEnabled')
+if wasRemoved then
+    print('isEnabled flag removed.')
 else
-  print("Variable myNumber not found")
+    print('Failed to remove isEnabled flag (perhaps it was already gone).')
 end
 
--- Checking if a value exists
-local hasValue = Storage.Contains("myVariable")
-print("Variable myVariable exists: " .. tostring(hasValue))
-
--- Removing a value
-Storage.RemoveValueAsync("myVariable")
-
--- Checking if a value exists after removal
-local hasValue = Storage.Contains("myVariable")
-print("Variable myVariable exists after removal: " .. tostring(hasValue))
-
--- Asynchronously retrieving a string value
-local myVariableAsync = Storage.GetStringAsync("myVariable").Result
-if myVariableAsync then
-    print("Asynchronous value of myVariable: " .. myVariableAsync)
-else
-    print("Asynchronous variable myVariable not found")
+-- Attempting to get the removed value will return nil
+local enabledStatus = Storage.GetBool('isEnabled')
+if enabledStatus == nil then
+    print('isEnabled status is now nil (not found).')
 end
 ```
+
+### Available methods
+
+#### Basic Operations
+
+| Method                     | Description                                                                                                                       |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `Contains(string name)`    | Checks if an entry with the specified name (`name`) exists in the storage. Returns `boolean` (`true` or `false`).                 |
+| `RemoveValue(string name)` | Removes the entry with the specified name (`name`) from the storage. Returns `boolean` (`true` if successful, `false` otherwise). |
+
+#### Methods for Basic Types (Recommended for Lua)
+
+These methods provide a convenient way to work with basic Lua data types.
+
+| Method                                    | Description                                                                                                                                     |
+| :---------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `InsertInt(string name, number value)`    | Saves or updates an integer (`number`) value `value` under the name `name`.                                                                     |
+| `GetInt(string name)`                     | Retrieves an integer (`number`) value by name `name`. Returns `number` or `nil` if the entry is not found or has a different type.              |
+| `InsertChar(string name, string value)`   | Saves or updates a character (`string` of length 1) value `value` under the name `name`.                                                        |
+| `GetChar(string name)`                    | Retrieves a character (`string` of length 1) value by name `name`. Returns `string` or `nil` if the entry is not found or has a different type. |
+| `InsertBool(string name, boolean value)`  | Saves or updates a boolean (`boolean`) value `value` under the name `name`.                                                                     |
+| `GetBool(string name)`                    | Retrieves a boolean (`boolean`) value by name `name`. Returns `boolean` or `nil` if the entry is not found or has a different type.             |
+| `InsertString(string name, string value)` | Saves or updates a string (`string`) value `value` under the name `name`.                                                                       |
+| `GetString(string name)`                  | Retrieves a string (`string`) value by name `name`. Returns `string` or `nil` if the entry is not found or has a different type.                |
+| `InsertDouble(string name, number value)` | Saves or updates a floating-point number (`number`) value `value` under the name `name`.                                                        |
+| `GetDouble(string name)`                  | Retrieves a floating-point number (`number`) value by name `name`. Returns `number` or `nil` if the entry is not found or has a different type. |
+
+**Clarifications**:
+
+- **Names (Keys):** Names (`name`) must be non-empty strings. Using invalid names will result in an error.
+- **Data Types:** When using `Get<Type>` methods (e.g., `GetInt`), if the value stored under that name is of a different type, the method will return `nil`.
+- **`nil`:** A `nil` value returned from `Get<Type>` methods means either the key was not found or the stored value has an incompatible type (in the case of `Get<Type>`).

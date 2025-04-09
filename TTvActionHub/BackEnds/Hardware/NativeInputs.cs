@@ -135,15 +135,6 @@ namespace TTvActionHub.BackEnds.Hardware
             F19 = 0x82, F20 = 0x83, F21 = 0x84,
             F22 = 0x85, F23 = 0x86, F24 = 0x87,
 
-            // --- Media related buttons ---
-            VolumeMute = 0xAD, VolumeDown = 0xAE,
-            VolumeUp = 0xAF,
-
-            MediaStop = 0xB2,
-            MediaNextTrack = 0xB0,
-            MediaPlayPause = 0xB3,
-            MediaPreviousTrack = 0xB1,
-
             // --- Shift keys ---
             Shift = 0x10, RShiftKey = 0xA1, LShiftKey = 0xA0,
 
@@ -157,7 +148,7 @@ namespace TTvActionHub.BackEnds.Hardware
             Up = 0x26, Right = 0x27, Left = 0x25, Down = 0x28,
 
             // --- Extra buttons ---
-            Win = 0x5B, Sleep = 0x5F,
+            LWin = 0x5B, RWin = 0x5C,
             Backspace = 0x08, Tab = 0x09,
             LineFeed = 0x0A, Clear = 0x0C,
             Enter = 0x0D, Pause = 0x13,
@@ -166,7 +157,7 @@ namespace TTvActionHub.BackEnds.Hardware
             PageDown = 0x22, End = 0x23,
             Home = 0x24, PrintScreen = 0x2C,
             Insert = 0x2D, Delete = 0x2E,
-            Scroll = 0x91,
+            Scroll = 0x91, Sleep = 0x5F,
 
         }
 

@@ -3,9 +3,9 @@ using TTvActionHub.Logs;
 
 namespace TTvActionHub.Items
 {
-    public class TwitchReward
+    public class TwitchReward : IAction 
     {
-        public required LuaFunction Function;
+        public required LuaFunction Function { get; set; }
 
         public void Execute(string sender, string[]? args)
         {

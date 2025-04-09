@@ -4,10 +4,10 @@ using TTvActionHub.Logs;
 using TTvActionHub.LuaTools.Stuff;
 namespace TTvActionHub.Items
 {
-    public class Command
+    public class TwitchCommand : IAction
     {
         private readonly Stopwatch _coolDownTimer = new();
-        public required LuaFunction Function;
+        public required LuaFunction Function { get; set; }
         public required Users.USERLEVEL Perm;
         public long? TimeOut;
         

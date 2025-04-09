@@ -1,4 +1,7 @@
-﻿namespace TTvActionHub.Services
+﻿using System.Collections.Concurrent;
+using TTvActionHub.Items;
+
+namespace TTvActionHub.Services
 {
     public class ServiceStatusEventArgs(string serviceName, bool isRunninng, string? message) : EventArgs
     {
@@ -7,7 +10,7 @@
         public string? Message { get; } = message;
     }
     
-    internal interface IService
+    public interface IService
     {
         public void Run();
         public void Stop();
@@ -18,5 +21,10 @@
 
         // Status
         bool IsRunning { get; }
+    }
+
+    public interface IUpdatableConfiguration
+    {
+        public bool UpdateConfiguration();
     }
 }

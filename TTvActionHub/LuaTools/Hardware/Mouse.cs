@@ -1,6 +1,4 @@
-﻿using System.Runtime.InteropServices;
-using System.Windows.Forms;
-using TTvActionHub.BackEnds.Hardware;
+﻿using TTvActionHub.BackEnds.Hardware;
 
 namespace TTvActionHub.LuaTools.Hardware
 {
@@ -8,14 +6,14 @@ namespace TTvActionHub.LuaTools.Hardware
     {
         // --- Public methods ---
 
-        public enum MouseButton : byte
+        public enum Button : byte
         {
             Left = 0,
             Middle = 1,
             Right = 2,
         }
 
-        public static void Press(MouseButton button)
+        public static void Press(Button button)
         {
             var input = InputWrapper.ConstructMouseButtonDown((NativeInputs.MouseButton)button);
             InputWrapper.DispatchInput([input]);
@@ -27,7 +25,7 @@ namespace TTvActionHub.LuaTools.Hardware
             InputWrapper.DispatchInput([input]);
         }
 
-        public static void Release(MouseButton button)
+        public static void Release(Button button)
         {
             var input = InputWrapper.ConstructMouseButtonUp((NativeInputs.MouseButton)button);
             InputWrapper.DispatchInput([input]);
@@ -39,21 +37,39 @@ namespace TTvActionHub.LuaTools.Hardware
             InputWrapper.DispatchInput([input]);
         }
 
-        public static void Hold(MouseButton button, int timeDelay = 1000)
+        public static void Hold(Button button, int duration = 1000)
         {
-            Press(button);
-            Thread.Sleep(timeDelay);
-            Release(button);
+            if (duration < 200)
+            {
+                Click(button);
+                return;
+            }
+            var durStep = duration / 100;
+            for (var totalDuration = 0; totalDuration < duration; totalDuration += durStep)
+            {
+                Press(button);
+                Thread.Sleep(durStep);
+                Press(button);
+            }
         }
 
-        public static void XHold(int xid, int timeDelay = 1000)
+        public static void XHold(int xid, int duration = 1000)
         {
-            XPress(xid);
-            Thread.Sleep(timeDelay);
-            XRelease(xid);
+            if (duration < 200)
+            {
+                XClick(xid);
+                return;
+            }
+            var durStep = duration / 100;
+            for (var totalDuration = 0; totalDuration < duration; totalDuration += durStep)
+            {
+                XPress(xid);
+                Thread.Sleep(durStep);
+                XPress(xid);
+            }
         }
 
-        public static void Click(MouseButton button)
+        public static void Click(Button button)
         {
             Press(button);
             Thread.Sleep(100);
@@ -67,8 +83,19 @@ namespace TTvActionHub.LuaTools.Hardware
             XRelease(xid);
         }
 
+        public static void HScroll(int distance)
+        {
+            var input = InputWrapper.ConstructHWheelScroll(distance);
+            InputWrapper.DispatchInput([input]);
+        }
 
-        public static void SetPostion(int x, int y)
+        public static void VScroll(int distance)
+        {
+            var input = InputWrapper.ConstructVWheelScroll(distance);
+            InputWrapper.DispatchInput([input]);
+        }
+
+        public static void SetPosition(int x, int y)
         {
             var input = InputWrapper.ConstructAbsoluteMouseMove(x, y);
             InputWrapper.DispatchInput([input]);

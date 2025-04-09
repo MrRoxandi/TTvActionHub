@@ -142,7 +142,7 @@ namespace TTvActionHub.Services
                     var deserializedStorage = JsonSerializer.Deserialize<ConcurrentDictionary<string, string>>(jsonData, options)
                         ?? new ConcurrentDictionary<string, string>();
 
-                    _storage = new ConcurrentDictionary<string, string>(deserializedStorage);
+                    _storage = new(deserializedStorage);
                     Logger.Log(LOGTYPE.INFO,  ServiceName, "Data was readed successfully");
                 }
                 else Logger.Log(LOGTYPE.INFO,  ServiceName, $"Nothing to read from {_fullpath}");

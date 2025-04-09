@@ -89,7 +89,8 @@ namespace TTvActionHub.Services
             {
                 foreach (var innerEx in ex.InnerExceptions)
                 {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName, "Exception during sound processing:", innerEx);
+                    if (!_soundCompletionSource?.Task.Result ?? true) 
+                        Logger.Log(LOGTYPE.ERROR, ServiceName, "Exception during sound processing:", innerEx);
                 }
             }
             _mediaPlayer!.EndReached -= OnPlaybackEndReached;

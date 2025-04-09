@@ -6,7 +6,7 @@ namespace TTvActionHub.LuaTools.Audio
     {
         public static AudioService? audio;
         
-        public static async Task PlaySoundAsync(string uri)
+        public static async Task PlaySound(string uri)
         {
             if (string.IsNullOrEmpty(uri)) throw new ArgumentNullException(nameof(uri));
             if (audio == null) throw new FieldAccessException("Audio service was not provided");
