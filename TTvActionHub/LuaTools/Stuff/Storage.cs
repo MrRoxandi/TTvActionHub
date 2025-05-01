@@ -89,8 +89,7 @@ namespace TTvActionHub.LuaTools.Stuff
             {
                 throw new ArgumentException($"Invalid name of an item [{name}]", nameof(name));
             }
-            object? item = Container.GetItem<object?>(name);
-            if (item is int val) return val;
+            if (Container.Contains(name)) return Container.GetItem<int>(name);
             else return null;
         }
 
@@ -106,8 +105,7 @@ namespace TTvActionHub.LuaTools.Stuff
             {
                 throw new ArgumentException($"Invalid name of an item [{name}]", nameof(name));
             }
-            object? item = Container.GetItem<object?>(name);
-            if (item is char val) return val;
+            if (Container.Contains(name)) return Container.GetItem<char>(name);
             else return null;
         }
 
@@ -124,8 +122,7 @@ namespace TTvActionHub.LuaTools.Stuff
             {
                 throw new ArgumentException($"Invalid name of an item [{name}]", nameof(name));
             }
-            object? item = Container.GetItem<object?>(name);
-            if (item is bool val) return val;
+            if (Container.Contains(name)) return Container.GetItem<bool>(name);
             else return null;
         }
 
@@ -142,8 +139,7 @@ namespace TTvActionHub.LuaTools.Stuff
             {
                 throw new ArgumentException($"Invalid name of an item [{name}]", nameof(name));
             }
-            object? item = Container.GetItem<object?>(name);
-            if (item is string val) return val;
+            if (Container.Contains(name)) return Container.GetItem<string>(name);
             else return null;
         }
 

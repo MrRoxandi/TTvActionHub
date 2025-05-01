@@ -26,19 +26,6 @@ namespace TTvActionHub.Services
 
         public event EventHandler<ServiceStatusEventArgs>? StatusChanged;
 
-        public AudioService()
-        {
-            try
-            {
-                Core.Initialize();
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, "Unable to initialize service due to error:", ex);
-                return;
-            }
-        }
-
         private void OnPlaybackEncounteredError(object? sender, EventArgs e)
         {
             if (_playbackState == PlaybackState.Playing)
@@ -64,6 +51,16 @@ namespace TTvActionHub.Services
 
         public void Run()
         {
+            try
+            {
+                Core.Initialize();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LOGTYPE.ERROR, ServiceName, "Unable to initialize service due to error:", ex);
+                OnStatusChanged(false, "Unable to initialize service due to error. Check logs");
+                return;
+            }
             _libVLC = new();
             _mediaPlayer = new(_libVLC);
             _mediaPlayer.EndReached += OnPlaybackEndReached;
@@ -83,7 +80,7 @@ namespace TTvActionHub.Services
             _serviceCancellationToken?.Cancel();
             try
             {
-                _workerTask?.Wait();
+                _workerTask?.GetAwaiter().GetResult();
             }
             catch (AggregateException ex)
             {
@@ -152,7 +149,7 @@ namespace TTvActionHub.Services
                     try
                     {
                         // Handle audioUri here.
-                        await Task.Run(() => ProcessSoundUri(audioUri));
+                        await ProcessSoundUri(audioUri);
 
                     } catch (Exception ex)
                     {
@@ -204,7 +201,6 @@ namespace TTvActionHub.Services
             }
             try
             {
-                //_mediaPlayer.Media = media;
                 _playbackState = PlaybackState.Playing;
                 _soundCompletionSource = new();
                 if (media.SubItems.Count > 0)
@@ -231,7 +227,6 @@ namespace TTvActionHub.Services
                 {
                     Logger.Log(LOGTYPE.INFO, ServiceName, "Playback cancelled via CancellationToken");
                     _playbackState = PlaybackState.Stopped;
-                    //_mediaPlayer.Stop();
                 }
             }
             catch (Exception ex)
@@ -242,7 +237,6 @@ namespace TTvActionHub.Services
             finally
             {
                 _playbackState = PlaybackState.Stopped;
-                //_mediaPlayer?.Stop();
             }
         }
 

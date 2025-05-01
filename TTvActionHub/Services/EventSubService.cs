@@ -131,9 +131,11 @@ namespace TTvActionHub.Services
             {
                 Logger.Log(LOGTYPE.INFO, ServiceName, "Subscribing to topics...");
                 await RegisterEvents();
+                OnStatusChanged(true, "Connected");
             } else
             {
                 Logger.Log(LOGTYPE.INFO, ServiceName, "Reconnected. Subscriptions should persist.");
+                OnStatusChanged(true, "Reconnected");
             }
         }
 
@@ -178,30 +180,33 @@ namespace TTvActionHub.Services
             }
         }
 
-        private Task HandleReconnect()
+        private async Task HandleReconnect()
         {
             if (!_stopRequested)
             {
                 Logger.Log(LOGTYPE.INFO, ServiceName, "Attempting to reconnect in 5 seconds...");
-                Task.Delay(5000).ContinueWith(_ =>
+                await Task.Delay(5000);
+                if (_stopRequested) return;
+                Logger.Log(LOGTYPE.INFO, ServiceName, "Reconnecting...");
+                try
                 {
-                    if (!_stopRequested)
+                    var client = _client;
+                    if (client != null)
                     {
-                        Logger.Log(LOGTYPE.INFO, ServiceName, "Reconnecting...");
-                        try
-                        {
-                            _client?.ReconnectAsync();
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Log(LOGTYPE.ERROR, ServiceName, "Reconnect failed.", ex);
-                            OnStatusChanged(false, $"Reconnect failed: {ex.Message}");
-                        }
+                        await client.ReconnectAsync();
+                    }
+                    else
+                    {
+                        Logger.Log(LOGTYPE.WARNING, ServiceName, "Client was null during reconnection process.");
+                        OnStatusChanged(false, "Reconnect failed: client disposed.");
                     }
                 }
-                );
+                catch (Exception ex)
+                {
+                    Logger.Log(LOGTYPE.ERROR, ServiceName, "Reconnect failed.", ex);
+                    OnStatusChanged(false, $"Reconnect failed: {ex.Message}");
+                }
             }
-            return Task.CompletedTask;
         }
 
         protected virtual void OnStatusChanged(bool isRunning, string? message = null)
