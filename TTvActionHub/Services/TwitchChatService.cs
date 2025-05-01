@@ -7,6 +7,8 @@ using TTvActionHub.Managers;
 using TTvActionHub.Items;
 using TTvActionHub.Logs;
 using TwitchLib.Client;
+using System.Net.NetworkInformation;
+using System.ComponentModel.DataAnnotations;
 
 namespace TTvActionHub.Services
 {
@@ -26,7 +28,12 @@ namespace TTvActionHub.Services
 
         private volatile bool _stopRequested = false;
         private ConnectionCredentials? _credentials;
-        private TwitchClient? _client;  
+        private TwitchClient? _client;
+
+        //private TaskCompletionSource<bool>? _commandCompletitionSource;
+        private CancellationTokenSource? _serviceCancelationToken;
+        private ConcurrentQueue<(TwitchCommand cmd, Users.USERLEVEL level, string sender, string[]? args)>? _commandsQueue;
+        private Task? _workerTask;
 
         public TwitchChatService(IConfig config, LuaConfigManager manager)
         {
@@ -39,7 +46,7 @@ namespace TTvActionHub.Services
         public void Run()
         {
             _stopRequested = false;
-            Logger.Log(LOGTYPE.INFO, ServiceName, "Connectiong...");
+            Logger.Log(LOGTYPE.INFO, ServiceName, "Starting service...");
             lock (_connectionLock)
             {
                 try
@@ -51,6 +58,7 @@ namespace TTvActionHub.Services
                         return;
                     }
                     Logger.Log(LOGTYPE.INFO, ServiceName, "Initializing and connecting...");
+
                     _client = new TwitchClient();
                     _credentials = new ConnectionCredentials(_configuration.Login, _configuration.Token);
 
@@ -63,10 +71,18 @@ namespace TTvActionHub.Services
                         _client.OnLog += OnLogHandler;
                     _client.Initialize(_credentials, _configuration.Login);
                     _client.Connect();
-                } catch (Exception ex)
+                    
+                    Logger.Log(LOGTYPE.INFO, ServiceName, "Initializing and starting worker...");
+                    _serviceCancelationToken = new();
+                    _commandsQueue = new();
+                    //_commandCompletitionSource = new();
+                    _workerTask = Task.Run(ProcessCommandQueueAsync, _serviceCancelationToken.Token);
+                } 
+                catch (Exception ex)
                 {
                     Logger.Log(LOGTYPE.ERROR, ServiceName, "Failed to start.", ex);
                     OnStatusChanged(false, $"Startup failed: {ex.Message}");
+                    _serviceCancelationToken?.Cancel();
                     CleanupClientResources();
                 }
             }
@@ -80,6 +96,7 @@ namespace TTvActionHub.Services
         public void Stop()
         {
             _stopRequested = true;
+            _serviceCancelationToken?.Cancel();
             Logger.Log(LOGTYPE.INFO, ServiceName, "Disconnecting...");
             lock (_connectionLock)
             {
@@ -207,28 +224,87 @@ namespace TTvActionHub.Services
 
         }
 
-        private void OnChatCommandReceived(object? sender, OnChatCommandReceivedArgs args) => Task.Run(() =>
+        private void OnChatCommandReceived(object? sender, OnChatCommandReceivedArgs args)
         {
-            var cmd = args.Command.CommandText;
-            var cmdArgStr = args.Command.ArgumentsAsString;
-            var chatMessage = args.Command.ChatMessage;
-            var cmdSender = chatMessage.Username;
+            InsertCommandAsync(args.Command);
+        }
+        //Task.Run(() =>
+        //{
+        //    var cmd = args.Command.CommandText;
+        //    var cmdArgStr = args.Command.ArgumentsAsString;
+        //    var chatMessage = args.Command.ChatMessage;
+        //    var cmdSender = chatMessage.Username;
 
-            if (Commands == null) return;
+        //    if (Commands == null) return;
 
-            var result = Commands.TryGetValue(cmd, out TwitchCommand? value);
-            if (!result || value == null) return;
+        //    var result = Commands.TryGetValue(cmd, out TwitchCommand? value);
+        //    if (!result || value == null) return;
 
-            cmdArgStr = cmdArgStr.Replace("\U000e0000", "").Trim();
-            Logger.Log(LOGTYPE.INFO, ServiceName, $"Received command: {cmd} from {cmdSender} with args: {cmdArgStr}");
+        //    cmdArgStr = cmdArgStr.Replace("\U000e0000", "").Trim();
+        //    Logger.Log(LOGTYPE.INFO, ServiceName, $"Received command: {cmd} from {cmdSender} with args: {cmdArgStr}");
 
-            string[]? cmdArgs = string.IsNullOrEmpty(cmdArgStr) ? null : cmdArgStr.Split(' ');
+        //    string[]? cmdArgs = string.IsNullOrEmpty(cmdArgStr) ? null : cmdArgStr.Split(' ');
 
-            value.Execute(
-                cmdSender,
-                Users.ParceFromTwitchLib(chatMessage.UserType, chatMessage.IsSubscriber, chatMessage.IsVip),
-                cmdArgs);
-        });
+        //    value.Execute(
+        //        cmdSender,
+        //        Users.ParceFromTwitchLib(chatMessage.UserType, chatMessage.IsSubscriber, chatMessage.IsVip),
+        //        cmdArgs);
+        //});
+
+        private void InsertCommandAsync(ChatCommand chatCommand)
+        {
+            var cmdName = chatCommand.CommandText;
+            if (!(Commands?.TryGetValue(cmdName, out var command) ?? false))
+                return;
+            if (!command.CanExecute) return;
+            var cmdArgStr = chatCommand.ArgumentsAsString.Replace("\U000e0000", "").Trim();
+            var sender = chatCommand.ChatMessage.Username;
+            Logger.Log(LOGTYPE.INFO, ServiceName, $"Received command: {cmdName} from {sender} with args: {cmdArgStr}");
+            var cmdArgs = string.IsNullOrEmpty(cmdArgStr) ? null : cmdArgStr.Split(' ');
+            _commandsQueue?.Enqueue(new(
+                command, 
+                Users.ParceFromTwitchLib(chatCommand.ChatMessage.UserType, chatCommand.ChatMessage.IsSubscriber, chatCommand.ChatMessage.IsVip), 
+                sender, cmdArgs)
+            );
+        }
+
+        private async Task ProcessCommandQueueAsync()
+        {
+            try
+            {
+                while (!_serviceCancelationToken!.IsCancellationRequested)
+                {
+                    if (_commandsQueue!.TryDequeue(out var RunData))
+                    {
+                        try
+                        {
+                            Logger.Log(LOGTYPE.INFO, ServiceName, $"Executing command from {RunData.sender}");
+                            RunData.cmd.Execute(RunData.sender, RunData.level, RunData.args);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log(LOGTYPE.ERROR, ServiceName, "Unable execute command due to erorr", ex);
+                        }
+                    }
+                    else
+                    {
+                        await Task.Delay(TimeSpan.FromMilliseconds(100), _serviceCancelationToken.Token);
+                    }
+                }
+            }
+            catch (TaskCanceledException)
+            {
+                Logger.Log(LOGTYPE.INFO, ServiceName, "Worker task was canceled");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LOGTYPE.ERROR, ServiceName, "Error during ProcessCommandQueue", ex);
+            }
+            finally
+            {
+                Logger.Log(LOGTYPE.INFO, ServiceName, "Commands queue processing stopped");
+            }
+        }
 
         private void CleanupClientResources()
         {
@@ -238,7 +314,19 @@ namespace TTvActionHub.Services
                 Logger.Log(LOGTYPE.INFO, ServiceName, "Cleaning up client resources...");
                 try
                 {
-                    // Отписываемся от всех событий
+                    _workerTask?.GetAwaiter().GetResult();
+                }
+                catch (AggregateException ex)
+                { 
+                    foreach(var innerEx in ex.InnerExceptions)
+                    {
+                        Logger.Log(LOGTYPE.ERROR, ServiceName, "Exception during command processing:", innerEx);
+                    }
+                }
+
+                try
+                {
+                    _commandsQueue?.Clear();
                     _client.OnChatCommandReceived -= OnChatCommandReceived;
                     _client.OnConnectionError -= OnConnectionErrorHandler;
                     _client.OnDisconnected -= OnDisconnectedHandler;
@@ -249,6 +337,7 @@ namespace TTvActionHub.Services
                     _client = null;
                     _credentials = null;
                     Logger.Log(LOGTYPE.INFO, ServiceName, "Client resources cleaned up.");
+
                 }
                 catch (Exception ex)
                 {

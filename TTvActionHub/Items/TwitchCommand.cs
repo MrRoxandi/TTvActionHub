@@ -7,10 +7,11 @@ namespace TTvActionHub.Items
     public class TwitchCommand : IAction
     {
         private readonly Stopwatch _coolDownTimer = new();
+        public bool CanExecute => !_coolDownTimer.IsRunning || _coolDownTimer.ElapsedMilliseconds > TimeOut;
         public required LuaFunction Function { get; set; }
         public required Users.USERLEVEL Perm;
         public long? TimeOut;
-        
+
         public void Execute(string sender, Users.USERLEVEL level, string[]? args)
         {
             if(level < Perm)
@@ -20,7 +21,7 @@ namespace TTvActionHub.Items
             }
             try
             {
-                if (_coolDownTimer.IsRunning && _coolDownTimer.ElapsedMilliseconds < TimeOut)
+                if (!CanExecute)
                     return;
                 Function.Call(sender, args);
                 _coolDownTimer.Restart();
