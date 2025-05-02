@@ -97,7 +97,7 @@ namespace TTvActionHub
                 return;
             }
 
-            IDisposable? shellDisposable = shell as IDisposable;
+            //Shell shellDisposable = shell;
             try
             {
                 Console.WriteLine("Initializing Shell UI...");
@@ -131,7 +131,7 @@ namespace TTvActionHub
                 DeInitAllServices();
                 Logger.Info("Service shutdown process finished.");
 
-                shellDisposable?.Dispose(); 
+                shell?.Dispose(); 
                 Application.Shutdown(); 
                 
                 Logger.Info("Program finished.");
