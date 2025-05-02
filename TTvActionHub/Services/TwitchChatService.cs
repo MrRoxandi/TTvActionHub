@@ -3,25 +3,29 @@ using System.Collections.Concurrent;
 using TTvActionHub.LuaTools.Stuff;
 using TwitchLib.Client.Events;
 using TwitchLib.Client.Models;
-using TTvActionHub.Managers;
-using TTvActionHub.Items;
-using TTvActionHub.Logs;
+using TTvActionHub.Managers; 
+using TTvActionHub.Items; 
+using TTvActionHub.Logs; 
 using TwitchLib.Client;
-using System.Net.NetworkInformation;
-using System.ComponentModel.DataAnnotations;
 
 namespace TTvActionHub.Services
 {
     public class TwitchChatService : IService, IUpdatableConfiguration
     {
+        private const int ReconnectDelaySeconds = 5;
+        private const int WorkerQueuePollDelayMs = 100;
+        private const int MaxConcurrentCommands = 5;
+        private const int CommandShutdownWaitSeconds = 3;
+        private const int WorkerTaskShutdownWaitSeconds = 3;
+
         public TwitchClient? Client { get => _client; }
-        public string Channel { get => _configuration.Login; }
-        
+        public string Channel => _configuration.Login; 
+
         public ConcurrentDictionary<string, TwitchCommand>? Commands { get; set; }
         public event EventHandler<ServiceStatusEventArgs>? StatusChanged;
-        public bool IsRunning => _client?.IsConnected ?? false;
-        public string ServiceName => "TwitchChat";
-        
+        public bool IsRunning => _client?.IsConnected ?? false; 
+        public string ServiceName => "TwitchChat"; 
+
         private readonly LuaConfigManager _configManager;
         private readonly IConfig _configuration;
         private readonly object _connectionLock = new();
@@ -30,188 +34,436 @@ namespace TTvActionHub.Services
         private ConnectionCredentials? _credentials;
         private TwitchClient? _client;
 
-        //private TaskCompletionSource<bool>? _commandCompletitionSource;
-        private CancellationTokenSource? _serviceCancelationToken;
-        private ConcurrentQueue<(TwitchCommand cmd, Users.USERLEVEL level, string sender, string[]? args)>? _commandsQueue;
+        private CancellationTokenSource? _serviceCts;
+        private ConcurrentQueue<(TwitchCommand cmd, string cmdName, Users.USERLEVEL level, string sender, string[]? args)>? _commandsQueue;
         private Task? _workerTask;
+        private SemaphoreSlim? _commandSemaphore;
 
         public TwitchChatService(IConfig config, LuaConfigManager manager)
         {
-            _configManager = manager;
-            _configuration = config;
-            var commands = _configManager.LoadCommands() ?? throw new Exception($"Bad configuration for {ServiceName}");
-            Commands = commands;
+            _configManager = manager ?? throw new ArgumentNullException(nameof(manager));
+            _configuration = config ?? throw new ArgumentNullException(nameof(config));
+
+            Commands = _configManager.LoadCommands()
+                ?? throw new InvalidOperationException($"Failed to load initial command configuration for {ServiceName}");
         }
 
         public void Run()
         {
             _stopRequested = false;
             Logger.Log(LOGTYPE.INFO, ServiceName, "Starting service...");
+
             lock (_connectionLock)
             {
+                if (IsRunning)
+                {
+                    Logger.Log(LOGTYPE.WARNING, ServiceName, "Service is already running.");
+                    OnStatusChanged(true); 
+                    return;
+                }
+
+                CleanupClientResources(); 
+
                 try
                 {
-                    if (_client != null && _client.IsConnected)
-                    {
-                        Logger.Log(LOGTYPE.WARNING, ServiceName, "Already running.");
-                        OnStatusChanged(true);
-                        return;
-                    }
                     Logger.Log(LOGTYPE.INFO, ServiceName, "Initializing and connecting...");
+
+                    _serviceCts = new();
+                    _commandsQueue = new();
+                    _commandSemaphore = new SemaphoreSlim(MaxConcurrentCommands, MaxConcurrentCommands);
 
                     _client = new TwitchClient();
                     _credentials = new ConnectionCredentials(_configuration.Login, _configuration.Token);
 
-                    _client.OnChatCommandReceived += OnChatCommandReceived;
-                    _client.OnConnectionError += OnConnectionErrorHandler;
-                    _client.OnDisconnected += OnDisconnectedHandler;
-                    _client.OnConnected += OnConnectedHandler;
-                    _client.OnError += OnErrorHandler;
-                    if (_configuration.LogState)
-                        _client.OnLog += OnLogHandler;
+                    SubscribeToClientEvents();
+
                     _client.Initialize(_credentials, _configuration.Login);
-                    _client.Connect();
-                    
-                    Logger.Log(LOGTYPE.INFO, ServiceName, "Initializing and starting worker...");
-                    _serviceCancelationToken = new();
-                    _commandsQueue = new();
-                    //_commandCompletitionSource = new();
-                    _workerTask = Task.Run(ProcessCommandQueueAsync, _serviceCancelationToken.Token);
-                } 
+                    _client.Connect(); 
+
+                    _workerTask = Task.Run(() => ProcessCommandQueueAsync(_serviceCts.Token), _serviceCts.Token);
+
+                }
                 catch (Exception ex)
                 {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName, "Failed to start.", ex);
+                    Logger.Log(LOGTYPE.ERROR, ServiceName, "Failed to start service.", ex);
                     OnStatusChanged(false, $"Startup failed: {ex.Message}");
-                    _serviceCancelationToken?.Cancel();
-                    CleanupClientResources();
+                    
+                    StopInternal(); 
+                    CleanupResources(); 
                 }
             }
-        }
-
-        private void OnLogHandler(object? sender, OnLogArgs e)
-        {
-             Logger.Log(LOGTYPE.INFO, ServiceName, e.Data);
         }
 
         public void Stop()
         {
+            if (_stopRequested) return; 
+
             _stopRequested = true;
-            _serviceCancelationToken?.Cancel();
-            Logger.Log(LOGTYPE.INFO, ServiceName, "Disconnecting...");
+            Logger.Log(LOGTYPE.INFO, ServiceName, "Stopping service requested...");
+
+            StopInternal(); 
+
             lock (_connectionLock)
             {
-
-                try
-                {
-                    if (_client?.IsConnected ?? false)
-                    {
-                        _client.Disconnect();
-                    }
-                    else
-                    {
-                        Logger.Log(LOGTYPE.WARNING, ServiceName, "Already disconnected, ensuring cleanup on Stop request.");
-                        CleanupClientResources();
-                        OnStatusChanged(false);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName, "Error during disconnect request", ex);
-                    OnStatusChanged(false, $"Shutdown error: {ex.Message}");
-                    CleanupClientResources();
-                }
+                DisconnectClient();
+                CleanupClientResources(); 
             }
+            CleanupNonClientResources();
+
+            Logger.Log(LOGTYPE.INFO, ServiceName, "Service stopped.");
+            OnStatusChanged(false, "Service stopped by request."); 
         }
 
         public bool UpdateConfiguration()
         {
-            if (_configManager.LoadCommands() is not ConcurrentDictionary<string, TwitchCommand> cmds)
+            Logger.Log(LOGTYPE.INFO, ServiceName, "Attempting to update configuration...");
+            try
             {
+                if (_configManager.LoadCommands() is ConcurrentDictionary<string, TwitchCommand> cmds)
+                {
+                    Commands = cmds; 
+                    Logger.Log(LOGTYPE.INFO, ServiceName, "Configuration updated successfully.");
+                    return true;
+                }
+                else
+                {
+                    Logger.Log(LOGTYPE.WARNING, ServiceName, "Failed to update configuration: LoadCommands returned null.");
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LOGTYPE.ERROR, ServiceName, "Failed to update configuration due to an error.", ex);
                 return false;
             }
-            Commands = cmds;
-            return true;
+        }
+
+        private void SubscribeToClientEvents()
+        {
+            if (_client == null) return;
+            _client.OnChatCommandReceived += OnChatCommandReceived;
+            _client.OnConnectionError += OnConnectionErrorHandler;
+            _client.OnDisconnected += OnDisconnectedHandler;
+            _client.OnConnected += OnConnectedHandler;
+            _client.OnError += OnErrorHandler;
+            if (_configuration.LogState)
+                _client.OnLog += OnLogHandler;
+        }
+
+        private void UnsubscribeFromClientEvents()
+        {
+            if (_client == null) return;
+            _client.OnChatCommandReceived -= OnChatCommandReceived;
+            _client.OnConnectionError -= OnConnectionErrorHandler;
+            _client.OnDisconnected -= OnDisconnectedHandler;
+            _client.OnConnected -= OnConnectedHandler;
+            _client.OnError -= OnErrorHandler;
+            if (_configuration.LogState) 
+                _client.OnLog -= OnLogHandler;
         }
 
         private void OnConnectedHandler(object? sender, OnConnectedArgs e)
         {
-            Logger.Log(LOGTYPE.INFO, ServiceName, $"Service has connected to channel {_configuration.Login}");
-            OnStatusChanged(true);
+            Logger.Log(LOGTYPE.INFO, ServiceName, $"Successfully connected to channel '{e.AutoJoinChannel}'");
+            OnStatusChanged(true, "Connected");
         }
 
-        private void OnDisconnectedHandler(object? sender, TwitchLib.Communication.Events.OnDisconnectedEventArgs e)
+        private void OnDisconnectedHandler(object? sender, OnDisconnectedEventArgs e)
         {
-            Logger.Log(LOGTYPE.INFO, ServiceName, $"Service has disconnected");
-            lock (_connectionLock)
-            {
-                if (_client != null)
-                {
-                    CleanupClientResources();
-                }
-            }
-            OnStatusChanged(false, "Disconnected");
-            HandleReconnect();
+            Logger.Log(LOGTYPE.WARNING, ServiceName, "Disconnected from Twitch.");
+            HandleDisconnection("Disconnected");
         }
 
         private void OnConnectionErrorHandler(object? sender, OnConnectionErrorArgs e)
         {
-            Logger.Log(LOGTYPE.ERROR, ServiceName,$"Connection Error: {e.Error.Message}");
-            lock (_connectionLock)
-            {
-                if (_client != null)
-                {
-                    CleanupClientResources();
-                }
-            }
-            OnStatusChanged(false, $"Connection Error: {e.Error.Message}");
-            HandleReconnect();
+            Logger.Log(LOGTYPE.ERROR, ServiceName, $"Connection error: {e.Error.Message}");
+            HandleDisconnection($"Connection Error: {e.Error.Message}");
         }
 
         private void OnErrorHandler(object? sender, OnErrorEventArgs e)
         {
-            Logger.Log(LOGTYPE.ERROR, ServiceName,$"Library Error: ", e.Exception);
+            Logger.Log(LOGTYPE.ERROR, ServiceName, "TwitchLib internal error.", e.Exception);
         }
 
-        private void HandleReconnect()
+        private void OnLogHandler(object? sender, OnLogArgs e)
         {
-            if (!_stopRequested)
+            Logger.Log(LOGTYPE.INFO, ServiceName, e.Data);
+        }
+
+        private void OnChatCommandReceived(object? sender, OnChatCommandReceivedArgs args)
+        {
+            EnqueueCommand(args.Command);
+        }
+
+        private void EnqueueCommand(ChatCommand chatCommand)
+        {
+            if (_commandsQueue == null || Commands == null || _serviceCts?.IsCancellationRequested == true)
             {
-                Logger.Log(LOGTYPE.INFO, ServiceName, "Attempting to reconnect in 5 seconds...");
-                Task.Delay(5000).ContinueWith(_ =>
+                return;
+            }
+
+            var cmdName = chatCommand.CommandText;
+            if (!Commands.TryGetValue(cmdName, out var command) || command == null) 
+            {
+                return; 
+            }
+
+            if (!command.CanExecute)
+            {
+                Logger.Log(LOGTYPE.INFO, ServiceName, $"Command '{cmdName}' cannot be executed right now.");
+                return; 
+            }
+
+            var cmdArgStr = chatCommand.ArgumentsAsString.Replace("\U000e0000", "").Trim();
+            var sender = chatCommand.ChatMessage.Username;
+            var userLevel = Users.ParceFromTwitchLib(
+                chatCommand.ChatMessage.UserType,
+                chatCommand.ChatMessage.IsSubscriber,
+                chatCommand.ChatMessage.IsVip);
+            string[]? cmdArgs = string.IsNullOrEmpty(cmdArgStr) ? null : cmdArgStr.Split(' ');
+
+            Logger.Log(LOGTYPE.INFO, ServiceName, $"Queueing command: '{cmdName}' from {sender} with args: [{cmdArgStr}]");
+
+            _commandsQueue.Enqueue((command, cmdName, userLevel, sender, cmdArgs));
+        }
+
+        private async Task ProcessCommandQueueAsync(CancellationToken cancellationToken)
+        {
+            Logger.Log(LOGTYPE.INFO, ServiceName, "Command processing worker started.");
+            var runningTasks = new List<Task>(); 
+
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    if (!_stopRequested)
+                    runningTasks.RemoveAll(t => t.IsCompleted);
+
+                    if (_commandsQueue!.TryDequeue(out var runData))
                     {
-                        Logger.Log(LOGTYPE.INFO, ServiceName, "Reconnecting...");
-                        lock (_connectionLock)
+                        if (_commandSemaphore!.CurrentCount == 0)
                         {
-                            try
+                            await Task.Delay(WorkerQueuePollDelayMs, cancellationToken);
+                            _commandsQueue.Enqueue(runData); 
+                            continue;
+                        }
+
+                        try
+                        {
+                            await _commandSemaphore.WaitAsync(cancellationToken);
+
+                            Task commandTask = Task.Run(() => 
                             {
-                                if (_client != null && !_client.IsConnected)
+                                try
                                 {
-                                    _client.Disconnect();
+                                    string commandIdentifier = $"'{runData.cmdName}' from {runData.sender}"; 
+                                    Logger.Log(LOGTYPE.INFO, ServiceName, $"Executing command {commandIdentifier}...");
+                                    runData.cmd.Execute(runData.sender, runData.level, runData.args); 
+                                    Logger.Log(LOGTYPE.INFO, ServiceName, $"Finished command {commandIdentifier}.");
                                 }
-                                else if (_client == null)
+                                catch (Exception ex)
                                 {
-                                    Logger.Log(LOGTYPE.ERROR, ServiceName, "Cannot reconnect, client instance is null (unexpected). Stop might have been called.");
-                                    OnStatusChanged(false, "Reconnect failed: client disposed.");
+                                    Logger.Log(LOGTYPE.ERROR, ServiceName, $"Error executing command '{runData.cmdName}' from {runData.sender}", ex);
                                 }
-                            }
-                            catch (Exception ex)
-                            {
-                                Logger.Log(LOGTYPE.ERROR, ServiceName, "Reconnect failed.", ex);
-                                OnStatusChanged(false, $"Reconnect failed: {ex.Message}");
-                            }
+                                finally
+                                {
+                                    _commandSemaphore.Release(); 
+                                }
+                            }, cancellationToken); 
+
+                            runningTasks.Add(commandTask); 
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            Logger.Log(LOGTYPE.INFO, ServiceName, "Operation canceled while waiting for semaphore or starting command task.");
+                            break; 
+                        }
+                        catch (Exception ex) 
+                        {
+                            Logger.Log(LOGTYPE.ERROR, ServiceName, $"Error dispatching command '{runData.cmdName}': {ex.Message}", ex);
                         }
                     }
                     else
                     {
-                        Logger.Log(LOGTYPE.INFO, ServiceName, "Reconnect cancelled, stop was requested during delay.");
+                        await Task.Delay(WorkerQueuePollDelayMs, cancellationToken);
                     }
-                }, TaskScheduler.Default);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                Logger.Log(LOGTYPE.INFO, ServiceName, "Command processing loop was canceled.");
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LOGTYPE.ERROR, ServiceName, "Unhandled error in command processing loop", ex);
+
+            }
+            finally
+            {
+                Logger.Log(LOGTYPE.INFO, ServiceName, $"Worker loop finished. Waiting for {runningTasks.Count} running command(s) to complete...");
+                try
+                {
+                    await Task.WhenAll(runningTasks).WaitAsync(TimeSpan.FromSeconds(CommandShutdownWaitSeconds));
+                    Logger.Log(LOGTYPE.INFO, ServiceName, "All tracked commands finished or timed out.");
+                }
+                catch (TimeoutException)
+                {
+                    Logger.Log(LOGTYPE.WARNING, ServiceName, "Timeout waiting for running commands to complete upon shutdown.");
+                }
+                catch (Exception ex) 
+                {
+                    Logger.Log(LOGTYPE.WARNING, ServiceName, $"Exception while waiting for running commands: {ex.Message}");
+                }
+                Logger.Log(LOGTYPE.INFO, ServiceName, "Command processing worker stopped.");
             }
         }
 
-        protected virtual void OnStatusChanged(bool isRunning, string? message = null)
+        // --- Вспомогательные методы ---
+        private void HandleDisconnection(string reason)
+        {
+            lock (_connectionLock)
+            {
+                CleanupClientResources();
+            }
+            OnStatusChanged(false, reason); // Сообщаем о дисконнекте
+
+            AttemptReconnect();
+        }
+
+        private void AttemptReconnect()
+        {
+            if (!_stopRequested)
+            {
+                Logger.Log(LOGTYPE.INFO, ServiceName, $"Attempting to reconnect in {ReconnectDelaySeconds} seconds...");
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        await Task.Delay(TimeSpan.FromSeconds(ReconnectDelaySeconds), _serviceCts?.Token ?? CancellationToken.None); // Используем токен, если он есть
+
+                        if (!_stopRequested) 
+                        {
+                            Logger.Log(LOGTYPE.INFO, ServiceName, "Reconnecting...");
+                            Run();
+                        }
+                        else
+                        {
+                            Logger.Log(LOGTYPE.INFO, ServiceName, "Reconnect cancelled, service stop was requested during delay.");
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        Logger.Log(LOGTYPE.INFO, ServiceName, "Reconnect delay was canceled.");
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log(LOGTYPE.ERROR, ServiceName, "Error during reconnect attempt execution.", ex);
+                        OnStatusChanged(false, $"Reconnect failed: {ex.Message}");
+                    }
+                });
+            }
+            else
+            {
+                Logger.Log(LOGTYPE.INFO, ServiceName, "Reconnect skipped, service stop was requested.");
+            }
+        }
+
+        private void StopInternal()
+        {
+            if (_serviceCts != null && !_serviceCts.IsCancellationRequested)
+            {
+                Logger.Log(LOGTYPE.INFO, ServiceName, "Requesting cancellation for worker task...");
+                _serviceCts.Cancel();
+            }
+
+            if (_workerTask != null && !_workerTask.IsCompleted)
+            {
+                Logger.Log(LOGTYPE.INFO, ServiceName, "Waiting for worker task to stop...");
+                try
+                {
+                    bool completed = _workerTask.Wait(TimeSpan.FromSeconds(WorkerTaskShutdownWaitSeconds));
+                    if (!completed)
+                    {
+                        Logger.Log(LOGTYPE.WARNING, ServiceName, "Worker task did not complete within the timeout period.");
+                    }
+                    else
+                    {
+                        Logger.Log(LOGTYPE.INFO, ServiceName, "Worker task stopped.");
+                    }
+                }
+                catch (OperationCanceledException)
+                {
+                    Logger.Log(LOGTYPE.INFO, ServiceName, "Worker task wait was canceled (expected).");
+                }
+                catch (AggregateException ae)
+                {
+                    ae.Handle(ex =>
+                    {
+                        Logger.Log(LOGTYPE.ERROR, ServiceName, "Exception occurred in worker task during shutdown.", ex);
+                        return true; 
+                    });
+                }
+            }
+            _workerTask = null; 
+        }
+
+        private void DisconnectClient()
+        {
+            if (_client?.IsConnected ?? false)
+            {
+                Logger.Log(LOGTYPE.INFO, ServiceName, "Disconnecting Twitch client...");
+                try
+                {
+                    _client.Disconnect();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LOGTYPE.ERROR, ServiceName, "Error during client disconnect request.", ex);
+                }
+            }
+        }
+
+        private void CleanupClientResources()
+        {
+            if (_client != null)
+            {
+                Logger.Log(LOGTYPE.INFO, ServiceName, "Cleaning up Twitch client resources...");
+                UnsubscribeFromClientEvents();
+                _client = null; 
+                _credentials = null;
+                Logger.Log(LOGTYPE.INFO, ServiceName, "Twitch client resources cleaned up.");
+            }
+        }
+
+        private void CleanupNonClientResources()
+        {
+            Logger.Log(LOGTYPE.INFO, ServiceName, "Cleaning up non-client resources (CTS, Semaphore)...");
+            _serviceCts?.Cancel(); 
+            _serviceCts?.Dispose();
+            _serviceCts = null;
+
+            _commandSemaphore?.Dispose();
+            _commandSemaphore = null;
+
+            _commandsQueue?.Clear();
+            _commandsQueue = null;
+
+            Logger.Log(LOGTYPE.INFO, ServiceName, "Non-client resources cleaned up.");
+        }
+
+        private void CleanupResources()
+        {
+            Logger.Log(LOGTYPE.INFO, ServiceName, "Performing full resource cleanup...");
+            StopInternal(); 
+            lock (_connectionLock)
+            {
+                DisconnectClient();
+                CleanupClientResources();
+            }
+            CleanupNonClientResources();
+            Logger.Log(LOGTYPE.INFO, ServiceName, "Full resource cleanup finished.");
+        }
+
+        private void OnStatusChanged(bool isRunning, string? message = null)
         {
             try
             {
@@ -220,129 +472,6 @@ namespace TTvActionHub.Services
             catch (Exception ex)
             {
                 Logger.Log(LOGTYPE.ERROR, ServiceName, "Error invoking StatusChanged event handler.", ex);
-            }
-
-        }
-
-        private void OnChatCommandReceived(object? sender, OnChatCommandReceivedArgs args)
-        {
-            InsertCommandAsync(args.Command);
-        }
-        //Task.Run(() =>
-        //{
-        //    var cmd = args.Command.CommandText;
-        //    var cmdArgStr = args.Command.ArgumentsAsString;
-        //    var chatMessage = args.Command.ChatMessage;
-        //    var cmdSender = chatMessage.Username;
-
-        //    if (Commands == null) return;
-
-        //    var result = Commands.TryGetValue(cmd, out TwitchCommand? value);
-        //    if (!result || value == null) return;
-
-        //    cmdArgStr = cmdArgStr.Replace("\U000e0000", "").Trim();
-        //    Logger.Log(LOGTYPE.INFO, ServiceName, $"Received command: {cmd} from {cmdSender} with args: {cmdArgStr}");
-
-        //    string[]? cmdArgs = string.IsNullOrEmpty(cmdArgStr) ? null : cmdArgStr.Split(' ');
-
-        //    value.Execute(
-        //        cmdSender,
-        //        Users.ParceFromTwitchLib(chatMessage.UserType, chatMessage.IsSubscriber, chatMessage.IsVip),
-        //        cmdArgs);
-        //});
-
-        private void InsertCommandAsync(ChatCommand chatCommand)
-        {
-            var cmdName = chatCommand.CommandText;
-            if (!(Commands?.TryGetValue(cmdName, out var command) ?? false))
-                return;
-            if (!command.CanExecute) return;
-            var cmdArgStr = chatCommand.ArgumentsAsString.Replace("\U000e0000", "").Trim();
-            var sender = chatCommand.ChatMessage.Username;
-            Logger.Log(LOGTYPE.INFO, ServiceName, $"Received command: {cmdName} from {sender} with args: {cmdArgStr}");
-            var cmdArgs = string.IsNullOrEmpty(cmdArgStr) ? null : cmdArgStr.Split(' ');
-            _commandsQueue?.Enqueue(new(
-                command, 
-                Users.ParceFromTwitchLib(chatCommand.ChatMessage.UserType, chatCommand.ChatMessage.IsSubscriber, chatCommand.ChatMessage.IsVip), 
-                sender, cmdArgs)
-            );
-        }
-
-        private async Task ProcessCommandQueueAsync()
-        {
-            try
-            {
-                while (!_serviceCancelationToken!.IsCancellationRequested)
-                {
-                    if (_commandsQueue!.TryDequeue(out var RunData))
-                    {
-                        try
-                        {
-                            Logger.Log(LOGTYPE.INFO, ServiceName, $"Executing command from {RunData.sender}");
-                            RunData.cmd.Execute(RunData.sender, RunData.level, RunData.args);
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.Log(LOGTYPE.ERROR, ServiceName, "Unable execute command due to erorr", ex);
-                        }
-                    }
-                    else
-                    {
-                        await Task.Delay(TimeSpan.FromMilliseconds(100), _serviceCancelationToken.Token);
-                    }
-                }
-            }
-            catch (TaskCanceledException)
-            {
-                Logger.Log(LOGTYPE.INFO, ServiceName, "Worker task was canceled");
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, "Error during ProcessCommandQueue", ex);
-            }
-            finally
-            {
-                Logger.Log(LOGTYPE.INFO, ServiceName, "Commands queue processing stopped");
-            }
-        }
-
-        private void CleanupClientResources()
-        {
-            lock (_connectionLock)
-            {
-                if (_client == null) return;
-                Logger.Log(LOGTYPE.INFO, ServiceName, "Cleaning up client resources...");
-                try
-                {
-                    _workerTask?.GetAwaiter().GetResult();
-                }
-                catch (AggregateException ex)
-                { 
-                    foreach(var innerEx in ex.InnerExceptions)
-                    {
-                        Logger.Log(LOGTYPE.ERROR, ServiceName, "Exception during command processing:", innerEx);
-                    }
-                }
-
-                try
-                {
-                    _commandsQueue?.Clear();
-                    _client.OnChatCommandReceived -= OnChatCommandReceived;
-                    _client.OnConnectionError -= OnConnectionErrorHandler;
-                    _client.OnDisconnected -= OnDisconnectedHandler;
-                    _client.OnConnected -= OnConnectedHandler;
-                    _client.OnError -= OnErrorHandler;
-                    if (_configuration.LogState)
-                        _client.OnLog -= OnLogHandler;
-                    _client = null;
-                    _credentials = null;
-                    Logger.Log(LOGTYPE.INFO, ServiceName, "Client resources cleaned up.");
-
-                }
-                catch (Exception ex)
-                {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName, "Exception during client resource cleanup.", ex);
-                }
             }
         }
     }
