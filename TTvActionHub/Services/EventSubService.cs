@@ -21,7 +21,7 @@ namespace TTvActionHub.Services
 
         public EventSubWebsocketClient? Client => _client; 
 
-        public ConcurrentDictionary<string, TwitchReward>? Rewards { get; set; }
+        public ConcurrentDictionary<string, TwitchReward>? Rewards { get; private set; }
         public event EventHandler<ServiceStatusEventArgs>? StatusChanged;
 
         public bool IsRunning => _client != null;

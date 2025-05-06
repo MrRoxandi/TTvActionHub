@@ -1,12 +1,11 @@
-﻿using Microsoft.UI.Xaml.Automation;
-using System.Runtime.InteropServices;
-using Windows.Management.Deployment;
+﻿using System.Runtime.InteropServices;
 using static TTvActionHub.BackEnds.Hardware.NativeInputs;
 
 namespace TTvActionHub.BackEnds.Hardware
 {
     internal static class InputWrapper
     {
+        
         public static bool IsExtendedKey(KeyCode keyCode)
         {
             if (keyCode == KeyCode.Alt || keyCode == KeyCode.LAlt || keyCode == KeyCode.RAlt ||
@@ -47,7 +46,7 @@ namespace TTvActionHub.BackEnds.Hardware
 
         public static INPUT ConstructKeyUp(KeyCode key)
         {
-            var up =new INPUT
+            var up = new INPUT
             { 
                 Type = (UInt32)InputType.Keyboard,
                 Data =

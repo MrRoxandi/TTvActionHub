@@ -14,7 +14,7 @@ namespace TTvActionHub.BackEnds
     {
         private string _filepath;
         private StreamWriter _writer;
-        private object _lock = new object();
+        private object _lock = new();
         private bool _disposed = false;
         private List<string> _lastLogs = [];
 
