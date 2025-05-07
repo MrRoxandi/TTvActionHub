@@ -61,97 +61,66 @@ namespace TTvActionHub.Managers
             Logger.Log(LOGTYPE.INFO, ServiceName, "Configuration loaded successfully");
         }
 
-        public ConcurrentDictionary<string, TwitchCommand>? LoadCommands() 
+        public ConcurrentDictionary<(string, TwitchTools.TwitchEventKind), TwitchEvent>? LoadTwitchEvents()
         {
-            var fileName = "commands.lua";
+            var fileName = "twitchevents.lua";
             var fileResult = ParseLuaFile(fileName);
-            if (fileResult is not LuaTable cmds) return null;
-            if (cmds.Keys.Count == 0)
+            if (fileResult is not LuaTable events) return null;
+
+            if (events.Keys.Count == 0)
             {
                 Logger.Log(LOGTYPE.WARNING, ServiceName, $"Table from file {fileName} is empty. Ignoring...");
                 return [];
             }
 
-            var comannds = new ConcurrentDictionary<string, TwitchCommand>();
-
-            foreach (var keyCommand in cmds.Keys)
+            var result = new ConcurrentDictionary<(string, TwitchTools.TwitchEventKind), TwitchEvent>();
+            foreach (var key in events.Keys)
             {
-                if (cmds[keyCommand] is not LuaTable cmdTable)
+                if (events[key] is not LuaTable TwEventTable)
                 {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName, $"In file {fileName} [{keyCommand}] is not a command. Check syntax. Aborting loading process...");
+                    Logger.Log(LOGTYPE.ERROR, ServiceName, $"In file {fileName} ['{key}'] is not a TwitchEvent. Check syntax. Aborting loading process ...");
                     return null;
                 }
 
-                if (cmdTable["action"] is not LuaFunction action)
+                if (TwEventTable["kind"] is not TwitchTools.TwitchEventKind kind)
                 {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName, $"In file {fileName} [{keyCommand}]['action'] is not an action. Check syntax. Aborting loading process...");
+                    Logger.Log(LOGTYPE.ERROR, ServiceName, $"In file {fileName} ['{key}']['kind'] is not a TwitchEventKind. Check syntax. Aborting loading process ...");
                     return null;
                 }
 
-                if (cmdTable["timeout"] is not long timeOut)
+                if (TwEventTable["action"] is not LuaFunction action)
                 {
-                    Logger.Log(LOGTYPE.WARNING, ServiceName, $"In file {fileName} [{keyCommand}]['timeout'] is not valid timeout. Will be used default value: [{_stdTimeOut}] ms");
-                    timeOut = _stdTimeOut;
-                } 
-                else if (timeOut < 0)
+                    Logger.Log(LOGTYPE.ERROR, ServiceName, $"In file {fileName} ['{key}']['action'] is not an action. Check syntax. Aborting loading process ...");
+                    return null;
+                }
+
+                long? timeOut = null;
+                TwitchTools.PermissionLevel perm = TwitchTools.PermissionLevel.VIEWIER;
+                if (kind != TwitchTools.TwitchEventKind.TwitchReward)
                 {
-                    if (timeOut != -1)
+                    if (TwEventTable["timeout"] is not long time)
                     {
-                        Logger.Log(LOGTYPE.WARNING, ServiceName, $"In file {fileName} [{keyCommand}]['timeout'] have value {timeOut}. It is not valid value. Will be used default value: [{_stdTimeOut}] ms");
+                        Logger.Log(LOGTYPE.WARNING, ServiceName, $"In file {fileName} ['{key}']['timeout'] is not a timeout. Will be used defult value: {_stdTimeOut} ms");
+                        time = _stdTimeOut;
                     }
-                    timeOut = _stdTimeOut;
+                    timeOut = time;
+
+                    if (TwEventTable["perm"] is not TwitchTools.PermissionLevel userLevel)
+                    {
+                        Logger.Log(LOGTYPE.WARNING, ServiceName, $"In file {fileName} ['{key}']['perm'] is not a permission level. Will be used defult value: VIEWIER");
+                        userLevel = TwitchTools.PermissionLevel.VIEWIER;
+                    }
+
+                    perm = userLevel;
                 }
-                if (cmdTable["perm"] is not Users.USERLEVEL perm)
-                {
-                    Logger.Log(LOGTYPE.WARNING, ServiceName, $"In file {fileName} [{keyCommand}]['perm'] is not valid level of permissions. Will be used default value: [viewier]");
-                    perm = Users.USERLEVEL.VIEWIER;
-                }
-                if (!comannds.TryAdd(keyCommand.ToString()!, new TwitchCommand() { Function = action, Perm = perm, TimeOut = timeOut }))
-                {
-                    Logger.Log(LOGTYPE.WARNING, ServiceName, $"For some reason [{keyCommand}] wasn't added to collection. Aborting loading process...");
-                    return null;
-                }
+
+                result.TryAdd((key.ToString()!, kind), new(kind, action, key.ToString()!, perm, timeOut));
             }
-            return comannds;
+
+            return result;
         }
 
-        public ConcurrentDictionary<string, TwitchReward>? LoadRewards()
-        {
-            var fileName = "rewards.lua";
-            var fileResult = ParseLuaFile(fileName);
-            if (fileResult is not LuaTable rwds) return null;
-            if (rwds.Keys.Count == 0)
-            {
-                Logger.Log(LOGTYPE.WARNING, ServiceName, $"Table from file {fileName} is empty. Ignoring...");
-                return [];
-            }
-
-            var rewards = new ConcurrentDictionary<string, TwitchReward>();
-            
-            foreach ( var keyReward in rwds.Keys)
-            {
-                if (rwds[keyReward] is not LuaTable rewardTable)
-                {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName, $"In file {fileName} [{keyReward}] is not a reward. Check syntax. Aborting loading process...");
-                    return null;
-                }
-
-                if (rewardTable["action"] is not LuaFunction action)
-                {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName, $"In file {fileName} [{keyReward}]['action'] is not an action. Check syntax. Aborting loading process...");
-                    return null;
-                }
-
-                if(!rewards.TryAdd(keyReward.ToString()!, new TwitchReward { Function = action }))
-                {
-                    Logger.Log(LOGTYPE.WARNING, ServiceName, $"For some reason [{keyReward}] wasn't added to collection. Aborting loading process...");
-                    return null;
-                }
-            }
-            return rewards;
-        }
-
-         public ConcurrentDictionary<string, TimerAction>? LoadTActions()
+        public ConcurrentDictionary<string, TimerAction>? LoadTActions()
         {
             var fileName = "timeractions.lua";
             var fileResult = ParseLuaFile(fileName);
@@ -227,30 +196,36 @@ namespace TTvActionHub.Managers
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Audio\").Sounds",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Hardware\").Keyboard",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Hardware\").Mouse",
-            "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Stuff\").TwitchChat",
+            "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Stuff\").TwitchTools",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Stuff\").Storage",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Stuff\").Funcs",
-            "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Stuff\").Users"
             ];
 
-        private static void GenerateCommandsFile()
+        private static void GenerateTwitchEventsFile()
         {
-            var filePath = Path.Combine(ConfigsPath, "commands.lua");
+            var filePath = Path.Combine(ConfigsPath, "twitchevents.lua");
             if (File.Exists(filePath)) return;
             StringBuilder builder = new();
             Bridges.ForEach(bridge => builder.AppendLine($"local {bridge.Split(").").Last()} = import {bridge}"));
             builder.AppendLine();
-            builder.AppendLine("local commands = {}");
+            builder.AppendLine("local twitchevents = {}");
             builder.AppendLine();
-            builder.AppendLine("commands['test'] = {}");
-            builder.AppendLine("commands['test']['action'] = ");
+            builder.AppendLine("twitchevents['ping'] = {}");
+            builder.AppendLine("twitchevents['ping']['kind'] = TwitchTools.TwitchEventKind.Command");
+            builder.AppendLine("twitchevents['ping']['action'] = ");
             builder.AppendLine("\tfunction(sender, args)");
-            builder.AppendLine("\t\tTwitchChat.SendMessage('@'..sender..' -> test')");
+            builder.AppendLine("\t\tTwitchTools.SendMessage('@'..sender..' -> pong')");
             builder.AppendLine("\tend");
-            builder.AppendLine("commands['test']['timeout'] = 1000 -- 1000 ms");
-            builder.AppendLine("commands['test']['perm'] = Users.USERLEVEL.VIEWIER");
+            builder.AppendLine("twitchevents['ping']['timeout'] = 1000 -- 1000 ms");
+            builder.AppendLine("twitchevents['ping']['perm'] = TwitchTools.PermissionLevel.VIEWIER");
             builder.AppendLine();
-            builder.AppendLine("return commands");
+            builder.AppendLine("twitchevents['test'] = {}");
+            builder.AppendLine("twitchevents['test']['kind'] = TwitchTools.TwitchEventKind.TwitchReward");
+            builder.AppendLine("twitchevents['test']['action'] = ");
+            builder.AppendLine("\tfunction(sender, args)");
+            builder.AppendLine("\t\tTwitchTools.SendMessage('@'..sender..' -> test')");
+            builder.AppendLine("\tend");
+            builder.AppendLine("return twitchevents");
             File.WriteAllText(filePath, builder.ToString());
         }
 
@@ -313,8 +288,8 @@ namespace TTvActionHub.Managers
 
         public static void GenerateAllConfigs()
         {
-            GenerateCommandsFile();
-            GenerateRewardsFile();
+            GenerateTwitchEventsFile();
+            //GenerateRewardsFile();
             GenerateTimerActionsFile();
             GenerateMainConfig();
         }
@@ -322,6 +297,6 @@ namespace TTvActionHub.Managers
         // --- Private fields ---
         private readonly Lua lua;
         private static readonly string _configPath = Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "configs")).FullName;
-        private static readonly string[] _configNames = ["config.lua", "commands.lua", "rewards.lua", "timeractions.lua"];
+        private static readonly string[] _configNames = ["config.lua", "twitchevents.lua", "timeractions.lua"];
     }
 }

@@ -58,8 +58,7 @@ namespace TTvActionHub
                     return new Configuration(lcm);
                 });
 
-                collection.AddSingleton<IService, TwitchChatService>();
-                collection.AddSingleton<IService, EventSubService>();
+                collection.AddSingleton<IService, TwitchService>();
                 collection.AddSingleton<IService, TimerActionsService>();
                 collection.AddSingleton<IService, ContainerService>();
                 collection.AddSingleton<IService, AudioService>();
@@ -244,8 +243,7 @@ namespace TTvActionHub
                 return null;
             }
 
-            if (service is TwitchChatService tcs) return tcs.Commands?.Keys.ToArray() ?? [];
-            if (service is EventSubService ess) return ess.Rewards?.Keys.ToArray() ?? [];
+            if (service is TwitchService ess) return ess.TwitchEvents?.Keys.Select(e => e.Item1).ToArray() ?? [];
             if (service is TimerActionsService tas) return tas.TActions?.Keys.ToArray() ?? [];
             return [];
         }
@@ -418,10 +416,9 @@ namespace TTvActionHub
                 var allServices = provider!.GetServices<IService>();
                 foreach (var service in allServices)
                 {
-                    if (service is TwitchChatService ttvServ)
+                    if (service is TwitchService ttvServ)
                     {
-                        TwitchChat.Client = ttvServ!.Client;
-                        TwitchChat.Channel = ttvServ!.Channel;
+                        TwitchTools.Service = ttvServ;
                     }
                     else if (service is AudioService audioServ)
                         Sounds.audio = audioServ!;
@@ -440,10 +437,9 @@ namespace TTvActionHub
             shell!.CmdOut($"Updating static bridges for {s.ServiceName}...");
             Logger.Info($"Updating static bridges for {s.ServiceName}...");
 
-            if (s is TwitchChatService ttvServ)
+            if (s is TwitchService ttvServ)
             {
-                TwitchChat.Client = ttvServ!.Client;
-                TwitchChat.Channel = ttvServ!.Channel;
+                TwitchTools.Service = ttvServ;
             }
             else if (s is AudioService audioServ)
                 Sounds.audio = audioServ!;
