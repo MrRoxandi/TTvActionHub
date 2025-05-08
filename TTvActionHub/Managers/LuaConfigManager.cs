@@ -75,19 +75,19 @@ namespace TTvActionHub.Managers
             var result = new ConcurrentDictionary<(string, TwitchTools.TwitchEventKind), TwitchEvent>();
             foreach (var key in fileResult.Keys)
             {
-                if (fileResult[key] is not LuaTable TwEventTable)
+                if (fileResult[key] is not LuaTable twEventTable)
                 {
                     Logger.Log(LogType.ERROR, ServiceName, $"In file {fileName} ['{key}'] is not a TwitchEvent. Check syntax. Aborting loading process ...");
                     return null;
                 }
 
-                if (TwEventTable["kind"] is not TwitchTools.TwitchEventKind kind)
+                if (twEventTable["kind"] is not TwitchTools.TwitchEventKind kind)
                 {
                     Logger.Log(LogType.ERROR, ServiceName, $"In file {fileName} ['{key}']['kind'] is not a TwitchEventKind. Check syntax. Aborting loading process ...");
                     return null;
                 }
 
-                if (TwEventTable["action"] is not LuaFunction action)
+                if (twEventTable["action"] is not LuaFunction action)
                 {
                     Logger.Log(LogType.ERROR, ServiceName, $"In file {fileName} ['{key}']['action'] is not an action. Check syntax. Aborting loading process ...");
                     return null;
@@ -98,20 +98,20 @@ namespace TTvActionHub.Managers
                 var perm = TwitchTools.PermissionLevel.Viewer;
                 if (kind != TwitchTools.TwitchEventKind.TwitchReward)
                 {
-                    if (TwEventTable["timeout"] is not long time)
+                    if (twEventTable["timeout"] is not long time)
                     {
                         Logger.Log(LogType.WARNING, ServiceName, $"In file {fileName} ['{key}']['timeout'] is not a timeout. Will be used default value: {_stdTimeOut} ms");
                         time = _stdTimeOut;
                     }
                     timeOut = time;
 
-                    if (TwEventTable["perm"] is not TwitchTools.PermissionLevel userLevel)
+                    if (twEventTable["perm"] is not TwitchTools.PermissionLevel userLevel)
                     {
                         Logger.Log(LogType.WARNING, ServiceName, $"In file {fileName} ['{key}']['perm'] is not a permission level. Will be used default value: Viewer");
                         userLevel = TwitchTools.PermissionLevel.Viewer;
                     }
 
-                    if (TwEventTable["cost"] is not long cost)
+                    if (twEventTable["cost"] is not long cost)
                     {
                         cost = 0;
                     }
@@ -196,13 +196,13 @@ namespace TTvActionHub.Managers
             }
         }
 
-        // All avaliable static bridges for lua
+        // All available static bridges for lua
         private static List<string> Bridges => [
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Hardware\").Keyboard",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Hardware\").Mouse",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Services\").Audio",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Services\").Container",
-            "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Services\").TwitchTool",
+            "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Services\").TwitchTools",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Stuff\").Funcs",
             ];
 
