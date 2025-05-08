@@ -28,7 +28,7 @@ namespace TTvActionHub.LuaTools.Services
             {
                 throw new Exception("Unable to send twitch chat message. Client is null");
             }
-            client.AddPointsToUserAsync(name, value, $"added {value} points to {name} from lua").GetAwaiter().GetResult();
+            client.AddPointsToUserAsync(name, value).GetAwaiter().GetResult();
         }
 
         public static long GetPoints(string name)

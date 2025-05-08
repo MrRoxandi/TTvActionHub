@@ -384,12 +384,17 @@ namespace TTvActionHub.Services
                                 var eventIdentifier = $"event '{eventDataToProcess.Event.Name}' ({eventDataToProcess.Event.Kind}) for {eventDataToProcess.Args.Sender}";
                                 try
                                 {
+                                    if (eventDataToProcess.Event.Cost > 0 && eventDataToProcess.Args.Sender != _configuration.Login)
+                                    {
+                                        var points = GetPointsFromUser(eventDataToProcess.Args.Sender).GetAwaiter().GetResult();
+                                        if (points < eventDataToProcess.Event.Cost) return;
+                                    }
                                     Logger.Log(LOGTYPE.INFO, ServiceName, $"Executing {eventIdentifier}...");
                                     eventDataToProcess.Event.Execute(eventDataToProcess.Args);
                                     Logger.Log(LOGTYPE.INFO, ServiceName, $"Finished {eventIdentifier}.");
                                     if (eventDataToProcess.Event.Cost > 0 && eventDataToProcess.Args.Sender != _configuration.Login)
                                     {
-                                        _ = AddPointsToUserAsync(eventDataToProcess.Args.Sender, -eventDataToProcess.Event.Cost, "using a command with a cost");
+                                        _ = AddPointsToUserAsync(eventDataToProcess.Args.Sender, -eventDataToProcess.Event.Cost);
                                         Logger.Log(LOGTYPE.INFO, ServiceName, $"Consuming {eventDataToProcess.Event.Cost} points from user: {eventDataToProcess.Args.Sender}");
                                     }
                                 }
@@ -613,7 +618,7 @@ namespace TTvActionHub.Services
                         {
                             continue;
                         }
-                        await AddPointsToUserAsync(chatter.UserLogin, PointsPerMinuteForViewers, "viewing");
+                        await AddPointsToUserAsync(chatter.UserLogin, PointsPerMinuteForViewers);
                         awardedCount++;
                     }
                     Logger.Log(LOGTYPE.INFO, ServiceName, $"Awarded {PointsPerMinuteForViewers} points to {awardedCount} active chatters.");
@@ -639,9 +644,8 @@ namespace TTvActionHub.Services
 
             try
             {
-                var lastCheckTimeUtc = await Container.GetValueAsync<DateTime?>(LastClipCheckTimeKey) ?? DateTime.Today;
-                //string startedAtFilter = lastCheckTimeUtc.ToString("o");
-
+                var lastCheckTimeUtc = await Container.Storage!.GetItemAsync<DateTime?>(LastClipCheckTimeKey) ?? DateTime.Today;
+                
                 GetClipsResponse? clipsResponse;
                 try
                 {
@@ -671,7 +675,8 @@ namespace TTvActionHub.Services
                             }
                             else
                             {
-                                await AddPointsToUserAsync(clip.CreatorName, PointsPerClip, $"creating clip ({clip.Id[..8]}...)");
+                                Logger.Log(LOGTYPE.INFO, ServiceName, $"adding {PointsPerClip} point to {clip.CreatorName} for creating clip ({clip.Id[..8]})");
+                                await AddPointsToUserAsync(clip.CreatorName, PointsPerClip);
                             }
                         }
                         else
@@ -679,7 +684,7 @@ namespace TTvActionHub.Services
                             Logger.Log(LOGTYPE.WARNING, ServiceName, $"Clip {clip.Id} has no CreatorName. Cannot award points.");
                         }
                     }
-                    await Container.InsertValueAsync(LastClipCheckTimeKey, lastCheckTimeUtc);
+                    await Container.Storage!.AddOrUpdateItemAsync(LastClipCheckTimeKey, lastCheckTimeUtc);
                     Logger.Log(LOGTYPE.INFO, ServiceName, $"Last clip check time updated to: {lastCheckTimeUtc:o}");
                 }
                 else
@@ -693,29 +698,17 @@ namespace TTvActionHub.Services
             }
         }
 
-        public async Task AddPointsToUserAsync(string username, long pointsToAdd, string reason)
+        public async Task AddPointsToUserAsync(string username, long pointsToAdd)
         {
-            if (string.IsNullOrWhiteSpace(username) || pointsToAdd <= 0) return;
-
-            var currentPoints = await GetPointsFromUser(username);
-            var newPoints = currentPoints + pointsToAdd;
-            await UpdateUserPoints(username, newPoints);
-            Logger.Log(LOGTYPE.INFO, ServiceName, $"Added {pointsToAdd} points to {username} for {reason}. Total: {newPoints}");
+            if (string.IsNullOrWhiteSpace(username)) return;
+            await Container.Storage!.AddPointsToUserAsync(username, pointsToAdd);
+            var total = await GetPointsFromUser(username);
         }
 
         public static async Task<long> GetPointsFromUser(string username)
         {
             if (string.IsNullOrWhiteSpace(username)) return 0;
-            var userPointsKey = $"user_points_{username.ToLower()}";
-            var currentPoints = await Container.GetValueAsync<int?>(userPointsKey) ?? 0;
-            return currentPoints;
-        }
-
-        public static async Task UpdateUserPoints(string username, long newValue)
-        {
-            if (string.IsNullOrWhiteSpace(username)) return;
-            var userPointsKey = $"user_points_{username.ToLower()}";
-            await Container.InsertValueAsync(userPointsKey, newValue);
+            return await Container.Storage!.GetPointsFromUserAsync(username);
         }
 
         // --- Status Changed event backend --- 
@@ -890,7 +883,7 @@ namespace TTvActionHub.Services
         {
             var chatMessage = e.ChatMessage;
             if (chatMessage.Message.Length < 10 || chatMessage.Username == _configuration.Login) return;
-            _ = AddPointsToUserAsync(chatMessage.Username, PointsPerMessage, "messages");
+            _ = AddPointsToUserAsync(chatMessage.Username, PointsPerMessage);
         }
 
         private async Task EventSubClient_WebsocketConnectedHandler(object? sender, WebsocketConnectedArgs args)

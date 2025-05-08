@@ -5,6 +5,8 @@ using TTvActionHub.Managers;
 using TTvActionHub.Logs;
 using Terminal.Gui;
 using TTvActionHub.LuaTools.Services;
+using TTvActionHub.LuaTools.Services.ContainerItems;
+using TTvActionHub.BackEnds;
 
 namespace TTvActionHub
 {
@@ -49,6 +51,9 @@ namespace TTvActionHub
             try
             {
                 ServiceCollection collection = new();
+                collection.AddSingleton<IDataBaseContext, DataBaseContext>();
+                collection.AddSingleton<BackEnds.DataContainer>();
+
                 collection.AddSingleton<LuaConfigManager>();
                 collection.AddSingleton<IConfig, Configuration>(sp =>
                 {
@@ -58,7 +63,6 @@ namespace TTvActionHub
 
                 collection.AddSingleton<IService, TwitchService>();
                 collection.AddSingleton<IService, TimerActionsService>();
-                collection.AddSingleton<IService, ContainerService>();
                 collection.AddSingleton<IService, AudioService>();
                 // ---------------------------------------------------------
 
@@ -85,6 +89,7 @@ namespace TTvActionHub
                 return;
             }
             shell = _provider.GetService<Shell>();
+            Container.Storage = _provider.GetService<DataContainer>();
             if (shell == null)
             {
                 Application.Shutdown();
@@ -427,9 +432,6 @@ namespace TTvActionHub
                         case AudioService audioServ:
                             Sounds.audio = audioServ!;
                             break;
-                        case ContainerService containerServ:
-                            Container.Storage = containerServ!;
-                            break;
                     }
                 }
             } catch (Exception ex)
@@ -451,9 +453,6 @@ namespace TTvActionHub
                     break;
                 case AudioService audioServ:
                     Sounds.audio = audioServ!;
-                    break;
-                case ContainerService containerServ:
-                    Container.Storage = containerServ!;
                     break;
             }
             Logger.Info("Static bridges updated successfully.");
