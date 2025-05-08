@@ -9,9 +9,10 @@ namespace TTvActionHub
     {
         private static string ClientId { get => "--"; }
         private static string ClientSecret { get => "--"; }
-        private static string RedirectUrl { get => @"http://localhost:6969/"; } // 6969 just for fun
+        
+        private const string RedirectUrl = @"http://localhost:6969/"; // 6969 just for fun
 
-        public string ID => _ttvInfo.ID;
+        public string Id => _ttvInfo.ID;
         public string Login => _ttvInfo.Login;
         public string Token => _ttvInfo.Token;
         public string RefreshToken => _ttvInfo.RefreshToken;
@@ -20,7 +21,7 @@ namespace TTvActionHub
         public bool LogState { get; private set; }
         public TwitchApi TwitchApi { get; private set; } 
 
-        private (string Login, string ID, string Token, string RefreshToken) _ttvInfo;
+        private readonly (string Login, string ID, string Token, string RefreshToken) _ttvInfo;
         
         public Configuration(LuaConfigManager manager)
         {
