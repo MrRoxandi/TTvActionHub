@@ -11,24 +11,21 @@ namespace TTvActionHub
         private static string ClientSecret { get => "--"; }
         private static string RedirectUrl { get => @"http://localhost:6969/"; } // 6969 just for fun
 
-        public string Login => _ttvInfo.Login;
         public string ID => _ttvInfo.ID;
+        public string Login => _ttvInfo.Login;
         public string Token => _ttvInfo.Token;
         public string RefreshToken => _ttvInfo.RefreshToken;
 
-        public TwitchApi TwitchApi { get => _twitchApi; }
-        public bool LogState { get => _logsState; }
+        private readonly bool _forceRelog;
+        public bool LogState { get; private set; }
+        public TwitchApi TwitchApi { get; private set; } 
 
         private (string Login, string ID, string Token, string RefreshToken) _ttvInfo;
-        private readonly TwitchApi _twitchApi;
-
-        private readonly bool _logsState;
-        private readonly bool _forceRelog;
+        
         public Configuration(LuaConfigManager manager)
         {
-
-            _twitchApi = new TwitchApi(ClientId, ClientSecret, RedirectUrl);
-            _logsState = manager.MoreLogs;
+            TwitchApi = new TwitchApi(ClientId, ClientSecret, RedirectUrl);
+            LogState = manager.MoreLogs;
             _forceRelog = manager.ForceRelog;
             _ttvInfo = AuthWithTwitch();
         }
@@ -36,7 +33,7 @@ namespace TTvActionHub
         private (string Login, string ID, string Token, string RefreshToken) GetAuthInfoFromAPI()
         {
             (string Login, string ID, string Token, string RefreshToken) authInfo = new();
-            var authTask = _twitchApi.GetAuthorizationInfo();
+            var authTask = TwitchApi.GetAuthorizationInfo();
             authTask.Wait();
             if (authTask.IsCompleted)
             {
@@ -46,23 +43,21 @@ namespace TTvActionHub
                 authInfo.Token = Token;
                 authInfo.RefreshToken = RefreshToken;
             }
-            var channelInfoTask = _twitchApi.GetChannelInfoAsync(authInfo.Token!);
+            var channelInfoTask = TwitchApi.GetChannelInfoAsync(authInfo.Token!);
             channelInfoTask.Wait();
-            if (channelInfoTask.IsCompleted)
-            {
-                var (Login, ID) = channelInfoTask.Result;
-                if (string.IsNullOrEmpty(Login) || string.IsNullOrEmpty(ID))
-                    throw new BadRequestException("Unable to get channel information");
-                authInfo.Login = Login;
-                authInfo.ID = ID;
-            }
+            if (!channelInfoTask.IsCompleted) return authInfo;
+            var (Login, ID) = channelInfoTask.Result;
+            if (string.IsNullOrEmpty(Login) || string.IsNullOrEmpty(ID))
+                throw new BadRequestException("Unable to get channel information");
+            authInfo.Login = Login;
+            authInfo.ID = ID;
 
             return authInfo;
         }
 
         private (string Login, string ID, string Token, string RefreshToken) AuthWithTwitch()
         {
-            AuthManager manager = new(_twitchApi, ClientSecret);
+            AuthManager manager = new(TwitchApi, ClientSecret);
             if (_forceRelog || !manager.LoadTwitchInfo())
             {
                 var result = GetAuthInfoFromAPI();
@@ -72,26 +67,24 @@ namespace TTvActionHub
             }
             var validationTask = manager.IsValidTokensAsync();
             validationTask.Wait();
-            if (!validationTask.Result)
+            if (validationTask.Result) return manager.TwitchInfo;
+            try
             {
-                try
+                var refreshTask = manager.UpdateAuthInfoAsync();
+                refreshTask.Wait();
+                if (!refreshTask.Result)
                 {
-                    var refreshTask = manager.UpdateAuthInfoAsync();
-                    refreshTask.Wait();
-                    if (!refreshTask.Result)
-                    {
-                        manager.TwitchInfo = GetAuthInfoFromAPI();
-                    }
-                } catch (Exception ex)
-                {
-                    Logger.Error($"Unable to update Twitch Info with manager due to error", ex);
-                    Logger.Info($"Getting new Twitch Info from browser");
                     manager.TwitchInfo = GetAuthInfoFromAPI();
                 }
-                finally
-                {
-                    manager.SaveTwitchInfo();
-                }
+            } catch (Exception ex)
+            {
+                Logger.Error($"Unable to update Twitch Info with manager due to error", ex);
+                Logger.Info($"Getting new Twitch Info from browser");
+                manager.TwitchInfo = GetAuthInfoFromAPI();
+            }
+            finally
+            {
+                manager.SaveTwitchInfo();
             }
             return manager.TwitchInfo;
         }

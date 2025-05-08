@@ -21,7 +21,7 @@ namespace TTvActionHub
         private readonly Action<string>? _reloadServiceCallBack = reloadServiceCallBack;
         private readonly Action<string>? _startServiceCallBack = startServicesCallBack;
         private readonly Action<string>? _stopServiceCallBack = stopServiceCallBack;
-        private readonly Func<string, string[]?>? _listServiceCallBack = listServiceCallBack;
+        private readonly Func<string, string[]?>? _infoServiceCallBack = listServiceCallBack;
         // --- UI states ---
         private readonly ConcurrentDictionary<string, bool> _serviceStates = new(StringComparer.OrdinalIgnoreCase); // Service -> Status (Running = true)
         private readonly ConcurrentQueue<string> _commandsOutPutQueue = [];
@@ -416,7 +416,7 @@ namespace TTvActionHub
                 case "clear": CmdClear(); CmdOut("Command output cleared."); return true;
                 case "start": HandleStartCommand(argument); return true;
                 case "stop": HandleStopCommand(argument); return true;
-                case "info": HandleListCommand(argument); return true;
+                case "info": HandleInfoCommand(argument); return true;
                 case "reload": HandleReloadCommand(argument); return true;
                 case "help": ShowHelpDialog(); return true;
                 case "exit": return false;
@@ -424,11 +424,11 @@ namespace TTvActionHub
             }
         }
 
-        private void HandleListCommand(string argument)
+        private void HandleInfoCommand(string argument)
         {
             if (string.IsNullOrEmpty(argument))
             {
-                CmdOut($"Usage: list [<service>|{string.Join('|', _serviceStates.Keys)}]");
+                CmdOut($"Usage: info [<service>|{string.Join('|', _serviceStates.Keys)}]");
                 return;
             }
             var target = argument.Trim();
@@ -437,31 +437,28 @@ namespace TTvActionHub
             if (serviceName == default)
             {
                 CmdOut($"Unable to find: {target}");
-                CmdOut($"Usage: list [<field>|{string.Join('|', _serviceStates.Keys)}]");
+                CmdOut($"Usage: info [<field>|{string.Join('|', _serviceStates.Keys)}]");
                 return;
             }
-            if (_listServiceCallBack != null)
-            {
-                try
-                {
-                    var information = _listServiceCallBack(serviceName);
-                    if (information == null) return;
-                    if (information.Length == 0)
-                    {
-                        CmdOut($"Service: {serviceName} -> Actions: empty");
-                        return;
-                    }
-                    CmdOut($"Service: {serviceName} -> Actions: [{string.Join(',', information)}]");
-                } 
-                catch (Exception ex)
-                {
-                    HandleCallbackError($"info {serviceName}", ex);
-                    return;
-                }
-            } 
-            else
+            if (_infoServiceCallBack == null)
             {
                 CmdOut($"Getting info about service is not configured. Ignoring...");
+                return;
+            }
+            try
+            {
+                var information = _infoServiceCallBack(serviceName);
+                if (information == null) return;
+                if (information.Length == 0)
+                {
+                    CmdOut($"Service: {serviceName} -> Actions: empty");
+                    return;
+                }
+                CmdOut($"Service: {serviceName} -> Actions: [{string.Join(',', information)}]");
+            }
+            catch (Exception ex)
+            {
+                HandleCallbackError($"info {serviceName}", ex);
                 return;
             }
 

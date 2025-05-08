@@ -241,7 +241,7 @@ namespace TTvActionHub
             if (finded && service != null)
                 return service switch
                 {
-                    TwitchService ess => ess.TwitchEvents?.Keys.Select(e => e.Item1).ToArray() ?? [],
+                    TwitchService ess => ess.TwitchEvents?.Values.Select(e => e.Name).ToArray() ?? [],
                     TimerActionsService tas => tas.Actions?.Keys.ToArray() ?? [],
                     _ => []
                 };

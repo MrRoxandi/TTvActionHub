@@ -15,12 +15,17 @@
 
 ## Features
 
-- **Sound playback**
-- **Data storage under names**
-- **Custom events for Twitch chat commands**
-- **Custom events for Twitch channel points**
-- **Keyboard emulation**
-- **Mouse emulation**
+- **TwitchService:**
+  - Fully customizable own events though chat commands and Twitch points redemptions
+  - Own points system supported
+- **AudioService:**
+  - Play almost any audio files with this service
+  - Also accepts internet links like: `https://example.com/audiofile.mp3`
+- **Container:**
+  - Stores almost any data under specified name
+- **Hardware:**
+  - Allows to emulate keyboard actions
+  - Allows to emulate mouse actions
 
 ## Highlights
 
