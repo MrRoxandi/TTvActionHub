@@ -343,7 +343,6 @@ namespace TTvActionHub
                 var added = false;
                 while (_commandsOutPutQueue.TryDequeue(out var message))
                 {
-                    if (!string.IsNullOrEmpty(message)) continue;
                     _cmdOutputHistory.Add(ustring.Make(message));
                     added = true;
                 }
