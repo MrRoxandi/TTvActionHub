@@ -7,7 +7,7 @@ using System.Linq.Expressions;
 using System.Text;
 using System.Threading.Tasks;
 using TTvActionHub.Logs;
-using TTvActionHub.LuaTools.Stuff;
+using TTvActionHub.LuaTools.Services;
 
 namespace TTvActionHub.Items
 {
@@ -26,28 +26,28 @@ namespace TTvActionHub.Items
         public string Name { get; private set; }
 
         // --- Other stuff ---
-        public TwitchTools.PermissionLevel PermissionLevel;
-        public Stopwatch? _coolDownTimer;
+        public readonly TwitchTools.PermissionLevel PermissionLevel;
+        public readonly Stopwatch? _coolDownTimer;
         public long? TimeOut;
+        public int Cost;
 
         // --- Executing checks ---
         public bool Executable => IsExecutable();
 
-        private string ItemName => nameof(TwitchEvent);
+        public static string ItemName => nameof(TwitchEvent);
 
-        public TwitchEvent(TwitchTools.TwitchEventKind kind, LuaFunction action, string name, TwitchTools.PermissionLevel? permissionLevel = null, long? timeOut = null)
+        public TwitchEvent(TwitchTools.TwitchEventKind kind, LuaFunction action, string name, TwitchTools.PermissionLevel? permissionLevel = null, long? timeOut = null, int cost = 0)
         {
             Kind = kind;
             Function = action;
             Name = name;
-            if (permissionLevel is not TwitchTools.PermissionLevel perm)
-                perm = TwitchTools.PermissionLevel.VIEWIER;
+            if (permissionLevel is not { } perm)
+                perm = TwitchTools.PermissionLevel.Viewer;
             PermissionLevel = perm;
-            if (timeOut is long time)
-            {
-                _coolDownTimer = new();
-                TimeOut = time;
-            }
+            if (timeOut is not { } time) return;
+            _coolDownTimer = new();
+            TimeOut = time;
+            Cost = cost;
         }
 
         public void Execute(TwitchEventArgs args)
@@ -71,7 +71,6 @@ namespace TTvActionHub.Items
             catch (Exception e)
             {
                 Logger.Error($"Unable to execute event [{Name}] due to error:", e);
-                return;
             }
         }
 

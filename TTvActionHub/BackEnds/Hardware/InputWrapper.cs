@@ -8,34 +8,22 @@ namespace TTvActionHub.BackEnds.Hardware
         
         public static bool IsExtendedKey(KeyCode keyCode)
         {
-            if (keyCode == KeyCode.Alt || keyCode == KeyCode.LAlt || keyCode == KeyCode.RAlt ||
-                keyCode == KeyCode.Control || keyCode == KeyCode.RControl || keyCode == KeyCode.LControl ||
-                keyCode == KeyCode.Delete || keyCode == KeyCode.Home || keyCode == KeyCode.End ||
-                keyCode == KeyCode.Right || keyCode == KeyCode.Up || keyCode == KeyCode.Left ||
-                keyCode == KeyCode.Down || keyCode == KeyCode.NumLock || keyCode == KeyCode.PrintScreen ||
-                keyCode == KeyCode.Divide)
-            {
-                return true;
-            }
-            else
-            {
-                return false;
-            }
+            return keyCode is KeyCode.Alt or KeyCode.LAlt or KeyCode.RAlt or KeyCode.Control or KeyCode.RControl or KeyCode.LControl or KeyCode.Delete or KeyCode.Home or KeyCode.End or KeyCode.Right or KeyCode.Up or KeyCode.Left or KeyCode.Down or KeyCode.NumLock or KeyCode.PrintScreen or KeyCode.Divide;
         }
 
-        public static INPUT ConstructKeyDown(KeyCode key)
+        public static Input ConstructKeyDown(KeyCode key)
         {
-            var down = new INPUT
+            var down = new Input
             {
-                Type = (UInt32)InputType.Keyboard,
+                Type = (uint)InputType.Keyboard,
                 Data =
                 {
                     Keyboard =
-                        new KEYBDINPUT
+                        new KeybdInput
                         {
-                            wVk = (UInt16) key,
-                            wScan = (UInt16)(NativeMethods.MapVirtualKey((UInt32)key, 0) & 0xFFU),
-                            dwFlags = (UInt32) (KeyboardFlag.ScanCode | (IsExtendedKey(key) ? KeyboardFlag.ExtendedKey : 0)),
+                            wVk = (ushort) key,
+                            wScan = (ushort)(NativeMethods.MapVirtualKey((uint)key, 0) & 0xFFU),
+                            dwFlags = (uint) (KeyboardFlag.ScanCode | (IsExtendedKey(key) ? KeyboardFlag.ExtendedKey : 0)),
                             time = 0,
                             dwExtraInfo = IntPtr.Zero
                         }
@@ -44,18 +32,18 @@ namespace TTvActionHub.BackEnds.Hardware
             return down;
         }
 
-        public static INPUT ConstructKeyUp(KeyCode key)
+        public static Input ConstructKeyUp(KeyCode key)
         {
-            var up = new INPUT
+            var up = new Input
             { 
-                Type = (UInt32)InputType.Keyboard,
+                Type = (uint)InputType.Keyboard,
                 Data =
                 {
-                    Keyboard = new KEYBDINPUT
+                    Keyboard = new KeybdInput
                     {
-                        wVk = (UInt16) key,
-                        wScan = (UInt16)(NativeMethods.MapVirtualKey((UInt32)key, 0) & 0xFFU),
-                        dwFlags = (UInt32) (KeyboardFlag.ScanCode | KeyboardFlag.KeyUp | (IsExtendedKey(key) ? KeyboardFlag.ExtendedKey : 0)),
+                        wVk = (ushort) key,
+                        wScan = (ushort)(NativeMethods.MapVirtualKey((uint)key, 0) & 0xFFU),
+                        dwFlags = (uint) (KeyboardFlag.ScanCode | KeyboardFlag.KeyUp | (IsExtendedKey(key) ? KeyboardFlag.ExtendedKey : 0)),
                         time = 0,
                         dwExtraInfo = IntPtr.Zero
                     }
@@ -64,19 +52,19 @@ namespace TTvActionHub.BackEnds.Hardware
             return up;
         }
 
-        public static INPUT ConstructCharDown(char character)
+        public static Input ConstructCharDown(char character)
         {
-            UInt16 scanCode = character;
-            var down = new INPUT
+            ushort scanCode = character;
+            var down = new Input
             {
-                Type = (UInt16)InputType.Keyboard,
+                Type = (ushort)InputType.Keyboard,
                 Data =
                 {
-                    Keyboard = new KEYBDINPUT
+                    Keyboard = new KeybdInput
                     {
                         wVk = 0,
                         wScan = scanCode,
-                        dwFlags = (UInt32)KeyboardFlag.Unicode,
+                        dwFlags = (uint)KeyboardFlag.Unicode,
                         time = 0,
                         dwExtraInfo = IntPtr.Zero
                     }
@@ -84,24 +72,24 @@ namespace TTvActionHub.BackEnds.Hardware
             };
             if((scanCode & 0xFF00) == 0xE000)
             {
-                down.Data.Keyboard.dwFlags |= (UInt32)KeyboardFlag.ExtendedKey;
+                down.Data.Keyboard.dwFlags |= (uint)KeyboardFlag.ExtendedKey;
             }
             return down;
         }
 
-        public static INPUT ConstructCharUp(char character)
+        public static Input ConstructCharUp(char character)
         {
-            UInt16 scanCode = character;
-            var up = new INPUT
+            ushort scanCode = character;
+            var up = new Input
             {
-                Type = (UInt16)InputType.Keyboard,
+                Type = (ushort)InputType.Keyboard,
                 Data =
                 {
-                    Keyboard = new KEYBDINPUT
+                    Keyboard = new KeybdInput
                     {
                         wVk = 0,
                         wScan = scanCode,
-                        dwFlags = (UInt32)(KeyboardFlag.KeyUp | KeyboardFlag.Unicode),
+                        dwFlags = (uint)(KeyboardFlag.KeyUp | KeyboardFlag.Unicode),
                         time = 0,
                         dwExtraInfo = IntPtr.Zero
                     }
@@ -109,21 +97,21 @@ namespace TTvActionHub.BackEnds.Hardware
             };
             if ((scanCode & 0xFF00) == 0xE000)
             {
-                up.Data.Keyboard.dwFlags |= (UInt32)KeyboardFlag.ExtendedKey;
+                up.Data.Keyboard.dwFlags |= (uint)KeyboardFlag.ExtendedKey;
             }
             return up;
         }
 
-        public static INPUT ConstructAbsoluteMouseMove(int x, int y)
+        public static Input ConstructAbsoluteMouseMove(int x, int y)
         {
-            var move = new INPUT 
+            var move = new Input 
             { 
-                Type = (UInt16)InputType.Mouse,
+                Type = (ushort)InputType.Mouse,
                 Data =
                 {
-                    Mouse = new MOUSEINPUT
+                    Mouse = new MouseInput
                     {
-                        dwFlags = (UInt32)(MouseFlag.Move | MouseFlag.Absolute),
+                        dwFlags = (uint)(MouseFlag.Move | MouseFlag.Absolute),
                         dx = x, dy = y
                     }
                 }
@@ -131,16 +119,16 @@ namespace TTvActionHub.BackEnds.Hardware
             return move;
         }
 
-        public static INPUT ConstructRelativeMouseMove(int dx, int dy)
+        public static Input ConstructRelativeMouseMove(int dx, int dy)
         {
-            var move = new INPUT
+            var move = new Input
             {
-                Type = (UInt16)InputType.Mouse,
+                Type = (ushort)InputType.Mouse,
                 Data =
                 {
-                    Mouse = new MOUSEINPUT
+                    Mouse = new MouseInput
                     {
-                        dwFlags = (UInt32)(MouseFlag.Move),
+                        dwFlags = (uint)(MouseFlag.Move),
                         dx = dx, dy = dy
                     }
                 }
@@ -148,69 +136,70 @@ namespace TTvActionHub.BackEnds.Hardware
             return move;
         }
 
-        public static INPUT ConstructMouseButtonDown(MouseButton button)
+        public static Input ConstructMouseButtonDown(MouseButton button)
         {
-            var down = new INPUT { Type = (UInt16)InputType.Mouse };
-            down.Data.Mouse.dwFlags = (UInt32)ToMouseFlag(button, true);
+            var down = new Input { Type = (ushort)InputType.Mouse };
+            down.Data.Mouse.dwFlags = (uint)ToMouseFlag(button, true);
             return down;
         }
 
-        public static INPUT ConstructMouseButtonUp(MouseButton button)
+        public static Input ConstructMouseButtonUp(MouseButton button)
         {
-            var up = new INPUT { Type = (UInt16)InputType.Mouse };
-            up.Data.Mouse.dwFlags = (UInt32)ToMouseFlag(button, false);
+            var up = new Input { Type = (ushort)InputType.Mouse };
+            up.Data.Mouse.dwFlags = (uint)ToMouseFlag(button, false);
             return up;
         }
 
-        public static INPUT ConstuctXMouseButtonUp(int xButtonId)
+        public static Input ConstructXMouseButtonUp(int xButtonId)
         {
-            var button = new INPUT { Type = (UInt32)InputType.Mouse };
-            button.Data.Mouse.dwFlags = (UInt32)MouseFlag.XUp;
-            button.Data.Mouse.mouseData = (UInt32)xButtonId;
+            var button = new Input { Type = (uint)InputType.Mouse };
+            button.Data.Mouse.dwFlags = (uint)MouseFlag.XUp;
+            button.Data.Mouse.mouseData = (uint)xButtonId;
             return button;
         }
 
-        public static INPUT ConstuctXMouseButtonDown(int xButtonId)
+        public static Input ConstructXMouseButtonDown(int xButtonId)
         {
-            var button = new INPUT { Type = (UInt32)InputType.Mouse };
-            button.Data.Mouse.dwFlags = (UInt32)MouseFlag.XDown;
-            button.Data.Mouse.mouseData = (UInt32)xButtonId;
+            var button = new Input { Type = (uint)InputType.Mouse };
+            button.Data.Mouse.dwFlags = (uint)MouseFlag.XDown;
+            button.Data.Mouse.mouseData = (uint)xButtonId;
             return button;
         }
 
-        public static INPUT ConstructVWheelScroll(int distance)
+        public static Input ConstructVWheelScroll(int distance)
         {
-            var scroll = new INPUT { Type = (UInt32)InputType.Mouse };
-            scroll.Data.Mouse.dwFlags = (UInt32)MouseFlag.VerticalWheel;
-            scroll.Data.Mouse.mouseData = (UInt32)distance;
+            var scroll = new Input { Type = (uint)InputType.Mouse };
+            scroll.Data.Mouse.dwFlags = (uint)MouseFlag.VerticalWheel;
+            scroll.Data.Mouse.mouseData = (uint)distance;
             return scroll;
         }
 
-        public static INPUT ConstructHWheelScroll(int distance)
+        public static Input ConstructHWheelScroll(int distance)
         {
-            var scroll = new INPUT { Type = (UInt32)InputType.Mouse };
-            scroll.Data.Mouse.dwFlags = (UInt32)MouseFlag.HorizontalWheel;
-            scroll.Data.Mouse.mouseData = (UInt32)distance;
+            var scroll = new Input { Type = (uint)InputType.Mouse };
+            scroll.Data.Mouse.dwFlags = (uint)MouseFlag.HorizontalWheel;
+            scroll.Data.Mouse.mouseData = (uint)distance;
             return scroll;
         }
 
-        public static void DispatchInput(INPUT[] inputs)
+        public static void DispatchInput(Input[] inputs)
         {
             ArgumentNullException.ThrowIfNull(inputs, nameof(inputs));
             if(inputs.Length == 0) throw new ArgumentException("The input array was empty", nameof(inputs));
-            var result = NativeMethods.SendInput((UInt32)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+            var result = NativeMethods.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(Input)));
             if(result != inputs.Length)
             {
                 throw new Exception("Some simulated input commands were not sent successfully.");
             }
         }
 
-        public static void DispatchInput(IEnumerable<INPUT> inputs)
+        public static void DispatchInput(IEnumerable<Input> inputs)
         {
             ArgumentNullException.ThrowIfNull(inputs, nameof(inputs));
-            if (!inputs.Any()) throw new ArgumentException("The input array was empty", nameof(inputs));
-            var result = NativeMethods.SendInput((UInt32)inputs.Count(), [..inputs], Marshal.SizeOf(typeof(INPUT)));
-            if (result != inputs.Count())
+            var inData = inputs as Input[] ?? inputs.ToArray();
+            if (inData.Length == 0) throw new ArgumentException("The input array was empty", nameof(inputs));
+            var result = NativeMethods.SendInput((uint)inData.Length, [..inData], Marshal.SizeOf(typeof(Input)));
+            if (result != inData.Length)
             {
                 throw new Exception("Some simulated input commands were not sent successfully.");
             }

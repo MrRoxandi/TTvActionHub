@@ -1,6 +1,6 @@
 ﻿using TTvActionHub.Services;
 
-namespace TTvActionHub.LuaTools.Audio
+namespace TTvActionHub.LuaTools.Services
 {
     public static class Sounds
     {

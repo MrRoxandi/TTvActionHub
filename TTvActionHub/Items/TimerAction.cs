@@ -6,7 +6,7 @@ namespace TTvActionHub.Items
     public class TimerAction : IAction
     {
         public required LuaFunction Function { get; set; }
-        public bool IsRunning { get => _timer != null; }
+        public bool IsRunning => _timer != null;
         private System.Timers.Timer? _timer;
         public required string Name;
         public required long TimeOut;
