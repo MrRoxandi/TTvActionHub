@@ -1,4 +1,4 @@
-# Документация для модуля 'Sounds' в `TTvActionHub.LuaTools.Services.Audio`
+# Документация для модуля 'Audio' в `TTvActionHub.LuaTools.Services.Audio`
 
 Этот модуль предоставляет функции для воспроизведения звуков из файлов на диске и по URL, а также для управления громкостью звука.
 
@@ -17,8 +17,8 @@ local Audio = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Audio
 | `PlaySound(string uri)`        | Асинхронно воспроизводит звук по указанному URL-адресу или локальному файлу полученному из `uri`.                         |
 | `SetVolume(float volume)`      | Устанавливает громкость звука. Значение `volume` должно быть в диапазоне от 0.0 (тишина) до 1.0 (максимальная громкость). |
 | `GetVolume()`                  | Возвращает текущую громкость звука. Значение находится в диапазоне от 0.0 до 1.0.                                         |
-| `IncreeseVolume(float volume)` | Увеличивает громкость звука на указанное значение `volume`. Громкость не может превышать 1.0.                             |
-| `DecreeseVolume(float volume)` | Уменьшает громкость звука на указанное значение `volume`. Громкость не может быть меньше 0.0.                             |
+| `IncreaseVolume(float volume)` | Увеличивает громкость звука на указанное значение `volume`. Громкость не может превышать 1.0.                             |
+| `DecreaseVolume(float volume)` | Уменьшает громкость звука на указанное значение `volume`. Громкость не может быть меньше 0.0.                             |
 | `SkipSound()`                  | Прерывает текущее воспроизведение звука.                                                                                  |
 
 Пример использования методов в файле конфигурации
@@ -40,10 +40,10 @@ local currentVolume = Audio.GetVolume()
 print("Текущая громкость: " .. currentVolume)
 
 -- Увеличение громкости на 10%
-Audio.IncreeseVolume(0.1)
+Audio.IncreaseVolume(0.1)
 
 -- Уменьшение громкости на 20%
-Audio.DecreeseVolume(0.2)
+Audio.DecreaseVolume(0.2)
 
 -- Прерывание воспроизведения звука
 Audio.SkipSound()
