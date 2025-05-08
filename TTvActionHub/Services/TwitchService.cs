@@ -100,7 +100,7 @@ namespace TTvActionHub.Services
             }
         }
 
-        public int? GetEventCost(string eventName)
+        public long? GetEventCost(string eventName)
         {
             if (TwitchEvents == null) return null;
             var result = TwitchEvents.TryGetValue((eventName, TwitchTools.TwitchEventKind.Command), out var tevent);
@@ -693,7 +693,7 @@ namespace TTvActionHub.Services
             }
         }
 
-        public async Task AddPointsToUserAsync(string username, int pointsToAdd, string reason)
+        public async Task AddPointsToUserAsync(string username, long pointsToAdd, string reason)
         {
             if (string.IsNullOrWhiteSpace(username) || pointsToAdd <= 0) return;
 
@@ -703,7 +703,7 @@ namespace TTvActionHub.Services
             Logger.Log(LOGTYPE.INFO, ServiceName, $"Added {pointsToAdd} points to {username} for {reason}. Total: {newPoints}");
         }
 
-        public static async Task<int> GetPointsFromUser(string username)
+        public static async Task<long> GetPointsFromUser(string username)
         {
             if (string.IsNullOrWhiteSpace(username)) return 0;
             var userPointsKey = $"user_points_{username.ToLower()}";
@@ -711,7 +711,7 @@ namespace TTvActionHub.Services
             return currentPoints;
         }
 
-        public static async Task UpdateUserPoints(string username, int newValue)
+        public static async Task UpdateUserPoints(string username, long newValue)
         {
             if (string.IsNullOrWhiteSpace(username)) return;
             var userPointsKey = $"user_points_{username.ToLower()}";
@@ -889,7 +889,7 @@ namespace TTvActionHub.Services
         private void TwitchClient_OnMessageReceived(object? sender, OnMessageReceivedArgs e)
         {
             var chatMessage = e.ChatMessage;
-            if (chatMessage.Message.Length < 10) return;
+            if (chatMessage.Message.Length < 10 || chatMessage.Username == _configuration.Login) return;
             AddPointsToUserAsync(chatMessage.Username, PointsPerMessage, "messages").GetAwaiter().GetResult();
         }
 

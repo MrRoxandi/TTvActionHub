@@ -29,14 +29,14 @@ namespace TTvActionHub.Items
         public readonly TwitchTools.PermissionLevel PermissionLevel;
         public readonly Stopwatch? _coolDownTimer;
         public long? TimeOut;
-        public int Cost;
+        public long Cost;
 
         // --- Executing checks ---
         public bool Executable => IsExecutable();
 
         public static string ItemName => nameof(TwitchEvent);
 
-        public TwitchEvent(TwitchTools.TwitchEventKind kind, LuaFunction action, string name, TwitchTools.PermissionLevel? permissionLevel = null, long? timeOut = null, int cost = 0)
+        public TwitchEvent(TwitchTools.TwitchEventKind kind, LuaFunction action, string name, TwitchTools.PermissionLevel? permissionLevel = null, long? timeOut = null, long cost = 0)
         {
             Kind = kind;
             Function = action;

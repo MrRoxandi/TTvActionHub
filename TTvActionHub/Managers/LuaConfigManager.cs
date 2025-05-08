@@ -94,7 +94,7 @@ namespace TTvActionHub.Managers
                 }
 
                 long? timeOut = null;
-                int cmdCost = 0;
+                long cmdCost = 0;
                 var perm = TwitchTools.PermissionLevel.Viewer;
                 if (kind != TwitchTools.TwitchEventKind.TwitchReward)
                 {
@@ -111,7 +111,7 @@ namespace TTvActionHub.Managers
                         userLevel = TwitchTools.PermissionLevel.Viewer;
                     }
 
-                    if (TwEventTable["cost"] is not int cost)
+                    if (TwEventTable["cost"] is not long cost)
                     {
                         cost = 0;
                     }

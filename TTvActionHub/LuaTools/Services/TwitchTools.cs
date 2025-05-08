@@ -31,7 +31,7 @@ namespace TTvActionHub.LuaTools.Services
             client.AddPointsToUserAsync(name, value, $"added {value} points to {name} from lua").GetAwaiter().GetResult();
         }
 
-        public static int GetPoints(string name)
+        public static long GetPoints(string name)
         {
             if (Service is not { })
             {
@@ -40,7 +40,7 @@ namespace TTvActionHub.LuaTools.Services
             return TwitchService.GetPointsFromUser(name).GetAwaiter().GetResult();
         }
 
-        public static int GetEventCost(string eventName)
+        public static long GetEventCost(string eventName)
         {
             if (string.IsNullOrEmpty(eventName)) throw new Exception($"Unable to get cost for event with empty name");
             if (Service is not { } client)
