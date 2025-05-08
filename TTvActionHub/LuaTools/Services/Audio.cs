@@ -2,7 +2,7 @@
 
 namespace TTvActionHub.LuaTools.Services
 {
-    public static class Sounds
+    public static class Audio
     {
         public static AudioService? audio;
         

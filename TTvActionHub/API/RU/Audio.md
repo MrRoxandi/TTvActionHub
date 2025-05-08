@@ -1,16 +1,16 @@
-## Документация для модуля 'Sounds' в `TTvActionHub.LuaTools.Audio`
+# Документация для модуля 'Sounds' в `TTvActionHub.LuaTools.Services.Audio`
 
 Этот модуль предоставляет функции для воспроизведения звуков из файлов на диске и по URL, а также для управления громкостью звука.
 
-### Подключение в файле конфигурации
+## Подключение в файле конфигурации
 
 Пример подключение модуля:
 
 ```lua
-local Sounds = import('TTvActionHub', 'TTvActionHub.LuaTools.Audio').Sounds
+local Audio = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Audio
 ```
 
-### Функции
+## Доступные методы
 
 | Функция                        | Описание                                                                                                                  |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------- |
@@ -24,27 +24,27 @@ local Sounds = import('TTvActionHub', 'TTvActionHub.LuaTools.Audio').Sounds
 Пример использования методов в файле конфигурации
 
 ```lua
-local Sounds = import('TTvActionHub', 'TTvActionHub.LuaTools.Audio').Sounds
+local Audio = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Audio
 
 -- Воспроизведение звука из файла на диске
-Sounds.PlaySound("C:/Sounds/mysound.mp3")
+Audio.PlaySound("C:/Sounds/mysound.mp3")
 
 -- Воспроизведение звука по URL
-Sounds.PlaySound("https://example.com/audio/sound.ogg")
+Audio.PlaySound("https://example.com/audio/sound.ogg")
 
 -- Установка громкости
-Sounds.SetVolume(0.5) -- Устанавливаем громкость на 50%
+Audio.SetVolume(0.5) -- Устанавливаем громкость на 50%
 
 -- Получение текущей громкости
-local currentVolume = Sounds.GetVolume()
+local currentVolume = Audio.GetVolume()
 print("Текущая громкость: " .. currentVolume)
 
 -- Увеличение громкости на 10%
-Sounds.IncreeseVolume(0.1)
+Audio.IncreeseVolume(0.1)
 
 -- Уменьшение громкости на 20%
-Sounds.DecreeseVolume(0.2)
+Audio.DecreeseVolume(0.2)
 
 -- Прерывание воспроизведения звука
-Sounds.SkipSound()
+Audio.SkipSound()
 ```

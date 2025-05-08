@@ -430,7 +430,7 @@ namespace TTvActionHub
                             TwitchTools.Service = ttvServ;
                             break;
                         case AudioService audioServ:
-                            Sounds.audio = audioServ!;
+                            Audio.audio = audioServ!;
                             break;
                     }
                 }
@@ -452,7 +452,7 @@ namespace TTvActionHub
                     TwitchTools.Service = ttvServ;
                     break;
                 case AudioService audioServ:
-                    Sounds.audio = audioServ!;
+                    Audio.audio = audioServ!;
                     break;
             }
             Logger.Info("Static bridges updated successfully.");

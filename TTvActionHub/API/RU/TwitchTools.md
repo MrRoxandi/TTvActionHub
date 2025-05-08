@@ -1,26 +1,39 @@
-# Документация для модуля 'TwitchTools' в `TTvActionHub.LuaTools.Stuff`
+# Документация для модуля 'TwitchTools' в `TTvActionHub.LuaTools.Services.TwitchTools`
 
 Пример подключение модуля:
 
 ```lua
-local TwitchTools = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').TwitchTools
+local TwitchTools = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').TwitchTools
 ```
 
 ## Доступные методы
 
-| Метод                                        | Описание                                                               |
-| -------------------------------------------- | ---------------------------------------------------------------------- |
-| `SendMessage(string message)`                | Отправляет сообщение в чат от вашего аккаунта                          |
-| `SendWhisper(string target, string message)` | Отправляет личное сообщение сообщение цели (target) от вашего аккаунта |
+| Метод                                        | Описание                                                                       |
+| -------------------------------------------- | ------------------------------------------------------------------------------ |
+| `SendMessage(string message)`                | Отправляет сообщение в чат от вашего аккаунта                                  |
+| `SendWhisper(string target, string message)` | Отправляет личное сообщение сообщение пользователю (target) от вашего аккаунта |
+| `AddPoints(string name, int value)`          | Добавить (отнять) некоторое количество (value) очков у пользователя (name).    |
+| `GetPoints(string name)`                     | Получить текущее количество очков пользователя (name)                          |
+| `GetEventCost(string eventName)`             | Получить стоимость выполнения ивента (eventName)                               |
 
-## Необходимые дополнительные данные
+## Дополнительные структуры данных
+
+### PermissionLevel - определяет уровень доступа к событиям твича
 
 ```cs
-enum PermissionLevel { VIEWIER, VIP, SUB, MODERATOR, BROADCASTER }
+public enum PermissionLevel : int
+{
+    Viewer, Vip, Subscriber, Moderator, Broadcaster
+}
 ```
 
+### TwitchEventKind - определяет тип события твича
+
 ```cs
-enum TwitchEventKind { Command , TwitchReward, PointsReward }
+public enum TwitchEventKind : byte
+{
+    Command = 0, TwitchReward
+}
 ```
 
 Пример испоользования в файле конфигурации :
