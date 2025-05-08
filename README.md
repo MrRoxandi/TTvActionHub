@@ -2,7 +2,7 @@
     <table>
     <tr>
         <td>
-            <img src="readme-assets/logo.png" alt="Logo" width="100">
+            <img src="readme-assets/loog.png" alt="Logo" width="100">
         </td>
         <td>
             <h2>TTvActionHub</h2>
@@ -10,11 +10,6 @@
     </tr>
   </table>
 </div>
-
-
-
-
-
 
 > This project consolidates essential Twitch streaming tools into one platform, including music playback, keyboard and mouse emulation, and data storage. All features are activated via Twitch channel points or commands using a personalized chat bot.
 
@@ -40,8 +35,8 @@
 ## Running (Windows)
 
 1. Navigate to the extracted directory.
-2. Place `config.lua` file in root directory. (or just run the program)
-3. Run the `TwitchController.exe`.
+2. Run the `TwitchController.exe` and let it generate all files.
+3. If you want to configure this program, then navigate to `..\configs\`
 
 ## LUA Scripting
 

@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0-windows10.0.22000.0</TargetFramework>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -30,11 +30,10 @@
   <ItemGroup>
     <PackageReference Include="KeraLua" Version="1.4.3" />
     <PackageReference Include="LibVLCSharp" Version="3.9.2" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.3" />
-    <PackageReference Include="NAudio" Version="2.2.1" />
-    <PackageReference Include="NAudio.Vorbis" Version="1.5.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.4" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
     <PackageReference Include="NLua" Version="1.7.4" />
-    <PackageReference Include="NVorbis" Version="0.10.5" />
+    <PackageReference Include="Terminal.Gui" Version="1.18.0" />
     <PackageReference Include="TwitchLib" Version="3.5.3" />
     <PackageReference Include="TwitchLib.Api.Core.Enums" Version="3.9.0" />
     <PackageReference Include="TwitchLib.EventSub.Core" Version="2.5.2" />

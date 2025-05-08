@@ -1,88 +1,69 @@
-## Документация для модуля Funcs в `TTvActionHub.LuaTools.Stuff`
+# Документация для модуля 'Funcs' в `TTvActionHub.LuaTools.Stuff`
 
-Этот модуль предоставляет набор полезных функций для выполнения различных операций, таких как генерация случайных чисел, выбор случайного элемента из коллекции, перемешивание коллекции и создание случайных строк.
+Этот модуль предоставляет набор общих вспомогательных функций, включая генерацию случайных чисел и строк, задержки выполнения, работу с коллекциями и генерацию случайных позиций.
 
-### Функции
+## Подключение в файле конфигурации
 
-| Функция                                                                   | Описание                                                                                                                                                                                                 | Возвращаемое значение |
-| ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| `RandomNumber(int? min, int? max)`                                        | Генерирует случайное целое число в диапазоне от `min` до `max` (включительно). Оба аргумента `min` и `max` **обязательны**.                                                                              | `int`                 |
-| `RandomDouble(double? min, double? max)`                                  | Генерирует случайное число с плавающей точкой в диапазоне от `min` до `max`. Оба аргумента `min` и `max` **обязательны**.                                                                                | `double`              |
-| `RandomNumberAsync(int? min, int? max)`                                   | Асинхронно генерирует случайное целое число в диапазоне от `min` до `max` (включительно). Оба аргумента `min` и `max` **обязательны**.                                                                   | `int`                 |
-| `RandomDoubleAsync(double? min, double? max)`                             | Асинхронно генерирует случайное число с плавающей точкой в диапазоне от `min` до `max`. Оба аргумента `min` и `max` **обязательны**.                                                                     | `double`              |
-| `RandomElement(IEnumerable<string>? elemets)`                             | Выбирает случайный элемент из переданной коллекции строк `elemets`. Если коллекция пуста, возвращает пустую строку. Аргумент `elemets` **обязателен**.                                                   | `string`              |
-| `RandomElementAsync(IEnumerable<string>? elemets)`                        | Асинхронно выбирает случайный элемент из переданной коллекции строк `elemets`. Если коллекция пуста, возвращает пустую строку. Аргумент `elemets` **обязателен**.                                        | `string`              |
-| `Shuffle(IEnumerable<string>? elemets)`                                   | Перемешивает переданную коллекцию строк `elemets` и возвращает новую перемешанную коллекцию в виде списка. Если коллекция пуста, возвращает пустой список. Аргумент `elemets` **обязателен**.            | `List<string>`        |
-| `ShuffleAsync(IEnumerable<string>? elemets)`                              | Асинхронно перемешивает переданную коллекцию строк `elemets` и возвращает новую перемешанную коллекцию в виде списка. Если коллекция пуста, возвращает пустой список. Аргумент `elemets` **обязателен**. | `List<string>`        |
-| `RandomString(int length)`                                                | Генерирует случайную строку указанной длины `length`, состоящую из букв (в верхнем и нижнем регистре) и цифр.                                                                                            | `string`              |
-| `RandomStringAsync(int length)`                                           | Асинхронно генерирует случайную строку указанной длины `length`, состоящую из букв (в верхнем и нижнем регистре) и цифр.                                                                                 | `string`              |
-| `DelayAsync(int? delay)`                                                  | Асинхронно приостанавливает выполнение на указанное количество миллисекунд `delay`. Аргумент `delay` **обязателен**.                                                                                     | `void`                |
-| `RandomPosition(int? minX, int? maxX, int? minY, int? maxY)`              | Генерирует случайную позицию (Point) со случайными координатами X и Y в указанных диапазонах. Все аргументы **обязательны**.                                                                             | `Funcs.Point`         |
-| `RandomPositionAsync(int? minX, int? maxX, int? minY, int? maxY)`         | Асинхронно генерирует случайную позицию (Point) со случайными координатами X и Y в указанных диапазонах. Все аргументы **обязательны**.                                                                  | `Funcs.Point`         |
-| `CollectionToString(IEnumerable<string>? elemets, string sep = " ")`      | Преобразует коллекцию строк `elemets` в одну строку, разделяя элементы указанным разделителем `sep` (по умолчанию пробел). Аргумент `elemets` **обязателен**.                                            | `string`              |
-| `CollectionToStringAsync(IEnumerable<string>? elemets, string sep = " ")` | Асинхронно преобразует коллекцию строк `elemets` в одну строку, разделяя элементы указанным разделителем `sep` (по умолчанию пробел). Аргумент `elemets` **обязателен**.                                 | `string`              |
+Пример подключение модуля:
 
-### Типы
+```lua
+local Funcs = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Funcs
+```
 
-#### `Point`
-
-Структура, представляющая точку с координатами X и Y.
-
-| Свойство | Тип   | Описание     |
-| -------- | ----- | ------------ |
-| `X`      | `int` | Координата X |
-| `Y`      | `int` | Координата Y |
-
-**Примечания:**
-
-- Все функции, заканчивающиеся на `Async`, выполняются асинхронно, не блокируя основной поток программы.
-- Перед использованием любой функции убедитесь, что все обязательные аргументы указаны. В противном случае будет выброшено исключение `ArgumentNullException`.
-- Для работы с `RandomPositionAsync` необходимо указывать все четыре параметра: `minX`, `maxX`, `minY`, `maxY`.
-- Для получения результата от асинхронных функций, необходимо использовать `.Result`. Например: `local randomNumber = Funcs.RandomNumberAsync(1, 100).Result`
-
-### Пример использования в `config.lua`
+Пример использования `RandomNumber` для получения случайного числа и `Delay` для паузы:
 
 ```lua
 local Funcs = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Funcs
 
--- Генерация случайного числа от 1 до 100
-local randomNumber = Funcs.RandomNumber(1, 100)
-print("Случайное число: " .. randomNumber)
+-- Получить случайное число от 1 до 10 включительно
+local randomNumber = Funcs.RandomNumber(1, 10)
+print('Случайное число: ' .. randomNumber)
 
--- Генерация случайного числа с плавающей точкой от 0.0 до 1.0
-local randomDouble = Funcs.RandomDouble(0.0, 1.0)
-print("Случайное число с плавающей точкой: " .. randomDouble)
+-- Создать случайную задержку от 500 до 1500 мс
+local randomDelay = Funcs.RandomNumber(500, 1500)
+print('Пауза на ' .. randomDelay .. ' мс...')
+Funcs.Delay(randomDelay) -- Приостановить выполнение скрипта
+print('Пауза завершена.')
 
--- Выбор случайного элемента из списка
-local myList = {"apple", "banana", "cherry"}
-local randomElement = Funcs.RandomElementAsync(myList).Result
-print("Случайный элемент: " .. randomElement)
+```
 
+### Доступные методы
 
--- Перемешивание списка
-local myList = {"apple", "banana", "cherry"}
-local shuffledList = Funcs.ShuffleAsync(myList).Result
-print("Перемешанный список:")
-for i, element in ipairs(shuffledList) do
-    print(i .. ": " .. element)
-end
+Ниже приведен список доступных методов модуля `Funcs`.
 
+| Метод                                                    | Описание                                                                                                                    |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `RandomNumber(int min, int max)`                         | Возвращает случайное целое число в диапазоне [`min`,`max`]                                                                  |
+| `RandomDouble(double min, double max)`                   | Возвращает случайное действительное число в диапазоне [`min` ,`max`)                                                        |
+| `RandomElement(table elements)`                          | Возвращает случайный строку из переданного списка. Если список пуст, возвращает пустую строку.                              |
+| `Shuffle(table elements)`                                | Перемешивает элементы в переданном списке и возвращает **новый** список. Если список пуст, возвращает пустой список.        |
+| `RandomString(int length)`                               | Генерирует случайную строку указанной длины из латинских букв и цифр (0-9).                                                 |
+| `Delay(int delayMs)`                                     | Приостанавливает выполнение текущего скрипта на указанное количество **миллисекунд**.                                       |
+| `RandomPosition(int minX, int maxX, int minY, int maxY)` | Возвращает объект с полями `X` и `Y`, содержащими случайные координаты в заданных диапазонах                                |
+| `CollectionToString(table elements, string separator)`   | Объединяет элементы списка строк в одну строку, используя указанный `separator` Если список пуст, возвращает пустую строку. |
 
--- Генерация случайной строки длиной 10 символов
-local randomString = Funcs.RandomStringAsync(10).Result
-print("Случайная строка: " .. randomString)
+Пример использования `RandomPosition` и `CollectionToString`:
 
+```lua
+local Funcs = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Funcs
+local Mouse = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Mouse -- Предполагается, что модуль Mouse тоже подключен
 
--- Приостановка выполнения на 1 секунду
-Funcs.DelayAsync(1000).Result
+-- Получить случайную позицию в прямоугольнике от (100, 100) до (500, 500)
+local pos = Funcs.RandomPosition(100, 500, 100, 500)
+print('Случайная позиция: X=' .. pos.X .. ', Y=' .. pos.Y)
 
--- Получение случайной позиции
-local pos = Funcs.RandomPositionAsync(0, 100, 0, 100).Result
-print("Случайная позиция: X=" .. pos.X .. ", Y=" .. pos.Y)
+-- Установить курсор в эту случайную позицию
+Mouse.SetPosition(pos.X, pos.Y)
 
+-- Пример работы с коллекцией
+local myList = { 'яблоко', 'банан', 'апельсин' }
+local shuffledList = Funcs.Shuffle(myList) -- Перемешать список
 
--- Преобразование списка в строку с разделителем
-local myList = {"apple", "banana", "cherry"}
-local myString = Funcs.CollectionToStringAsync(myList, ", ").Result
-print("Строка: " .. myString)
+-- Вывести перемешанный список, соединенный запятой с пробелом
+local resultString = Funcs.CollectionToString(shuffledList, ', ')
+print('Перемешанный список: ' .. resultString)
+
+-- Выбрать случайный фрукт из исходного списка
+local randomFruit = Funcs.RandomElement(myList)
+print('Случайный фрукт: ' .. randomFruit)
 ```
