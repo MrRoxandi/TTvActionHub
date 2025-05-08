@@ -18,8 +18,8 @@ namespace TTvActionHub
         public string RefreshToken => _ttvInfo.RefreshToken;
 
         private readonly bool _forceRelog;
-        public bool LogState { get; private set; }
-        public TwitchApi TwitchApi { get; private set; } 
+        public bool LogState { get; }
+        public TwitchApi TwitchApi { get; } 
 
         private readonly (string Login, string ID, string Token, string RefreshToken) _ttvInfo;
         
@@ -47,11 +47,11 @@ namespace TTvActionHub
             var channelInfoTask = TwitchApi.GetChannelInfoAsync(authInfo.Token!);
             channelInfoTask.Wait();
             if (!channelInfoTask.IsCompleted) return authInfo;
-            var (login, ID) = channelInfoTask.Result;
-            if (string.IsNullOrEmpty(login) || string.IsNullOrEmpty(ID))
+            var (login, id) = channelInfoTask.Result;
+            if (string.IsNullOrEmpty(login) || string.IsNullOrEmpty(id))
                 throw new BadRequestException("Unable to get channel information");
             authInfo.Login = login;
-            authInfo.ID = ID;
+            authInfo.ID = id;
 
             return authInfo;
         }
@@ -79,8 +79,8 @@ namespace TTvActionHub
                 }
             } catch (Exception ex)
             {
-                Logger.Error($"Unable to update Twitch Info with manager due to error", ex);
-                Logger.Info($"Getting new Twitch Info from browser");
+                Logger.Error("Unable to update Twitch Info with manager due to error", ex);
+                Logger.Info("Getting new Twitch Info from browser");
                 manager.TwitchInfo = GetAuthInfoFromApi();
             }
             finally
