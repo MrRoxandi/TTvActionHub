@@ -23,7 +23,7 @@ namespace TTvActionHub.Services
         public string ServiceName => nameof(TwitchService);
         public bool IsRunning { get; private set; } = false;
 
-        // --- Connection checks
+        // --- Connection checks ---
 
         public bool IsTwitchClientConnected => _twitchClient?.IsConnected ?? false;
         public bool IsEventSubClientConnected { get; private set; } = false;
@@ -890,7 +890,7 @@ namespace TTvActionHub.Services
         {
             var chatMessage = e.ChatMessage;
             if (chatMessage.Message.Length < 10 || chatMessage.Username == _configuration.Login) return;
-            AddPointsToUserAsync(chatMessage.Username, PointsPerMessage, "messages").GetAwaiter().GetResult();
+            _ = AddPointsToUserAsync(chatMessage.Username, PointsPerMessage, "messages");
         }
 
         private async Task EventSubClient_WebsocketConnectedHandler(object? sender, WebsocketConnectedArgs args)
