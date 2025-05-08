@@ -8,7 +8,7 @@ namespace TTvActionHub.Managers
     public class AuthManager
     {
         public (string Login, string ID, string Token, string RefreshToken) TwitchInfo;
-        public static string ServiceName => "AuthManager";
+        private static string ServiceName => "AuthManager";
 
         private static string AuthDir => "auth";
         private static string FileName => "data";
@@ -28,7 +28,7 @@ namespace TTvActionHub.Managers
 
         public bool LoadTwitchInfo()
         {
-            string path = Path.Combine(AuthDir, FileName);
+            var path = Path.Combine(AuthDir, FileName);
             
             try
             {
@@ -37,13 +37,13 @@ namespace TTvActionHub.Managers
                     Logger.Log(LOGTYPE.INFO, ServiceName, $"Authorization file not found at {path}. No data loaded.");
                     return false;
                 }
-                string encryptedData = File.ReadAllText(path);
+                var encryptedData = File.ReadAllText(path);
                 if (string.IsNullOrEmpty(encryptedData))
                 {
                     Logger.Log(LOGTYPE.WARNING, ServiceName, $"Authorization file at {path} is empty. No data loaded.");
                     return false;
                 }
-                string decryptedData = Decrypt(encryptedData, _secret);
+                var decryptedData = Decrypt(encryptedData, _secret);
                 var data = decryptedData.Split('\n');
                 if (data.Length != 4)
                 {
@@ -72,15 +72,15 @@ namespace TTvActionHub.Managers
             try
             {
                 Directory.CreateDirectory(AuthDir);
-                string path = Path.Combine(AuthDir, FileName);
+                var path = Path.Combine(AuthDir, FileName);
                 var (login, id, token, rtoken) = TwitchInfo;
                 if (string.IsNullOrEmpty(login) || string.IsNullOrEmpty(id) || string.IsNullOrEmpty(token) || string.IsNullOrEmpty(rtoken))
                 {
                     Logger.Log(LOGTYPE.WARNING, ServiceName, "Attempted to save incomplete Twitch info. Aborting save.");
                     return false;
                 }
-                string data = string.Join('\n', [login, id, token, rtoken]);
-                string encryptedData = Encrypt(data, _secret);
+                var data = string.Join('\n', [login, id, token, rtoken]);
+                var encryptedData = Encrypt(data, _secret);
                 File.WriteAllText(path, encryptedData);
                 Logger.Log(LOGTYPE.INFO, ServiceName, $"Authorization information saved successfully at {path}");
                 return true;
@@ -101,12 +101,12 @@ namespace TTvActionHub.Managers
             }
             try
             {
-                bool IsValid = await _api.ValidateTokenAsync(TwitchInfo.Token).ConfigureAwait(false);
-                if (!IsValid)
+                var isValid = await _api.ValidateTokenAsync(TwitchInfo.Token).ConfigureAwait(false);
+                if (!isValid)
                 {
                     Logger.Log(LOGTYPE.WARNING, ServiceName, "Twitch API reported the current access token is invalid.");
                 }
-                return IsValid;
+                return isValid;
             }
             catch (Exception ex)
             {
@@ -166,7 +166,7 @@ namespace TTvActionHub.Managers
             ArgumentNullException.ThrowIfNull(plainText);
             ArgumentNullException.ThrowIfNull(secret); 
 
-            using Aes aes = Aes.Create(); 
+            using var aes = Aes.Create(); 
             aes.Key = DeriveKey(secret); 
             aes.GenerateIV(); 
 
@@ -206,7 +206,7 @@ namespace TTvActionHub.Managers
             aes.Key = DeriveKey(secret); 
 
             // Extract the IV from the beginning of the buffer
-            byte[] iv = new byte[ivLength];
+            var iv = new byte[ivLength];
             Array.Copy(buffer, 0, iv, 0, iv.Length);
             aes.IV = iv;
 

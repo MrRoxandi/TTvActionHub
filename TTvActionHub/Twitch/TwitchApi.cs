@@ -1,33 +1,23 @@
 ﻿using System.Diagnostics;
 using System.Net;
-using System.Text.Json;
 using TwitchLib.Api;
 using TTvActionHub.Logs;
 using TwitchLib.Api.Core.Enums;
 
 namespace TTvActionHub.Twitch
 {
-    public class TwitchApi
+    public class TwitchApi(string clientId, string clientSecret, string redirectUri)
     {
-        public TwitchAPI InnerAPI { get => _api; }
-
-        private readonly TwitchAPI _api;
-        private readonly string _redirectUrl;
-        private readonly string _clientId;
-        private readonly string _clientSecret;
-
-        private static readonly HttpClient _httpClient = new();
-
-        public TwitchApi(string clientId, string clientSecret, string redirectUri)
+        public TwitchAPI InnerApi { get; } = new()
         {
-            _clientId = clientId;
-            _clientSecret = clientSecret;
-            _redirectUrl = redirectUri;
+            Settings =
+            {
+                ClientId = clientId,
+                Secret = clientSecret
+            }
+        };
 
-            _api = new TwitchAPI();
-            _api.Settings.ClientId = clientId;
-            _api.Settings.Secret = clientSecret;
-        }
+        /*private static readonly HttpClient HttpClient = new();*/
 
         public async Task<(string? Token, string? RefreshToken)> GetAuthorizationInfo()
         {
@@ -40,15 +30,14 @@ namespace TTvActionHub.Twitch
         private async Task<(string? Token, string? RefreshToken)> RequestAuthorizationInfo()
         {
             using HttpListener listener = new();
-            listener.Prefixes.Add(_redirectUrl);
+            listener.Prefixes.Add(redirectUri);
             listener.Start();
 
-            Process.Start(new ProcessStartInfo(TokenURL) { UseShellExecute = true });
+            Process.Start(new ProcessStartInfo(TokenUri) { UseShellExecute = true });
 
             var context = await listener.GetContextAsync();
             var request = context.Request;
-            var response = context.Response;
-
+            
             var code = request.QueryString["code"];
             var error = request.QueryString["error"];
 
@@ -69,22 +58,21 @@ namespace TTvActionHub.Twitch
             return (accessToken, refreshToken);
         }
 
-        private string TokenURL => _api.Auth.GetAuthorizationCodeUrl(_redirectUrl, [
-                                    AuthScopes.Helix_Channel_Read_Redemptions,
-                                    AuthScopes.Helix_Channel_Manage_Redemptions,
-                                    AuthScopes.Chat_Edit,
-                                    AuthScopes.Chat_Read,
-                                    AuthScopes.Helix_User_Edit], clientId: _clientId);
+        private string TokenUri => InnerApi.Auth.GetAuthorizationCodeUrl(redirectUri, 
+            [AuthScopes.Helix_Channel_Read_Redemptions,
+            AuthScopes.Helix_Channel_Manage_Redemptions,
+            AuthScopes.Chat_Edit, AuthScopes.Chat_Read,
+            AuthScopes.Helix_User_Edit, AuthScopes.Helix_Moderator_Read_Chatters], clientId: clientId);
 
         private static string ServiceName => "TwitchAPI";
 
         public async Task<(string? Login, string? ID)> GetChannelInfoAsync(string token)
         {
-            _api.Settings.AccessToken = token;
+            InnerApi.Settings.AccessToken = token;
 
             try
             {
-                var usersResponse = await _api.Helix.Users.GetUsersAsync();
+                var usersResponse = await InnerApi.Helix.Users.GetUsersAsync();
                 var user = usersResponse.Users.FirstOrDefault();
                 if (user != null)
                 {
@@ -104,12 +92,12 @@ namespace TTvActionHub.Twitch
         {
             try
             {
-                var result = await _api.Auth.GetAccessTokenFromCodeAsync(authorizationCode, _clientSecret, _redirectUrl, _clientId);
+                var result = await InnerApi.Auth.GetAccessTokenFromCodeAsync(authorizationCode, clientSecret, redirectUri, clientId);
                 return (result.AccessToken, result.RefreshToken);
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, "Unable to get access token due to erro: ", ex);
+                Logger.Log(LOGTYPE.ERROR, ServiceName, "Unable to get access token due to error: ", ex);
                 return (null, null);
             }
         }
@@ -118,7 +106,7 @@ namespace TTvActionHub.Twitch
         {
             try
             {
-                var result = await _api.Auth.RefreshAuthTokenAsync(refreshToken, _clientSecret, _clientId);
+                var result = await InnerApi.Auth.RefreshAuthTokenAsync(refreshToken, clientSecret, clientId);
                 return (result.AccessToken, result.RefreshToken);
             }
             catch (Exception ex)
@@ -130,10 +118,10 @@ namespace TTvActionHub.Twitch
 
         public async Task<bool> ValidateTokenAsync(string token)
         {
-            _api.Settings.AccessToken = token;
+            InnerApi.Settings.AccessToken = token;
             try
             {
-                var usersResponse = await _api.Helix.Users.GetUsersAsync();
+                var usersResponse = await InnerApi.Helix.Users.GetUsersAsync();
                 return usersResponse.Users.Length != 0; // If we get a user, token is valid
             }
             catch (Exception ex)

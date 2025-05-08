@@ -1,21 +1,21 @@
-## Documentation for the 'Funcs' module in `TTvActionHub.LuaTools.Stuff`
+# Documentation for the 'Funcs' module in `TTvActionHub.LuaTools.Stuff`
 
-This module provides a set of general helper functions, including generating random numbers and strings, execution delays, working with collections, and generating random positions.
+This module provides a set of common helper functions, including random number and string generation, execution delays, working with collections, and generating random positions.
 
-### Connecting in the configuration file
+## Importing into the configuration file
 
-Module connection example:
+Example of importing the module:
 
 ```lua
 local Funcs = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Funcs
 ```
 
-Example using `RandomNumber` to get a random number and `Delay` for a pause:
+Example of using `RandomNumber` to get a random number and `Delay` for a pause:
 
 ```lua
 local Funcs = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Funcs
 
--- Get a random integer from 1 to 10 inclusive
+-- Get a random number between 1 and 10 inclusive
 local randomNumber = Funcs.RandomNumber(1, 10)
 print('Random number: ' .. randomNumber)
 
@@ -24,29 +24,28 @@ local randomDelay = Funcs.RandomNumber(500, 1500)
 print('Pausing for ' .. randomDelay .. ' ms...')
 Funcs.Delay(randomDelay) -- Pause script execution
 print('Pause finished.')
-
 ```
 
-### Available methods
+### Available Methods
 
-Below is a list of the `Funcs` module's available methods.
+Below is a list of available methods in the `Funcs` module.
 
-| Method                                                   | Description                                                                                                                                                   |
-| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `RandomNumber(int min, int max)`                         | Returns a random integer in the inclusive range [`min`, `max`].                                                                                               |
-| `RandomDouble(double min, double max)`                   | Returns a random floating-point number (double) in the range [`min`, `max`).                                                                                  |
-| `RandomElement(table elements)`                          | Returns a random element from the provided table. If the table is empty, returns an empty string.                                                             |
-| `Shuffle(table elements)`                                | Shuffles the elements in the provided table and returns a **new** table. If the table is empty, returns an empty table.                                       |
-| `RandomString(int length)`                               | Generates a random string of the specified length using Latin letters and digits (0-9).                                                                       |
-| `Delay(int delayMs)`                                     | Pauses the execution of the current script for the specified number of **milliseconds**.                                                                      |
-| `RandomPosition(int minX, int maxX, int minY, int maxY)` | Returns an object (table) with `X` and `Y` fields containing random coordinates within the specified ranges.                                                  |
-| `CollectionToString(table elements, string separator)`   | Joins the elements of a table (expected to be strings) into a single string, using the specified `separator`. If the table is empty, returns an empty string. |
+| Method                                                   | Description                                                                                                                                   |
+| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RandomNumber(int min, int max)`                         | Returns a random integer in the range [`min`,`max`] (inclusive).                                                                              |
+| `RandomDouble(double min, double max)`                   | Returns a random floating-point number in the range [`min`, `max`) (min inclusive, max exclusive).                                            |
+| `RandomElement(table elements)`                          | Returns a random element from the provided list. If the list is empty, returns an empty string.                                               |
+| `Shuffle(table elements)`                                | Shuffles the elements in the provided list and returns a **new** list. If the list is empty, returns an empty list.                           |
+| `RandomString(int length)`                               | Generates a random string of the specified length consisting of Latin letters and digits (0-9).                                               |
+| `Delay(int delayMs)`                                     | Pauses the execution of the current script for the specified number of **milliseconds**.                                                      |
+| `RandomPosition(int minX, int maxX, int minY, int maxY)` | Returns an object with `X` and `Y` fields, containing random coordinates within the specified ranges.                                         |
+| `CollectionToString(table elements, string separator)`   | Joins the elements of a list of strings into a single string, using the specified `separator`. If the list is empty, returns an empty string. |
 
-Example using `RandomPosition` and `CollectionToString`:
+Example of using `RandomPosition` and `CollectionToString`:
 
 ```lua
 local Funcs = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Funcs
-local Mouse = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Mouse -- Assuming the Mouse module is also connected
+local Mouse = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Mouse -- Assuming the Mouse module is also imported
 
 -- Get a random position within the rectangle from (100, 100) to (500, 500)
 local pos = Funcs.RandomPosition(100, 500, 100, 500)

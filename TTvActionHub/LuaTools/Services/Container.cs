@@ -1,77 +1,77 @@
-﻿using TTvActionHub.Services;
+﻿using TTvActionHub.BackEnds;
 
-namespace TTvActionHub.LuaTools.Stuff
+namespace TTvActionHub.LuaTools.Services
 {
-    public static class Storage
+    public static class Container
     {
-        public static ContainerService? Container = null;
+        public static DataContainer? Storage = null;
 
         public static bool Contains(string name)
         {
-            ArgumentNullException.ThrowIfNull(Container, nameof(Container));
+            ArgumentNullException.ThrowIfNull(Storage, nameof(Storage));
             ArgumentException.ThrowIfNullOrEmpty($"Invalid name of an item [{name}]", nameof(name));
-            return Container.Contains(name);
+            return Storage.Contains(name);
         }
 
         public static void InsertValue<T>(string name, T value) where T : notnull
         {
-            ArgumentNullException.ThrowIfNull(Container, nameof(Container));
+            ArgumentNullException.ThrowIfNull(Storage, nameof(Storage));
             if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
             {
                 throw new ArgumentException($"Invalid name of an item [{name}]", nameof(name));
             }
-            Container.AddOrUpdateItem(name, value);
+            Storage.AddOrUpdateItem(name, value);
         }
 
         public static async Task InsertValueAsync<T>(string name, T value) where T : notnull
         {
-            ArgumentNullException.ThrowIfNull(Container, nameof(Container));
+            ArgumentNullException.ThrowIfNull(Storage, nameof(Storage));
             if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
             {
                 throw new ArgumentException($"Invalid name of an item [{name}]", nameof(name));
             }
-            await Container.AddOrUpdateItemAsync(name, value);
+            await Storage.AddOrUpdateItemAsync(name, value);
         }
 
 
-        public static T? GetValue<T>(string name) where T : class
+        public static T? GetValue<T>(string name)
         {
-            ArgumentNullException.ThrowIfNull(Container, nameof(Container));
+            ArgumentNullException.ThrowIfNull(Storage, nameof(Storage));
             if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
             {
                 throw new ArgumentException($"Invalid name of an item [{name}]", nameof(name));
             }
-            return Container.GetItem<T>(name);
+            return Storage.GetItem<T>(name);
         }
 
-        public static async Task<T?> GetValueAsync<T>(string name) where T : class
+        public static async Task<T?> GetValueAsync<T>(string name) 
         {
-            ArgumentNullException.ThrowIfNull(Container, nameof(Container));
+            ArgumentNullException.ThrowIfNull(Storage, nameof(Storage));
             if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
             {
                 throw new ArgumentException($"Invalid name of an item [{name}]", nameof(name));
             }
-            return await Container.GetItemAsync<T>(name);
+            return await Storage.GetItemAsync<T>(name);
         }
 
         public static bool RemoveValue(string name)
         {
-            ArgumentNullException.ThrowIfNull(Container, nameof(Container));
+            ArgumentNullException.ThrowIfNull(Storage, nameof(Storage));
             if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
             {
                 throw new ArgumentException($"Invalid name of an item [{name}]", nameof(name));
             }
-            return Container.RemoveItem(name);
+            return Storage.RemoveItem(name);
         }
 
         public static async Task<bool> RemoveValueAsync(string name)
         {
-            ArgumentNullException.ThrowIfNull(Container, nameof(Container));
+            ArgumentNullException.ThrowIfNull(Storage, nameof(Storage));
             if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
             {
                 throw new ArgumentException($"Invalid name of an item [{name}]", nameof(name));
             }
-            return await Container.RemoveItemAsync(name);
+            return await Storage.RemoveItemAsync(name);
         }
 
 
@@ -84,12 +84,12 @@ namespace TTvActionHub.LuaTools.Stuff
 
         public static int? GetInt(string name)
         {
-            ArgumentNullException.ThrowIfNull(Container, nameof(Container));
+            ArgumentNullException.ThrowIfNull(Storage, nameof(Storage));
             if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
             {
                 throw new ArgumentException($"Invalid name of an item [{name}]", nameof(name));
             }
-            if (Container.Contains(name)) return Container.GetItem<int>(name);
+            if (Storage.Contains(name)) return Storage.GetItem<int>(name);
             else return null;
         }
 
@@ -100,12 +100,12 @@ namespace TTvActionHub.LuaTools.Stuff
 
         public static char? GetChar(string name)
         {
-            ArgumentNullException.ThrowIfNull(Container, nameof(Container));
+            ArgumentNullException.ThrowIfNull(Storage, nameof(Storage));
             if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
             {
                 throw new ArgumentException($"Invalid name of an item [{name}]", nameof(name));
             }
-            if (Container.Contains(name)) return Container.GetItem<char>(name);
+            if (Storage.Contains(name)) return Storage.GetItem<char>(name);
             else return null;
         }
 
@@ -117,12 +117,12 @@ namespace TTvActionHub.LuaTools.Stuff
 
         public static bool? GetBool(string name)
         {
-            ArgumentNullException.ThrowIfNull(Container, nameof(Container));
+            ArgumentNullException.ThrowIfNull(Storage, nameof(Storage));
             if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
             {
                 throw new ArgumentException($"Invalid name of an item [{name}]", nameof(name));
             }
-            if (Container.Contains(name)) return Container.GetItem<bool>(name);
+            if (Storage.Contains(name)) return Storage.GetItem<bool>(name);
             else return null;
         }
 
@@ -134,13 +134,12 @@ namespace TTvActionHub.LuaTools.Stuff
 
         public static string? GetString(string name)
         {
-            ArgumentNullException.ThrowIfNull(Container, nameof(Container));
+            ArgumentNullException.ThrowIfNull(Storage, nameof(Storage));
             if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
             {
                 throw new ArgumentException($"Invalid name of an item [{name}]", nameof(name));
             }
-            if (Container.Contains(name)) return Container.GetItem<string>(name);
-            else return null;
+            return Storage.Contains(name) ? Storage.GetItem<string>(name) : null;
         }
 
         // double
@@ -152,12 +151,12 @@ namespace TTvActionHub.LuaTools.Stuff
 
         public static double? GetDouble(string name)
         {
-            ArgumentNullException.ThrowIfNull(Container, nameof(Container));
+            ArgumentNullException.ThrowIfNull(Storage, nameof(Storage));
             if (string.IsNullOrEmpty(name) || string.IsNullOrWhiteSpace(name))
             {
                 throw new ArgumentException($"Invalid name of an item [{name}]", nameof(name));
             }
-            object? item = Container.GetItem<object?>(name);
+            object? item = Storage.GetItem<object?>(name);
             if (item is double val) return val;
             else return null;
         }

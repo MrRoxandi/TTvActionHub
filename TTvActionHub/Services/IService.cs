@@ -3,9 +3,9 @@ using TTvActionHub.Items;
 
 namespace TTvActionHub.Services
 {
-    public class ServiceStatusEventArgs(string serviceName, bool isRunninng, string? message) : EventArgs
+    public class ServiceStatusEventArgs(string serviceName, bool isRunning, string? message) : EventArgs
     {
-        public bool IsRunning { get; } = isRunninng;
+        public bool IsRunning { get; } = isRunning;
         public string ServiceName { get; } = serviceName;
         public string? Message { get; } = message;
     }

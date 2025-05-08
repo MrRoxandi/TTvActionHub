@@ -84,7 +84,7 @@ namespace TTvActionHub.LuaTools.Hardware
 
         public static void TypeMessage(IEnumerable<char> message)
         {
-            List<NativeInputs.INPUT> inputs = [];
+            List<NativeInputs.Input> inputs = [];
             foreach(char c in message)
             {
                 inputs.Add(InputWrapper.ConstructCharDown(c));

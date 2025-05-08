@@ -21,7 +21,7 @@ namespace TTvActionHub.LuaTools.Hardware
 
         public static void XPress(int xid)
         {
-            var input = InputWrapper.ConstuctXMouseButtonDown(xid);
+            var input = InputWrapper.ConstructXMouseButtonDown(xid);
             InputWrapper.DispatchInput([input]);
         }
 
@@ -33,7 +33,7 @@ namespace TTvActionHub.LuaTools.Hardware
 
         public static void XRelease(int xid)
         {
-            var input = InputWrapper.ConstuctXMouseButtonUp(xid);
+            var input = InputWrapper.ConstructXMouseButtonUp(xid);
             InputWrapper.DispatchInput([input]);
         }
 

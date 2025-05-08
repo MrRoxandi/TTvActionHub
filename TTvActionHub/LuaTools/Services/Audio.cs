@@ -1,8 +1,8 @@
 ﻿using TTvActionHub.Services;
 
-namespace TTvActionHub.LuaTools.Audio
+namespace TTvActionHub.LuaTools.Services
 {
-    public static class Sounds
+    public static class Audio
     {
         public static AudioService? audio;
         
@@ -27,7 +27,7 @@ namespace TTvActionHub.LuaTools.Audio
             return audio.GetVolume();
         }
 
-        public static void IncreeseVolume(float volume)
+        public static void IncreaseVolume(float volume)
         {
             if (audio == null) { throw new Exception("Audio service was not provided"); };
             var res = audio.GetVolume() + volume;
@@ -35,7 +35,7 @@ namespace TTvActionHub.LuaTools.Audio
             audio.SetVolume((float)(res > 1.0 ? 1.0 : res));
         }
 
-        public static void DecreeseVolume(float volume)
+        public static void DecreaseVolume(float volume)
         {
             if (audio == null) { throw new Exception("Audio service was not provided"); };
 
