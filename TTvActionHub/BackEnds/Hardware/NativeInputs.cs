@@ -9,27 +9,27 @@ namespace TTvActionHub.BackEnds.Hardware
 {
     internal static class NativeInputs
     {
-        internal struct INPUT
+        internal struct Input
         {
             public uint Type;
-            public MOUSEKEYBDHARDWAREINPUT Data;
+            public MouseKeybdHardwareInput Data;
         }
 
         [StructLayout(LayoutKind.Explicit)]
-        internal struct MOUSEKEYBDHARDWAREINPUT
+        internal struct MouseKeybdHardwareInput
         {
             [FieldOffset(0)]
-            public MOUSEINPUT Mouse;
+            public MouseInput Mouse;
 
             [FieldOffset(0)]
-            public KEYBDINPUT Keyboard;
+            public KeybdInput Keyboard;
 
             [FieldOffset(0)]
-            public HARDWAREINPUT Hardware;
+            public HardwareInput Hardware;
         }
         
         [StructLayout(LayoutKind.Sequential)]
-        internal struct MOUSEINPUT
+        internal struct MouseInput
         {
             public int dx;
             public int dy;
@@ -40,7 +40,7 @@ namespace TTvActionHub.BackEnds.Hardware
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        internal struct KEYBDINPUT
+        internal struct KeybdInput
         {
             public ushort wVk;
             public ushort wScan;
@@ -50,7 +50,7 @@ namespace TTvActionHub.BackEnds.Hardware
         }
 
         [StructLayout(LayoutKind.Sequential)]
-        internal struct HARDWAREINPUT
+        internal struct HardwareInput
         {
             public uint uMsg;
             public ushort wParamL;

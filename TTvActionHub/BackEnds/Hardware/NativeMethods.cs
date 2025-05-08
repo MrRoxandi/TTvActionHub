@@ -13,7 +13,9 @@ namespace TTvActionHub.BackEnds.Hardware
         [DllImport("user32.dll", SetLastError = true)]
         public static extern short GetKeyState(ushort virtualKeyCode);
         [DllImport("user32.dll", SetLastError = true)]
-        public static extern uint SendInput(uint numberOfInputs, INPUT[] inputs, int sizeOfInputStructure);
+        public static extern uint SendInput(uint numberOfInputs, Input[] inputs, int sizeOfInputStructure);
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern bool BlockInput(bool fBlockIt);
         [DllImport("user32.dll")]
         public static extern nint GetMessageExtraInfo();
         [DllImport("user32.dll")]

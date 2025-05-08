@@ -12,18 +12,17 @@ namespace TTvActionHub.BackEnds
 {
     internal class MainLogger : ILogger, IDisposable
     {
-        private string _filepath;
-        private StreamWriter _writer;
-        private object _lock = new object();
+        private readonly StreamWriter _writer;
+        private readonly object _lock = new();
         private bool _disposed = false;
-        private List<string> _lastLogs = [];
+        private readonly List<string> _lastLogs = [];
 
         public MainLogger()
         {
             var dir = Path.Combine(Directory.GetCurrentDirectory(), "logs");
             Directory.CreateDirectory(dir);
-            _filepath = Path.Combine(dir, DateTime.Now.ToString("yyyy-MM-dd-HH.mm") + ".txt");
-            _writer = new(new FileStream(_filepath, FileMode.Create, FileAccess.Write, FileShare.Read))
+            var filepath = Path.Combine(dir, DateTime.Now.ToString("yyyy-MM-dd-HH.mm") + ".txt");
+            _writer = new(new FileStream(filepath, FileMode.Create, FileAccess.Write, FileShare.Read))
             {
                 AutoFlush = true
             };
@@ -42,7 +41,7 @@ namespace TTvActionHub.BackEnds
             {
                 consoleMessage = $"{message} {err.Message} (full trace in file)"; 
                 fileMessage = $"{message}\n" +
-                    $"\tErorr message: {err.Message}\n" +
+                    $"\tError message: {err.Message}\n" +
                     $"\tStack trace: {err.StackTrace}\n";
             }
             try
@@ -100,11 +99,9 @@ namespace TTvActionHub.BackEnds
 
         public void Dispose()
         {
-            if (!_disposed)
-            {
-                _writer?.Dispose();
-                _disposed = true;
-            }
+            if (_disposed) return;
+            _writer?.Dispose();
+            _disposed = true;
         }
 
     }

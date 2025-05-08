@@ -1,58 +1,58 @@
-## Documentation for the Keyboard module in `TTvActionHub.LuaTools.Hardware`
+# Documentation for the Keyboard module in `TTvActionHub.LuaTools.Hardware`
 
-### Connecting in the configuration file
+## Importing into the configuration file
 
-Module connection example:
+Example of importing the module:
 
 ```lua
 local Keyboard = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Keyboard
 ```
 
-Example of getting the key code for 'B' and simulating a single press of this key:
+Example of getting the key code for 'B' and simulating a press of this key:
 
 ```lua
 local key = Keyboard.Key.B -- Get the key code for 'B'
 Keyboard.TypeKey(key)
 ```
 
-### Available keys for simulation...
+## Available keys for simulation
 
 Currently, all available keys are located in the `Key` field of the `Keyboard` module. Below is a list of them:
 
-1.  **Number row**:
-    `D0`, `D1`, `D2`, `D3`, `D4`, `D5`, `D6`, `D7`, `D8`, `D9`
-2.  **Alphabet**:
-    `A`, `B`, `C`, `D`, `E`, `F`, `G`, `H`, `I`, `J`, `K`, `L`,`M`,
-    `N`, `O`, `P`, `Q`, `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z`
-3.  **Numeric keypad**:
-    `NumLock`, `NumPad0`, `NumPad1`, `NumPad2`, `NumPad3`, `NumPad4`,
-    `NumPad5`, `NumPad6`, `NumPad7`, `NumPad8`, `NumPad9`, `Multiply`,
-    `Separator`, `Add`, `Subtract`, `Decimal`, `Divide`
-4.  **Function keys:**
-    `F1`, `F2`, `F3`, `F4`, `F5`, `F6`, `F7`, `F8`, `F9`,
-    `F10`, `F11`, `F12`, `F13`, `F14`, `F15`, `F16`, `F17`,
-    `F18`, `F19`, `F20`, `F21`, `F22`, `F23`, `F24`
-5.  **Modifier keys**:
-    `Shift`, `RShiftKey`, `LShiftKey`, `Alt`, `LAlt`, `RAlt`, `Control`, `LControlKey`, `RControlKey`
-6.  **Additional keys**:
-    `LWin`, `RWin`, `Backspace`, `Tab`, `LineFeed`, `Clear`, `Enter`, `Pause`, `CapsLock`, `Escape`, `Space`, `PageUp`, `PageDown`, `End`, `Home`, `PrintScreen`, `Insert`, `Delete`, `Scroll`, `Sleep`,
-7.  **Arrow keys**:
-    `Up`, `Right`, `Left`, `Down`
+1. **Number row**:
+   `D0`, `D1`, `D2`, `D3`, `D4`, `D5`, `D6`, `D7`, `D8`, `D9`
+2. **Alphabet**:
+   `A`, `B`, `C`, `D`, `E`, `F`, `G`, `H`, `I`, `J`, `K`, `L`,`M`,
+   `N`, `O`, `P`, `Q`, `R`, `S`, `T`, `U`, `V`, `W`, `X`, `Y`, `Z`
+3. **Numeric keypad**:
+   `NumLock`, `NumPad0`, `NumPad1`, `NumPad2`, `NumPad3`, `NumPad4`,
+   `NumPad5`, `NumPad6`, `NumPad7`, `NumPad8`, `NumPad9`, `Multiply`,
+   `Separator`, `Add`, `Subtract`, `Decimal`, `Divide`
+4. **Function keys:**
+   `F1`, `F2`, `F3`, `F4`, `F5`, `F6`, `F7`, `F8`, `F9`,
+   `F10`, `F11`, `F12`, `F13`, `F14`, `F15`, `F16`, `F17`,
+   `F18`, `F19`, `F20`, `F21`, `F22`, `F23`, `F24`
+5. **Special keys**:
+   `Shift`, `RShiftKey`, `LShiftKey`, `Alt`, `LAlt`, `RAlt`, `Control`, `LControlKey`, `RControlKey`
+6. **Additional keys**:
+   `LWin`, `RWin`, `Backspace`, `Tab`, `LineFeed`, `Clear`, `Enter`, `Pause`, `CapsLock`, `Escape`, `Space`, `PageUp`, `PageDown`, `End`, `Home`, `PrintScreen`, `Insert`, `Delete`, `Scroll`, `Sleep`,
+7. **Arrow keys**:
+   `Up`, `Right`, `Left`, `Down`
 
-### Available keyboard simulation methods
+## Available keyboard simulation methods
 
-| Method                                   | Description                                                      |
-| ---------------------------------------- | ---------------------------------------------------------------- |
-| `PressKey(Key key)`                      | Simulates pressing a key (does not release it)                   |
-| `ReleaseKey(Key key)`                    | Releases a pressed key                                           |
-| `TypeKey(Key key)`                       | Simulates a brief key press (press, then release)                |
-| `TypeMessage(string message)`            | Simulates typing the specified message string                    |
-| `HoldKey(Key key, int timeDelay = 1000)` | Holds down a key for the specified duration (default is 1000 ms) |
+| Method                                   | Description                                                       |
+| ---------------------------------------- | ----------------------------------------------------------------- |
+| `PressKey(Key key)`                      | Simulates pressing a key (does not release it).                   |
+| `ReleaseKey(Key key)`                    | Releases a pressed key.                                           |
+| `TypeKey(Key key)`                       | Simulates a short key press (press, then release).                |
+| `TypeMessage(string message)`            | Simulates typing a message from the given string.                 |
+| `HoldKey(Key key, int timeDelay = 1000)` | Holds a key down for the specified duration (default is 1000 ms). |
 
-Example using `TypeMessage` in the configuration file:
+Example of using `TypeMessage` in the configuration file:
 
 ```lua
 local Keyboard = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Keyboard
 
-Keyboard.TypeMessage('Example text!') -- Simulates typing the message 'Example text!'
+Keyboard.TypeMessage('Example text!') -- Simulates typing the message "Example text!"
 ```

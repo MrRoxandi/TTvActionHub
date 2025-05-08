@@ -1,24 +1,24 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System.Collections.Concurrent;
-using TTvActionHub.LuaTools.Audio;
-using TTvActionHub.LuaTools.Stuff;
 using TTvActionHub.Services;
 using TTvActionHub.Managers;
 using TTvActionHub.Logs;
 using Terminal.Gui;
+using TTvActionHub.LuaTools.Services;
+using TTvActionHub.LuaTools.Services.ContainerItems;
+using TTvActionHub.BackEnds;
 
 namespace TTvActionHub
 {
     internal abstract class Program
     {
-        static string ConfigurationPath => Path.Combine(Directory.GetCurrentDirectory(), "configs");
-        static ServiceProvider? provider;
+        private static string ConfigurationPath => Path.Combine(Directory.GetCurrentDirectory(), "configs");
+        private static ServiceProvider? _provider;
 
-        static readonly ConcurrentDictionary<string, IService> runningServices = [];
+        private static readonly ConcurrentDictionary<string, IService> RunningServices = [];
 
-        static readonly object serviceManagementLock = new();
-        static LuaConfigManager? luaConfigManager;
-        static Shell? shell;
+        private static readonly object ServiceManagementLock = new();
+        private static Shell? shell;
 
         static void Main(/*string[] args*/)
         {
@@ -51,6 +51,9 @@ namespace TTvActionHub
             try
             {
                 ServiceCollection collection = new();
+                collection.AddSingleton<IDataBaseContext, DataBaseContext>();
+                collection.AddSingleton<BackEnds.DataContainer>();
+
                 collection.AddSingleton<LuaConfigManager>();
                 collection.AddSingleton<IConfig, Configuration>(sp =>
                 {
@@ -58,10 +61,8 @@ namespace TTvActionHub
                     return new Configuration(lcm);
                 });
 
-                collection.AddSingleton<IService, TwitchChatService>();
-                collection.AddSingleton<IService, EventSubService>();
+                collection.AddSingleton<IService, TwitchService>();
                 collection.AddSingleton<IService, TimerActionsService>();
-                collection.AddSingleton<IService, ContainerService>();
                 collection.AddSingleton<IService, AudioService>();
                 // ---------------------------------------------------------
 
@@ -71,11 +72,11 @@ namespace TTvActionHub
                 {
                     var config = sp.GetRequiredService<IConfig>();
                     return new Shell(config, 
-                        StartServiceByName, StopServiceByName, ReloadServiceConfiguraionByName,
+                        StartServiceByName, StopServiceByName, ReloadServiceConfigurationByName,
                         GetServiceInfoByName);
                 });
 
-                provider = collection.BuildServiceProvider();
+                _provider = collection.BuildServiceProvider();
                 Logger.Info("Dependency Injection configured.");
                 Console.WriteLine("Dependency Injection configured.");
             }
@@ -87,7 +88,8 @@ namespace TTvActionHub
                 _ = Console.ReadLine();
                 return;
             }
-            shell = provider.GetService<Shell>();
+            shell = _provider.GetService<Shell>();
+            Container.Storage = _provider.GetService<DataContainer>();
             if (shell == null)
             {
                 Application.Shutdown();
@@ -97,20 +99,20 @@ namespace TTvActionHub
                 return;
             }
 
-            IDisposable? shellDisposable = shell as IDisposable;
+            //Shell shellDisposable = shell;
             try
             {
                 Console.WriteLine("Initializing Shell UI...");
                 Logger.Info("Initializing Shell UI...");
                 shell.InitializeUI();
 
-                Console.WriteLine("Initializ services...");
-                Logger.Info("Initializ services...");
+                Console.WriteLine("Initializing services...");
+                Logger.Info("Initializing services...");
 
                 InitAllServices();
 
-                Console.WriteLine("Initializ static lua bridges...");
-                Logger.Info("Initializ static lua bridges...");
+                Console.WriteLine("Initializing static lua bridges...");
+                Logger.Info("Initializing static lua bridges...");
 
                 InitializeStaticLuaBridges();
                 
@@ -131,7 +133,7 @@ namespace TTvActionHub
                 DeInitAllServices();
                 Logger.Info("Service shutdown process finished.");
 
-                shellDisposable?.Dispose(); 
+                shell?.Dispose(); 
                 Application.Shutdown(); 
                 
                 Logger.Info("Program finished.");
@@ -145,13 +147,13 @@ namespace TTvActionHub
 
         private static void InitAllServices()
         {
-            if (provider == null || shell == null)
+            if (_provider == null || shell == null)
             {
                 Logger.Warn("Cannot start services: Provider or Shell is not initialized.");
                 return;
             }
 
-            var servicesToStart = provider.GetServices<IService>();
+            var servicesToStart = _provider.GetServices<IService>();
 
             foreach (var service in servicesToStart)
             {
@@ -162,13 +164,13 @@ namespace TTvActionHub
                     continue;
                 }
                 shell.AddService(serviceName);
-                shell.CmdOut($"Attemting to start {serviceName}...");
-                Logger.Info($"Attemting to start {serviceName}...");
+                shell.CmdOut($"Attempting to start {serviceName}...");
+                Logger.Info($"Attempting to start {serviceName}...");
                 try
                 {
                     service.StatusChanged += OnServiceStatusChangedHandler;
                     service.Run();
-                    bool state = service.IsRunning;
+                    var state = service.IsRunning;
                     shell.UpdateServicesStates(serviceName, state);
                     if (state)
                     {
@@ -180,7 +182,7 @@ namespace TTvActionHub
                         shell.CmdOut($"{serviceName} run command issued, but service reports not running immediately.");
                         Logger.Warn($"{serviceName} run command issued, but service reports not running immediately.");
                     }
-                    runningServices.TryAdd(serviceName, service);
+                    RunningServices.TryAdd(serviceName, service);
                 }
                 catch (Exception ex)
                 {
@@ -196,69 +198,67 @@ namespace TTvActionHub
 
         private static void DeInitAllServices()
         {
-            if (provider == null || shell == null)
+            if (_provider == null || shell == null)
             {
                 Logger.Warn("Cannot stop services: Provider or Shell is not initialized.");
                 return;
             }
             shell.CmdOut("Attempting to stop all running services...");
-            var serviceNamesToStop = runningServices.Keys.ToList();
-            foreach (var sname in serviceNamesToStop)
+            var serviceNamesToStop = RunningServices.Keys.ToList();
+            foreach (var sName in serviceNamesToStop)
             {
-                if (runningServices.TryRemove(sname, out var service))
+                if (!RunningServices.TryRemove(sName, out var service)) continue;
+                shell.CmdOut($"Attempting to stop {sName}...");
+                Logger.Info($"Attempting to stop {sName}...");
+                try
                 {
-                    shell.CmdOut($"Attempting to stop {sname}...");
-                    Logger.Info($"Attempting to stop {sname}...");
-                    try
-                    {
-                        service.StatusChanged -= OnServiceStatusChangedHandler;
-                        service.Stop();
-                        shell.UpdateServicesStates(sname, false);
-                        shell.CmdOut($"{sname} stopped.");
-                        Logger.Info($"{sname} stopped successfully.");
-                    }
-                    catch (Exception ex)
-                    {
-                        shell.UpdateServicesStates(sname, false); // Anyway it is not working...
-                        shell.CmdOut($"ERROR stopping {sname}: {ex.Message}");
-                        Logger.Error($"Failed to stop {sname}:", ex);
-                    }
+                    service.StatusChanged -= OnServiceStatusChangedHandler;
+                    service.Stop();
+                    shell.UpdateServicesStates(sName, false);
+                    shell.CmdOut($"{sName} stopped.");
+                    Logger.Info($"{sName} stopped successfully.");
+                }
+                catch (Exception ex)
+                {
+                    shell.UpdateServicesStates(sName, false); // Anyway it is not working...
+                    shell.CmdOut($"ERROR stopping {sName}: {ex.Message}");
+                    Logger.Error($"Failed to stop {sName}:", ex);
                 }
             }
-            runningServices.Clear();
+            RunningServices.Clear();
             shell.CmdOut("Service shutdown process finished.");
         }
 
         private static string[]? GetServiceInfoByName(string name)
         {
-            if (provider == null || shell == null)
+            if (_provider == null || shell == null)
             {
                 Logger.Error("Get service info: Provider or Shell is not initialized.");
                 return null;
             }
 
-            var finded = runningServices.TryGetValue(name, out var service);
-            if(!finded || service == null)
-            {
-                shell?.CmdOut($"Unable to find running service with name: [{name}] to get it's information");
-                return null;
-            }
+            var finded = RunningServices.TryGetValue(name, out var service);
+            if (finded && service != null)
+                return service switch
+                {
+                    TwitchService ess => ess.TwitchEvents?.Keys.Select(e => e.Item1).ToArray() ?? [],
+                    TimerActionsService tas => tas.Actions?.Keys.ToArray() ?? [],
+                    _ => []
+                };
+            shell?.CmdOut($"Unable to find running service with name: [{name}] to get it's information");
+            return null;
 
-            if (service is TwitchChatService tcs) return tcs.Commands?.Keys.ToArray() ?? [];
-            if (service is EventSubService ess) return ess.Rewards?.Keys.ToArray() ?? [];
-            if (service is TimerActionsService tas) return tas.TActions?.Keys.ToArray() ?? [];
-            return [];
         }
 
-        private static void ReloadServiceConfiguraionByName(string name)
+        private static void ReloadServiceConfigurationByName(string name)
         {
-            if (provider == null || shell == null)
+            if (_provider == null || shell == null)
             {
                 Logger.Error("Cannot reload service configuration: Provider or Shell is not initialized.");
                 return;
             }
 
-            var finded = runningServices.TryGetValue(name, out var service);
+            var finded = RunningServices.TryGetValue(name, out var service);
             
             if(!finded || service == null)
             {
@@ -283,12 +283,12 @@ namespace TTvActionHub
 
         private static void StopServiceByName(string name)
         {
-            if (provider == null || shell == null)
+            if (_provider == null || shell == null)
             {
                 Logger.Error("Cannot stop services: Provider or Shell is not initialized.");
                 return;
             }
-            var finded = runningServices.TryRemove(name, out var service);
+            var finded = RunningServices.TryRemove(name, out var service);
             if (service == null || !finded)
             {
                 shell.CmdOut($"Unable to get service with name: {name}");
@@ -318,13 +318,13 @@ namespace TTvActionHub
 
         private static void StartServiceByName(string name)
         {
-            if (shell == null || provider == null)
+            if (shell == null || _provider == null)
             {
                 Logger.Warn("Cannot start services: Provider or Shell is not initialized.");
                 return;
             }
 
-            var finded = runningServices.TryGetValue(name, out var service);
+            var finded = RunningServices.TryGetValue(name, out var service);
             if (finded && service != null)
             {
                 if (service.IsRunning)
@@ -333,12 +333,12 @@ namespace TTvActionHub
                     Logger.Warn($"Service {name} already running");
                     return;
                 }
-                runningServices.TryRemove(service.ServiceName, out _);
+                RunningServices.TryRemove(service.ServiceName, out _);
             }
             // --- Attempting to find service ---
-            service = provider.GetServices<IService>().FirstOrDefault(
+            service = _provider.GetServices<IService>().FirstOrDefault(
                 sv => sv.ServiceName.Equals(name, StringComparison.OrdinalIgnoreCase));
-            if (service == default(IService))
+            if (service == null)
             {
                 shell.CmdOut($"Unable to start service: {name}. Looks like it dosn't registred");
                 Logger.Warn($"Unable to start service: {name}. Looks like it dosn't registred");
@@ -351,9 +351,9 @@ namespace TTvActionHub
                 service.StatusChanged += OnServiceStatusChangedHandler;
                 // service.Run()
                 Task.Run(service.Run);
-                var isrunning = service.IsRunning;
-                shell.UpdateServicesStates(service.ServiceName, isrunning);
-                if (isrunning)
+                var isRunning = service.IsRunning;
+                shell.UpdateServicesStates(service.ServiceName, isRunning);
+                if (isRunning)
                 {
                     shell.CmdOut($"{service.ServiceName} run command issued, service reports running.");
                     Logger.Info($"{service.ServiceName} run command issued, service reports running.");
@@ -363,7 +363,7 @@ namespace TTvActionHub
                     shell.CmdOut($"{service.ServiceName} run command issued, but service reports not running immediately.");
                     Logger.Warn($"{service.ServiceName} run command issued, but service reports not running immediately.");
                 }
-                runningServices.TryAdd(service.ServiceName, service);
+                RunningServices.TryAdd(service.ServiceName, service);
                 UpdateStaticLuaBridges(service);
             }
             catch (Exception ex)
@@ -382,30 +382,36 @@ namespace TTvActionHub
 
             shell.UpdateServicesStates(e.ServiceName, e.IsRunning);
 
-            string reason = string.IsNullOrEmpty(e.Message) ? "" : $" Reason: {e.Message}";
-            bool wasExpectedRunning = runningServices.ContainsKey(e.ServiceName);
+            var reason = string.IsNullOrEmpty(e.Message) ? "" : $" Reason: {e.Message}";
+            var wasExpectedRunning = RunningServices.ContainsKey(e.ServiceName);
 
-            if (!e.IsRunning && wasExpectedRunning)
+            switch (e.IsRunning)
             {
-                Logger.Warn($"Service '{e.ServiceName}' stopped unexpectedly.{reason}");
-                shell.CmdOut($"ALERT: Service '{e.ServiceName}' stopped!{reason}");
-
-                if (runningServices.TryRemove(e.ServiceName, out _))
+                case false when wasExpectedRunning:
                 {
-                    Logger.Info($"Service '{e.ServiceName}' removed from active list due to unexpected stop.");
-                }
-            }
+                    Logger.Warn($"Service '{e.ServiceName}' stopped unexpectedly.{reason}");
+                    shell.CmdOut($"ALERT: Service '{e.ServiceName}' stopped!{reason}");
 
-            else if (e.IsRunning && !wasExpectedRunning)
-            {
-                Logger.Warn($"Service '{e.ServiceName}' reported running unexpectedly.{reason}");
-                if (sender is IService serviceInstance)
-                {
-                    runningServices.TryAdd(e.ServiceName, serviceInstance);
+                    if (RunningServices.TryRemove(e.ServiceName, out _))
+                    {
+                        Logger.Info($"Service '{e.ServiceName}' removed from active list due to unexpected stop.");
+                    }
+
+                    break;
                 }
-            } else
-            {
-                Logger.Info($"Service '{e.ServiceName}' status changed to: {(e.IsRunning ? "Running" : "Stopped")}.{reason}");
+                case true when !wasExpectedRunning:
+                {
+                    Logger.Warn($"Service '{e.ServiceName}' reported running unexpectedly.{reason}");
+                    if (sender is IService serviceInstance)
+                    {
+                        RunningServices.TryAdd(e.ServiceName, serviceInstance);
+                    }
+
+                    break;
+                }
+                default:
+                    Logger.Info($"Service '{e.ServiceName}' status changed to: {(e.IsRunning ? "Running" : "Stopped")}.{reason}");
+                    break;
             }
         }
 
@@ -415,18 +421,18 @@ namespace TTvActionHub
             {
                 Logger.Info("Initializing static bridges for Lua...");
 
-                var allServices = provider!.GetServices<IService>();
+                var allServices = _provider!.GetServices<IService>();
                 foreach (var service in allServices)
                 {
-                    if (service is TwitchChatService ttvServ)
+                    switch (service)
                     {
-                        TwitchChat.Client = ttvServ!.Client;
-                        TwitchChat.Channel = ttvServ!.Channel;
+                        case TwitchService ttvServ:
+                            TwitchTools.Service = ttvServ;
+                            break;
+                        case AudioService audioServ:
+                            Audio.audio = audioServ!;
+                            break;
                     }
-                    else if (service is AudioService audioServ)
-                        Sounds.audio = audioServ!;
-                    else if (service is ContainerService containerServ)
-                        Storage.Container = containerServ!;
                 }
             } catch (Exception ex)
             {
@@ -440,15 +446,15 @@ namespace TTvActionHub
             shell!.CmdOut($"Updating static bridges for {s.ServiceName}...");
             Logger.Info($"Updating static bridges for {s.ServiceName}...");
 
-            if (s is TwitchChatService ttvServ)
+            switch (s)
             {
-                TwitchChat.Client = ttvServ!.Client;
-                TwitchChat.Channel = ttvServ!.Channel;
+                case TwitchService ttvServ:
+                    TwitchTools.Service = ttvServ;
+                    break;
+                case AudioService audioServ:
+                    Audio.audio = audioServ!;
+                    break;
             }
-            else if (s is AudioService audioServ)
-                Sounds.audio = audioServ!;
-            else if (s is ContainerService containerServ)
-                Storage.Container = containerServ!;
             Logger.Info("Static bridges updated successfully.");
         }
     }

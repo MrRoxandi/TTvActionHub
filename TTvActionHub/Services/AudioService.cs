@@ -7,12 +7,12 @@ using System;
 
 namespace TTvActionHub.Services
 {
-    enum PlaybackState
+    internal enum PlaybackState
     {
-        Playing, Stopped, Paused
+        Playing = 0, Stopped = 1, Paused = 2
     }
 
-    public class AudioService : IService, IDisposable
+    public sealed class AudioService : IService, IDisposable
     {
         private CancellationTokenSource? _serviceCancellationToken;
         private TaskCompletionSource<bool>? _soundCompletionSource;
@@ -20,33 +20,28 @@ namespace TTvActionHub.Services
         private PlaybackState _playbackState = PlaybackState.Stopped;
         private string _currentPlayingFile = string.Empty;
         private MediaPlayer? _mediaPlayer;
-        private bool isRunning = false;
         private Task? _workerTask;
-        private LibVLC? _libVLC;
+        private LibVLC? _libVlc;
 
         public event EventHandler<ServiceStatusEventArgs>? StatusChanged;
 
         private void OnPlaybackEncounteredError(object? sender, EventArgs e)
         {
-            if (_playbackState == PlaybackState.Playing)
-            {
-                _playbackState = PlaybackState.Stopped;
-                _soundCompletionSource?.TrySetException(new Exception($"{ServiceName} failed to play audio"));
-                Logger.Log(LOGTYPE.ERROR, ServiceName, $"Error during playback for: {_currentPlayingFile}");
-            }
+            if (_playbackState != PlaybackState.Playing) return;
+            _playbackState = PlaybackState.Stopped;
+            _soundCompletionSource?.TrySetException(new Exception($"{ServiceName} failed to play audio"));
+            Logger.Log(LOGTYPE.ERROR, ServiceName, $"Error during playback for: {_currentPlayingFile}");
         }
 
         private void OnPlaybackEndReached(object? sender, EventArgs e)
         {
-            if (_playbackState == PlaybackState.Playing)
+            if (_playbackState != PlaybackState.Playing) return;
+            _playbackState = PlaybackState.Stopped;
+            if (!_soundCompletionSource!.TrySetResult(true))
             {
-                _playbackState = PlaybackState.Stopped;
-                if (!_soundCompletionSource!.TrySetResult(true))
-                {
-                    _soundCompletionSource.TrySetException(new Exception($"{ServiceName} failed to set stop state"));
-                }
-                Logger.Log(LOGTYPE.INFO, ServiceName, $"Playback finished for: {_currentPlayingFile}");
+                _soundCompletionSource.TrySetException(new Exception($"{ServiceName} failed to set stop state"));
             }
+            Logger.Log(LOGTYPE.INFO, ServiceName, $"Playback finished for: {_currentPlayingFile}");
         }
 
         public void Run()
@@ -61,8 +56,8 @@ namespace TTvActionHub.Services
                 OnStatusChanged(false, "Unable to initialize service due to error. Check logs");
                 return;
             }
-            _libVLC = new();
-            _mediaPlayer = new(_libVLC);
+            _libVlc = new();
+            _mediaPlayer = new(_libVlc);
             _mediaPlayer.EndReached += OnPlaybackEndReached;
             _mediaPlayer.EncounteredError += OnPlaybackEncounteredError;
             _serviceCancellationToken = new();
@@ -71,7 +66,7 @@ namespace TTvActionHub.Services
             _soundCompletionSource.TrySetResult(true);
             Logger.Log(LOGTYPE.INFO, ServiceName, "Sound service is running");
             OnStatusChanged(true);
-            isRunning = true;
+            IsRunning = true;
         }
 
         public void Stop()
@@ -94,9 +89,9 @@ namespace TTvActionHub.Services
             _mediaPlayer!.EncounteredError -= OnPlaybackEncounteredError;
             _mediaPlayer?.Stop();
             _mediaPlayer?.Dispose();
-            _libVLC?.Dispose();
+            _libVlc?.Dispose();
             OnStatusChanged(false);
-            isRunning = false;
+            IsRunning = false;
         }
 
         public void StopPlaying()
@@ -122,20 +117,24 @@ namespace TTvActionHub.Services
 
         public void SetVolume(float volume)
         {
-            if (volume < 0) throw new ArgumentOutOfRangeException(nameof(volume), "Minimum value for volume is 0.0");
-            if (volume > 1) throw new ArgumentOutOfRangeException(nameof(volume), "Maximum value for volume is 1.0");
-            Logger.Log(LOGTYPE.INFO, ServiceName, $"Setting volume to {volume}");
-            _mediaPlayer!.Volume = (int)(volume * 100);
+            switch (volume)
+            {
+                case < 0:
+                    throw new ArgumentOutOfRangeException(nameof(volume), "Minimum value for volume is 0.0");
+                case > 1:
+                    throw new ArgumentOutOfRangeException(nameof(volume), "Maximum value for volume is 1.0");
+                default:
+                    Logger.Log(LOGTYPE.INFO, ServiceName, $"Setting volume to {volume}");
+                    _mediaPlayer!.Volume = (int)(volume * 100);
+                    break;
+            }
         }
 
         public Task PlaySoundAsync(Uri audioSourceUri)
         {
-            if (audioSourceUri != null)
-            {
-                _soundQueue.Enqueue(audioSourceUri);
-                return Task.CompletedTask;
-            }
-            throw new ArgumentNullException(nameof(audioSourceUri));
+            ArgumentNullException.ThrowIfNull(audioSourceUri, nameof(audioSourceUri));
+            _soundQueue.Enqueue(audioSourceUri);
+            return Task.CompletedTask;
         }
 
         private async Task ProcessSoundQueueAsync()
@@ -153,7 +152,7 @@ namespace TTvActionHub.Services
 
                     } catch (Exception ex)
                     {
-                        Logger.Log(LOGTYPE.ERROR, ServiceName, "Error processing sound reques:", ex);
+                        Logger.Log(LOGTYPE.ERROR, ServiceName, "Error processing sound request:", ex);
                     }
                 }
                 else
@@ -167,7 +166,7 @@ namespace TTvActionHub.Services
 
         private async Task ProcessSoundUri(Uri audioUri)
         {
-            string path = audioUri.LocalPath;
+            var path = audioUri.LocalPath;
             _currentPlayingFile = audioUri.OriginalString;
             try
             {
@@ -177,11 +176,11 @@ namespace TTvActionHub.Services
                     {
                         throw new FileNotFoundException($"File not found: {path}");
                     }
-                    using var media = new Media(_libVLC!, audioUri);
+                    using var media = new Media(_libVlc!, audioUri);
                     await PlayMediaAsync(media);
                 } else
                 {
-                    using var media = new Media(_libVLC!, audioUri.OriginalString, FromType.FromLocation);
+                    using var media = new Media(_libVlc!, audioUri.OriginalString, FromType.FromLocation);
                     await media.Parse(MediaParseOptions.ParseNetwork);
                     await PlayMediaAsync(media);
                 }
@@ -203,19 +202,15 @@ namespace TTvActionHub.Services
             {
                 _playbackState = PlaybackState.Playing;
                 _soundCompletionSource = new();
-                if (media.SubItems.Count > 0)
-                {
-                    _mediaPlayer.Play(media.SubItems.First());
-                } else
-                    _mediaPlayer.Play(media);
+                _mediaPlayer.Play(media.SubItems.Count > 0 ? media.SubItems.First() : media);
                 Logger.Log(LOGTYPE.INFO, ServiceName, $"Playback started for: {_currentPlayingFile}");
 
-                var comletedTask = await Task.WhenAny(_soundCompletionSource.Task, Task.Delay(Timeout.Infinite, _serviceCancellationToken!.Token));
-                if (comletedTask == _soundCompletionSource.Task)
+                var completedTask = await Task.WhenAny(_soundCompletionSource.Task, Task.Delay(Timeout.Infinite, _serviceCancellationToken!.Token));
+                if (completedTask == _soundCompletionSource.Task)
                 {
-                    if (comletedTask.IsFaulted)
+                    if (completedTask.IsFaulted)
                     {
-                        var ex = comletedTask.Exception.InnerException;
+                        var ex = completedTask.Exception.InnerException;
                         if (ex != null) throw ex;
                     }
                     else if (_soundCompletionSource.Task.Result == false)
@@ -223,7 +218,7 @@ namespace TTvActionHub.Services
                         Logger.Log(LOGTYPE.INFO, ServiceName, "Playback cancelled externally");
                     }
                 }
-                else if (comletedTask.IsCanceled)
+                else if (completedTask.IsCanceled)
                 {
                     Logger.Log(LOGTYPE.INFO, ServiceName, "Playback cancelled via CancellationToken");
                     _playbackState = PlaybackState.Stopped;
@@ -246,20 +241,18 @@ namespace TTvActionHub.Services
             GC.SuppressFinalize(this);
         }
 
-        protected virtual void Dispose(bool disposing)
+        private void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-                Stop();
-                _serviceCancellationToken?.Dispose();
-            }
+            if (!disposing) return;
+            Stop();
+            _serviceCancellationToken?.Dispose();
         }
 
-        public string ServiceName { get => "AudioService"; }
+        public string ServiceName => "AudioService";
 
-        public bool IsRunning => isRunning;
+        public bool IsRunning { get; private set; } = false;
 
-        protected virtual void OnStatusChanged(bool isRunning, string? message = null)
+        private void OnStatusChanged(bool isRunning, string? message = null)
         {
             try
             {

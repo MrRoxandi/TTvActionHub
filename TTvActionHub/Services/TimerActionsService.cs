@@ -5,9 +5,9 @@ using TTvActionHub.Managers;
 
 namespace TTvActionHub.Services
 {
-    public class TimerActionsService : IService, IUpdatableConfiguration
+    public sealed class TimerActionsService : IService, IUpdatableConfiguration
     {
-        public ConcurrentDictionary<string, TimerAction>? TActions { get; set; }
+        public ConcurrentDictionary<string, TimerAction>? Actions { get; set; }
         public event EventHandler<ServiceStatusEventArgs>? StatusChanged;
         private readonly LuaConfigManager _configManager;
         private readonly IConfig _config;
@@ -17,23 +17,23 @@ namespace TTvActionHub.Services
             _config = config;
             _configManager = manager;
             var tActions = _configManager.LoadTActions() ?? throw new Exception($"Bad configuration for {ServiceName}");
-            TActions = tActions;
+            Actions = tActions;
         }
 
         public void Run()
         {
-            if (TActions == null)
+            if (Actions == null)
             {
                 OnStatusChanged(false);
                 return;
             }
-            if (TActions.IsEmpty)
+            if (Actions.IsEmpty)
             {
                 Logger.Log(LOGTYPE.INFO, ServiceName, "Nothing to run. Skipping...");
                 OnStatusChanged(true);
                 return;
             }
-            foreach (var (_, e) in TActions)
+            foreach (var (_, e) in Actions)
             {
                 Logger.Log(LOGTYPE.INFO, ServiceName, $"Running [{e.Name}] action");
                 e.Run();
@@ -44,18 +44,18 @@ namespace TTvActionHub.Services
 
         public void Stop()
         {
-            if (TActions == null)
+            if (Actions == null)
             {
                 OnStatusChanged(false);
                 return;
             }
-            if (TActions.IsEmpty)
+            if (Actions.IsEmpty)
             {
                 Logger.Log(LOGTYPE.INFO, ServiceName, "Nothing to stop. Skipping...");
                 OnStatusChanged(false);
                 return;
             }
-            foreach (var (_, e) in TActions)
+            foreach (var (_, e) in Actions)
             {
                 if (!e.IsRunning) continue;
                 Logger.Log(LOGTYPE.INFO, ServiceName, $"Stopping [{e.Name}] action");
@@ -67,21 +67,21 @@ namespace TTvActionHub.Services
 
         public bool UpdateConfiguration()
         {
-            if (_configManager.LoadTActions() is not ConcurrentDictionary<string, TimerAction> tActions)
+            if (_configManager.LoadTActions() is not { } tActions)
             {
                 return false;
             }
-            if (TActions != null && !TActions.IsEmpty)
+            if (Actions is { IsEmpty: false })
             {
-                foreach (var (_, e) in TActions)
+                foreach (var (_, e) in Actions)
                 {
                     if (!e.IsRunning) continue;
                     Logger.Log(LOGTYPE.INFO, ServiceName, $"Stopping [{e.Name}] action");
                     e.Stop();
                 }
             }
-            TActions = tActions;
-            foreach (var (_, e) in TActions)
+            Actions = tActions;
+            foreach (var (_, e) in Actions)
             {
                 Logger.Log(LOGTYPE.INFO, ServiceName, $"Running [{e.Name}] action");
                 e.Run();
@@ -89,11 +89,11 @@ namespace TTvActionHub.Services
             return true;
         }
 
-        public string ServiceName { get => "TimerActions"; }
+        public string ServiceName => "TimerActions";
 
-        public bool IsRunning => TActions != null;
+        public bool IsRunning => Actions != null;
 
-        protected virtual void OnStatusChanged(bool isRunning, string? message = null)
+        private void OnStatusChanged(bool isRunning, string? message = null)
         {
             try
             {
