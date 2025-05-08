@@ -1,18 +1,13 @@
 ﻿using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TTvActionHub.LuaTools.Services.ContainerItems
 {
-    public class DataBaseContext : DbContext, IDataBaseContext
+    public partial class DataBaseContext : DbContext, IDataBaseContext
     {
         public DbSet<TwitchUser> Users { get; set; }
 
-        public DbSet<JSONTable> DataTable { get; set; }
+        public DbSet<JsonTable> DataTable { get; set; }
 
         public void EnsureCreated() => Database.EnsureCreated();
 

@@ -1,20 +1,12 @@
-﻿using Microsoft.Extensions.Primitives;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using TTvActionHub.Logs;
+﻿using TTvActionHub.Logs;
 
 namespace TTvActionHub.BackEnds
 {
-    internal class MainLogger : ILogger, IDisposable
+    internal partial class MainLogger : ILogger, IDisposable
     {
         private readonly StreamWriter _writer;
         private readonly object _lock = new();
-        private bool _disposed = false;
+        private bool _disposed;
         private readonly List<string> _lastLogs = [];
 
         public MainLogger()
@@ -100,7 +92,7 @@ namespace TTvActionHub.BackEnds
         public void Dispose()
         {
             if (_disposed) return;
-            _writer?.Dispose();
+            _writer.Dispose();
             _disposed = true;
         }
 

@@ -1,6 +1,4 @@
-﻿using System.Collections.Concurrent;
-using TTvActionHub.Items;
-using TTvActionHub.Twitch;
+﻿using TTvActionHub.Twitch;
 
 namespace TTvActionHub
 {
@@ -9,7 +7,7 @@ namespace TTvActionHub
         public string RefreshToken { get; }
         public string Token { get; }
         public string Login { get; }
-        public string ID { get; }
+        public string Id { get; }
         
         public TwitchApi TwitchApi { get; }
 

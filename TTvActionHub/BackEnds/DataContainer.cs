@@ -1,118 +1,115 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using System.Collections.Concurrent;
 using System.Text.Json;
 using TTvActionHub.Logs;
 using TTvActionHub.LuaTools.Services.ContainerItems;
-using TTvActionHub.Services;
 
 namespace TTvActionHub.BackEnds
 {
     public sealed class DataContainer
     {
-        private static readonly string ServiceName = "Container";
-        private IDataBaseContext db;
+        private const string ServiceName = "Container";
+        private readonly IDataBaseContext _db;
         
         public DataContainer(IDataBaseContext context)
         {
-            db = context;
-            db.EnsureCreated();
+            _db = context;
+            _db.EnsureCreated();
         }
 
-        // --- User releated methods ---
+        // --- User related methods ---
         public void AddPointsToUser(string username, long points)
         {
-            var user = db.Users.FirstOrDefault(te => te.Name == username);
-            user ??= new() { Name = username };
+            var user = _db.Users.FirstOrDefault(te => te.Name == username);
+            user ??= new TwitchUser { Name = username };
             user.Points += points;
-            if (user.ID == 0)
+            if (user.Id == 0)
             {
-                db.Users.Add(user);
+                _db.Users.Add(user);
             }
-            db.SaveChanges();
+            _db.SaveChanges();
         }
 
         public long GetPointsFromUser(string username)
         {
-            var user = db.Users.FirstOrDefault(te => te.Name == username);
+            var user = _db.Users.FirstOrDefault(te => te.Name == username);
             return user?.Points ?? 0;
         }
 
         public async Task<long> GetPointsFromUserAsync(string username)
         {
-            var user = await db.Users.FirstOrDefaultAsync(te => te.Name == username);
+            var user = await _db.Users.FirstOrDefaultAsync(te => te.Name == username);
             return user?.Points ?? 0;
         }
 
         public async Task AddPointsToUserAsync(string username, long points)
         {
-            var user = db.Users.FirstOrDefault(te => te.Name == username);
+            var user = _db.Users.FirstOrDefault(te => te.Name == username);
             user ??= new() { Name = username };
             user.Points += points;
-            if (user.ID == 0)
+            if (user.Id == 0)
             {
-                await db.Users.AddAsync(user);
+                await _db.Users.AddAsync(user);
             }
-            await db.SaveChangesAsync();
+            await _db.SaveChangesAsync();
         }
 
         public void AddAdditionalInfoToUser(string username, string data)
         {
-            var user = db.Users.FirstOrDefault(te => te.Name == username);
+            var user = _db.Users.FirstOrDefault(te => te.Name == username);
             user ??= new() { Name = username };
             user.AdditionalInfo = data;
-            if (user.ID == 0)
+            if (user.Id == 0)
             {
-                db.Users.Add(user);
+                _db.Users.Add(user);
             }
-            db.SaveChanges();
+            _db.SaveChanges();
         }
 
         public async Task AddAdditionalInfoToUserAsync(string username, string data)
         {
-            var user = db.Users.FirstOrDefault(te => te.Name == username);
+            var user = _db.Users.FirstOrDefault(te => te.Name == username);
             user ??= new() { Name = username };
             user.AdditionalInfo = data;
-            if (user.ID == 0)
+            if (user.Id == 0)
             {
-                await db.Users.AddAsync(user);
+                await _db.Users.AddAsync(user);
             }
-            await db.SaveChangesAsync();
+            await _db.SaveChangesAsync();
         }
 
-        // --- Random data releated methods ---
+        // --- Random data related methods ---
 
         public void AddOrUpdateItem<T>(string name, T value)
         {
-            var dataTable = db.DataTable.FirstOrDefault(t => t.Name == name);
+            var dataTable = _db.DataTable.FirstOrDefault(t => t.Name == name);
             dataTable ??= new() { Name = name };
-            dataTable.JSONData = JsonSerializer.Serialize(value);
-            if (dataTable.ID == 0)
-                db.DataTable.Add(dataTable);
-            db.SaveChanges();
+            dataTable.JsonData = JsonSerializer.Serialize(value);
+            if (dataTable.Id == 0)
+                _db.DataTable.Add(dataTable);
+            _db.SaveChanges();
         }
 
         public async Task AddOrUpdateItemAsync<T>(string name, T value)
         {
-            var dataTable = db.DataTable.FirstOrDefault(t => t.Name == name);
+            var dataTable = _db.DataTable.FirstOrDefault(t => t.Name == name);
             dataTable ??= new() { Name = name };
-            dataTable.JSONData = JsonSerializer.Serialize(value);
-            if (dataTable.ID == 0)
-                await db.DataTable.AddAsync(dataTable);
-            await db.SaveChangesAsync();
+            dataTable.JsonData = JsonSerializer.Serialize(value);
+            if (dataTable.Id == 0)
+                await _db.DataTable.AddAsync(dataTable);
+            await _db.SaveChangesAsync();
         }
 
         public T? GetItem<T>(string name)
         {
-            var dataTable = db.DataTable.FirstOrDefault(t => t.Name == name);
+            var dataTable = _db.DataTable.FirstOrDefault(t => t.Name == name);
             if (dataTable == null) return default;
             try
             {
-                return JsonSerializer.Deserialize<T>(dataTable.JSONData);
+                return JsonSerializer.Deserialize<T>(dataTable.JsonData);
             } 
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, $"Error deserializing item '{name}' to type {typeof(T).Name}.", ex);
+                Logger.Log(LogType.ERROR, ServiceName, $"Error deserializing item '{name}' to type {typeof(T).Name}.", ex);
                 return default;
             }
         }
@@ -122,15 +119,15 @@ namespace TTvActionHub.BackEnds
             return await Task.Run(
                 () =>
                 {
-                    var dataTable = db.DataTable.FirstOrDefault(t => t.Name == name);
+                    var dataTable = _db.DataTable.FirstOrDefault(t => t.Name == name);
                     if (dataTable == null) return default;
                     try
                     {
-                        return JsonSerializer.Deserialize<T>(dataTable.JSONData);
+                        return JsonSerializer.Deserialize<T>(dataTable.JsonData);
                     }
                     catch (Exception ex)
                     {
-                        Logger.Log(LOGTYPE.ERROR, ServiceName, $"Error deserializing item '{name}' to type {typeof(T).Name}.", ex);
+                        Logger.Log(LogType.ERROR, ServiceName, $"Error deserializing item '{name}' to type {typeof(T).Name}.", ex);
                         return default;
                     }
                 }
@@ -139,27 +136,27 @@ namespace TTvActionHub.BackEnds
 
         public bool RemoveItem(string name)
         {
-            var dataTable = db.DataTable.FirstOrDefault(t => t.Name == name);
+            var dataTable = _db.DataTable.FirstOrDefault(t => t.Name == name);
             if (dataTable == null) return false;
-            db.DataTable.Remove(dataTable);
-            db.SaveChanges();
-            Logger.Log(LOGTYPE.INFO, ServiceName, $"Item '{name}' was removed successfully.");
+            _db.DataTable.Remove(dataTable);
+            _db.SaveChanges();
+            Logger.Log(LogType.INFO, ServiceName, $"Item '{name}' was removed successfully.");
             return true;
         }
 
         public async Task<bool> RemoveItemAsync(string name)
         {
-            var dataTable = db.DataTable.FirstOrDefault(t => t.Name == name);
+            var dataTable = _db.DataTable.FirstOrDefault(t => t.Name == name);
             if (dataTable == null) return true;
-            db.DataTable.Remove(dataTable);
-            await db.SaveChangesAsync();
-            Logger.Log(LOGTYPE.INFO, ServiceName, $"Item '{name}' was removed successfully.");
+            _db.DataTable.Remove(dataTable);
+            await _db.SaveChangesAsync();
+            Logger.Log(LogType.INFO, ServiceName, $"Item '{name}' was removed successfully.");
             return true;
         }
 
-        public bool Contains(string name) => db.DataTable.Any(t => t.Name == name);
+        public bool Contains(string name) => _db.DataTable.Any(t => t.Name == name);
 
-        public async Task<bool> ContainsAsync(string name) => await db.DataTable.AnyAsync(t => t.Name == name);
+        public async Task<bool> ContainsAsync(string name) => await _db.DataTable.AnyAsync(t => t.Name == name);
         
     }
 }

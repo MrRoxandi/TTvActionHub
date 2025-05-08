@@ -19,16 +19,17 @@
         public static string RandomElement(IEnumerable<string>? elements)
         {
             ArgumentNullException.ThrowIfNull(elements, nameof(elements));
-            if(!elements.Any()) return string.Empty;
-            return elements.ElementAt(Random.Shared.Next(elements.Count()));
+            var enumerable = elements as string[] ?? elements.ToArray();
+            return enumerable.Length == 0 ? string.Empty : enumerable.ElementAt(Random.Shared.Next(enumerable.Length));
         }
 
         public static List<string> Shuffle(IEnumerable<string>? elements)
         {
-            if(elements is IEnumerable<string> elems) 
+            if(elements is not null) 
             {
-                if (!elems.Any()) return [];
-                var span = new Span<string>([.. elems]);
+                var enumerable = elements as string[] ?? elements.ToArray();
+                if (enumerable.Length == 0) return [];
+                var span = new Span<string>([.. enumerable]);
                 Random.Shared.Shuffle(span);
                 return span.ToArray().ToList();
             }
@@ -44,7 +45,7 @@
         public static void Delay(int? delay)
         {
             ArgumentNullException.ThrowIfNull(delay, nameof(delay));
-            Thread.Sleep(delay!.Value);
+            Thread.Sleep(delay.Value);
         }
 
         public struct Point(int x, int y)
@@ -61,8 +62,8 @@
         public static string CollectionToString(IEnumerable<string>? elements, string sep = " ")
         {
             ArgumentNullException.ThrowIfNull(elements, nameof(elements));
-            if (!elements.Any()) return string.Empty;
-            return string.Join(sep, elements);
+            var enumerable = elements as string[] ?? elements.ToArray();
+            return enumerable.Length == 0 ? string.Empty : string.Join(sep, enumerable);
         }
 
     }

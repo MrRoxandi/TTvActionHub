@@ -3,6 +3,7 @@ using System.Net;
 using TwitchLib.Api;
 using TTvActionHub.Logs;
 using TwitchLib.Api.Core.Enums;
+using LogType = TTvActionHub.Logs.LogType;
 
 namespace TTvActionHub.Twitch
 {
@@ -21,7 +22,7 @@ namespace TTvActionHub.Twitch
 
         public async Task<(string? Token, string? RefreshToken)> GetAuthorizationInfo()
         {
-            Logger.Log(LOGTYPE.INFO, "TwitchApi", "Requesting new Twitch authentication token.");
+            Logger.Log(LogType.INFO, "TwitchApi", "Requesting new Twitch authentication token.");
             var authInfo = await RequestAuthorizationInfo();
 
             return authInfo;
@@ -78,12 +79,12 @@ namespace TTvActionHub.Twitch
                 {
                     return (user.Login, user.Id);
                 }
-                Logger.Log(LOGTYPE.WARNING, ServiceName, "Could not retrieve user information from Twitch API.");
+                Logger.Log(LogType.WARNING, ServiceName, "Could not retrieve user information from Twitch API.");
                 return (null, null);
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, "Error getting channel info from Twitch API.", ex);
+                Logger.Log(LogType.ERROR, ServiceName, "Error getting channel info from Twitch API.", ex);
                 return (null, null);
             }
         }
@@ -97,7 +98,7 @@ namespace TTvActionHub.Twitch
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, "Unable to get access token due to error: ", ex);
+                Logger.Log(LogType.ERROR, ServiceName, "Unable to get access token due to error: ", ex);
                 return (null, null);
             }
         }
@@ -111,7 +112,7 @@ namespace TTvActionHub.Twitch
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, "Unable to refresh token due to error: ", ex);
+                Logger.Log(LogType.ERROR, ServiceName, "Unable to refresh token due to error: ", ex);
                 return (null, null);
             }
         }
@@ -126,7 +127,7 @@ namespace TTvActionHub.Twitch
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.WARNING, "TwitchApi", "Token validation failed.", ex);
+                Logger.Log(LogType.WARNING, "TwitchApi", "Token validation failed.", ex);
                 return false;
             }
         }

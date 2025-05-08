@@ -55,7 +55,7 @@ namespace TTvActionHub.LuaTools.Services
             return c;
         }
 
-        public enum PermissionLevel : int
+        public enum PermissionLevel : byte
         {
             Viewer, Vip, Subscriber, Moderator, Broadcaster
         }

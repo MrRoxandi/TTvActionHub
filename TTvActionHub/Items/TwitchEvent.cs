@@ -1,11 +1,5 @@
-﻿using System;
-using NLua;
-using System.Collections.Generic;
+﻿using NLua;
 using System.Diagnostics;
-using System.Linq;
-using System.Linq.Expressions;
-using System.Text;
-using System.Threading.Tasks;
 using TTvActionHub.Logs;
 using TTvActionHub.LuaTools.Services;
 
@@ -22,14 +16,14 @@ namespace TTvActionHub.Items
     {
         // --- Main things in event ---
         public TwitchTools.TwitchEventKind Kind { get; private set; }
-        public LuaFunction Function { get; private set; }
-        public string Name { get; private set; }
+        private LuaFunction Function { get; }
+        public string Name { get; }
 
         // --- Other stuff ---
-        public readonly TwitchTools.PermissionLevel PermissionLevel;
-        public readonly Stopwatch? _coolDownTimer;
-        public long? TimeOut;
-        public long Cost;
+        private readonly TwitchTools.PermissionLevel _permissionLevel;
+        private readonly Stopwatch? _coolDownTimer;
+        private readonly long? _timeOut;
+        public readonly long Cost;
 
         // --- Executing checks ---
         public bool Executable => IsExecutable();
@@ -43,30 +37,30 @@ namespace TTvActionHub.Items
             Name = name;
             if (permissionLevel is not { } perm)
                 perm = TwitchTools.PermissionLevel.Viewer;
-            PermissionLevel = perm;
+            _permissionLevel = perm;
             if (timeOut is not { } time) return;
             _coolDownTimer = new();
-            TimeOut = time;
+            _timeOut = time;
             Cost = cost;
         }
 
         public void Execute(TwitchEventArgs args)
         {
-            if (args.Permission < PermissionLevel)
+            if (args.Permission < _permissionLevel)
             {
-                Logger.Log(LOGTYPE.INFO, ItemName, $"Unable to execute event [{Name}]. {args.Sender} has no permission to do that");
+                Logger.Log(LogType.INFO, ItemName, $"Unable to execute event [{Name}]. {args.Sender} has no permission to do that");
                 return;
             }
             try
             {
                 if (!IsExecutable())
                 {
-                    Logger.Log(LOGTYPE.INFO, ItemName, $"Unable to execute event [{Name}]. Event still on cooldown");
+                    Logger.Log(LogType.INFO, ItemName, $"Unable to execute event [{Name}]. Event still on cooldown");
                     return;
                 }
                 Function.Call(args.Sender, args.Args);
                 _coolDownTimer?.Restart();
-                Logger.Log(LOGTYPE.INFO, ItemName, $"Event [{Name}] was executed successfully");
+                Logger.Log(LogType.INFO, ItemName, $"Event [{Name}] was executed successfully");
             }
             catch (Exception e)
             {
@@ -76,8 +70,8 @@ namespace TTvActionHub.Items
 
         private bool IsExecutable()
         {
-            if (TimeOut == null) return true;
-            else return !_coolDownTimer!.IsRunning || _coolDownTimer!.ElapsedMilliseconds > TimeOut;
+            if (_timeOut == null) return true;
+            else return !_coolDownTimer!.IsRunning || _coolDownTimer!.ElapsedMilliseconds > _timeOut;
         }
         
     }

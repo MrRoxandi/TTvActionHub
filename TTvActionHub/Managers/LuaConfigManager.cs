@@ -34,30 +34,30 @@ namespace TTvActionHub.Managers
             }
             if (fileResult["force-reload"] is not bool forceRelog)
             {
-                Logger.Log(LOGTYPE.WARNING, ServiceName, $"In file {fileName} ['force-relog'] is not presented. Will be used default value: [{false}]");
+                Logger.Log(LogType.WARNING, ServiceName, $"In file {fileName} ['force-relog'] is not presented. Will be used default value: [{false}]");
                 ForceRelog = false;
             }
             else ForceRelog = forceRelog;
 
             if (fileResult["logs"] is not bool moreLogs)
             {
-                Logger.Log(LOGTYPE.WARNING, ServiceName, $"In file {fileName} ['logs'] is not presented. Will be used default value: [{false}]");
+                Logger.Log(LogType.WARNING, ServiceName, $"In file {fileName} ['logs'] is not presented. Will be used default value: [{false}]");
                 MoreLogs = false;
             }
             else MoreLogs = moreLogs;
 
             if (fileResult["timeout"] is not long stdTimeOut)
             {
-                Logger.Log(LOGTYPE.WARNING, ServiceName, $"In file {fileName} ['timeout'] is not presented. Will be used default value: [{30000}] ms");
+                Logger.Log(LogType.WARNING, ServiceName, $"In file {fileName} ['timeout'] is not presented. Will be used default value: [{30000}] ms");
                 _stdTimeOut = 30000;
             }
             else if (stdTimeOut < 0)
             {
-                Logger.Log(LOGTYPE.WARNING, ServiceName, $"In file {fileName} ['timeout'] have [{stdTimeOut}] value. But valid value must be > 0. Will be used default value: [{30000}] ms");
+                Logger.Log(LogType.WARNING, ServiceName, $"In file {fileName} ['timeout'] have [{stdTimeOut}] value. But valid value must be > 0. Will be used default value: [{30000}] ms");
                 _stdTimeOut = 30000;
             }
             else _stdTimeOut = stdTimeOut;
-            Logger.Log(LOGTYPE.INFO, ServiceName, "Configuration loaded successfully");
+            Logger.Log(LogType.INFO, ServiceName, "Configuration loaded successfully");
         }
 
         public ConcurrentDictionary<(string, TwitchTools.TwitchEventKind), TwitchEvent>? LoadTwitchEvents()
@@ -68,7 +68,7 @@ namespace TTvActionHub.Managers
 
             if (fileResult.Keys.Count == 0)
             {
-                Logger.Log(LOGTYPE.WARNING, ServiceName, $"Table from file {fileName} is empty. Ignoring...");
+                Logger.Log(LogType.WARNING, ServiceName, $"Table from file {fileName} is empty. Ignoring...");
                 return [];
             }
 
@@ -77,19 +77,19 @@ namespace TTvActionHub.Managers
             {
                 if (fileResult[key] is not LuaTable TwEventTable)
                 {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName, $"In file {fileName} ['{key}'] is not a TwitchEvent. Check syntax. Aborting loading process ...");
+                    Logger.Log(LogType.ERROR, ServiceName, $"In file {fileName} ['{key}'] is not a TwitchEvent. Check syntax. Aborting loading process ...");
                     return null;
                 }
 
                 if (TwEventTable["kind"] is not TwitchTools.TwitchEventKind kind)
                 {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName, $"In file {fileName} ['{key}']['kind'] is not a TwitchEventKind. Check syntax. Aborting loading process ...");
+                    Logger.Log(LogType.ERROR, ServiceName, $"In file {fileName} ['{key}']['kind'] is not a TwitchEventKind. Check syntax. Aborting loading process ...");
                     return null;
                 }
 
                 if (TwEventTable["action"] is not LuaFunction action)
                 {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName, $"In file {fileName} ['{key}']['action'] is not an action. Check syntax. Aborting loading process ...");
+                    Logger.Log(LogType.ERROR, ServiceName, $"In file {fileName} ['{key}']['action'] is not an action. Check syntax. Aborting loading process ...");
                     return null;
                 }
 
@@ -100,14 +100,14 @@ namespace TTvActionHub.Managers
                 {
                     if (TwEventTable["timeout"] is not long time)
                     {
-                        Logger.Log(LOGTYPE.WARNING, ServiceName, $"In file {fileName} ['{key}']['timeout'] is not a timeout. Will be used default value: {_stdTimeOut} ms");
+                        Logger.Log(LogType.WARNING, ServiceName, $"In file {fileName} ['{key}']['timeout'] is not a timeout. Will be used default value: {_stdTimeOut} ms");
                         time = _stdTimeOut;
                     }
                     timeOut = time;
 
                     if (TwEventTable["perm"] is not TwitchTools.PermissionLevel userLevel)
                     {
-                        Logger.Log(LOGTYPE.WARNING, ServiceName, $"In file {fileName} ['{key}']['perm'] is not a permission level. Will be used default value: Viewer");
+                        Logger.Log(LogType.WARNING, ServiceName, $"In file {fileName} ['{key}']['perm'] is not a permission level. Will be used default value: Viewer");
                         userLevel = TwitchTools.PermissionLevel.Viewer;
                     }
 
@@ -132,7 +132,7 @@ namespace TTvActionHub.Managers
             if (fileResult is null) return null;
             if (fileResult.Keys.Count == 0)
             {
-                Logger.Log(LOGTYPE.WARNING, ServiceName, $"Table from file {fileName} is empty. Ignoring...");
+                Logger.Log(LogType.WARNING, ServiceName, $"Table from file {fileName} is empty. Ignoring...");
                 return [];
             }
             var actions = new ConcurrentDictionary<string, TimerAction>();
@@ -140,30 +140,30 @@ namespace TTvActionHub.Managers
             {
                 if (fileResult[keyTAction] is not LuaTable tActionTable)
                 {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName, $"In file {fileName} [{keyTAction}] is not a TimerAction. Check syntax. Aborting loading process ...");
+                    Logger.Log(LogType.ERROR, ServiceName, $"In file {fileName} [{keyTAction}] is not a TimerAction. Check syntax. Aborting loading process ...");
                     return null;
                 }
 
                 if (tActionTable["action"] is not LuaFunction action)
                 {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName, $"In file {fileName} [{keyTAction}]['action'] is not an action. Check syntax. Aborting loading process...");
+                    Logger.Log(LogType.ERROR, ServiceName, $"In file {fileName} [{keyTAction}]['action'] is not an action. Check syntax. Aborting loading process...");
                     return null;
                 }
 
                 if (tActionTable["timeout"] is not long timeOut)
                 {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName, $"In file {fileName} [{keyTAction}]['timeout'] is not valid value. Check syntax. Aborting loading process...");
+                    Logger.Log(LogType.ERROR, ServiceName, $"In file {fileName} [{keyTAction}]['timeout'] is not valid value. Check syntax. Aborting loading process...");
                     return null;
                 } 
                 else if (timeOut <= 0)
                 {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName, $"In file {fileName} [{keyTAction}]['timeout'] is not in valid range. Allowed range [1, inf). Aborting loading process...");
+                    Logger.Log(LogType.ERROR, ServiceName, $"In file {fileName} [{keyTAction}]['timeout'] is not in valid range. Allowed range [1, inf). Aborting loading process...");
                     return null;
                 }
 
                 if (!actions.TryAdd(keyTAction.ToString()!, new TimerAction() { Function = action, Name = keyTAction.ToString()!, TimeOut = timeOut }))
                 {
-                    Logger.Log(LOGTYPE.WARNING, ServiceName, $"For some reason [{keyTAction}] wasn't added to collection. Aborting loading process...");
+                    Logger.Log(LogType.WARNING, ServiceName, $"For some reason [{keyTAction}] wasn't added to collection. Aborting loading process...");
                     return null;
                 }
             }
@@ -191,7 +191,7 @@ namespace TTvActionHub.Managers
             }
             catch (Exception ex) 
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, "During parsing lua file occured en error:", ex);
+                Logger.Log(LogType.ERROR, ServiceName, "During parsing lua file occured en error:", ex);
                 return null;
             }
         }

@@ -1,15 +1,13 @@
 ﻿using Terminal.Gui;
 using NStack;
-using System.Text;
-using System.Buffers;
 
 namespace TTvActionHub.ShellItems
 {
-    public class ScrollableContentView : View
+    public partial class ScrollableContentView : View
     {
         
         private List<ustring> _lines = [];
-        private int _topLine = 0;
+        private int _topLine;
         //private Shell _shellRef;
 
         private Terminal.Gui.Attribute _colorError;
@@ -51,15 +49,15 @@ namespace TTvActionHub.ShellItems
 
         public void SetLines(IEnumerable<ustring> newLines)
         {
-            bool wasAtBottom = IsScrolledToBottom();
-            _lines = newLines?.ToList() ?? [];
+            var wasAtBottom = IsScrolledToBottom();
+            _lines = newLines.ToList();
             if (wasAtBottom) ScrollToBottom();
             else _topLine = Math.Min(_topLine, Math.Max(0, _lines.Count - Bounds.Height));
             SetNeedsDisplay();
         }
         public void AddLine(ustring line)
         {
-            bool wasAtBottom = IsScrolledToBottom();
+            var wasAtBottom = IsScrolledToBottom();
             _lines.Add(line);
             if (wasAtBottom) ScrollToBottom();
             SetNeedsDisplay();
@@ -91,12 +89,11 @@ namespace TTvActionHub.ShellItems
 
             if (_lines.Count == 0) return;
 
-            int viewHeight = Bounds.Height;
-            int currentLineIndex;
+            var viewHeight = Bounds.Height;
 
-            for (int viewRow = 0; viewRow < viewHeight; viewRow++)
+            for (var viewRow = 0; viewRow < viewHeight; viewRow++)
             {
-                currentLineIndex = _topLine + viewRow;
+                var currentLineIndex = _topLine + viewRow;
                 if (currentLineIndex >= _lines.Count) break;
 
                 Move(0, viewRow); 
@@ -104,31 +101,29 @@ namespace TTvActionHub.ShellItems
                 var lineStr = lineUstr.ToString() ?? string.Empty; 
 
                 
-                Terminal.Gui.Attribute currentAttribute = ParseLineForAttribute(lineStr!);
+                var currentAttribute = ParseLineForAttribute(lineStr);
                 driver.SetAttribute(currentAttribute);
 
                 
                 driver.AddStr(lineUstr);
 
                 
-                int drawnLength = lineUstr.ConsoleWidth; 
-                if (drawnLength < Bounds.Width)
+                var drawnLength = lineUstr.ConsoleWidth;
+                if (drawnLength >= Bounds.Width) continue;
+                driver.SetAttribute(_colorDefault); 
+                for (var i = drawnLength; i < Bounds.Width; i++)
                 {
-                    driver.SetAttribute(_colorDefault); 
-                    for (int i = drawnLength; i < Bounds.Width; i++)
-                    {
-                        AddRune(i, viewRow, ' '); 
-                    }
+                    AddRune(i, viewRow, ' '); 
                 }
             }
 
             
             driver.SetAttribute(_colorDefault);
-            int lastDrawnLine = Math.Min(viewHeight, _lines.Count - _topLine);
-            for (int i = lastDrawnLine; i < viewHeight; i++)
+            var lastDrawnLine = Math.Min(viewHeight, _lines.Count - _topLine);
+            for (var i = lastDrawnLine; i < viewHeight; i++)
             {
                 Move(0, i);
-                for (int j = 0; j < Bounds.Width; j++) { AddRune(j, i, ' '); }
+                for (var j = 0; j < Bounds.Width; j++) { AddRune(j, i, ' '); }
             }
         }
 

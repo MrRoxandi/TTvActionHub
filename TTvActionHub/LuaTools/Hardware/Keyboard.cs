@@ -1,11 +1,10 @@
-﻿using System.Runtime.InteropServices;
-using TTvActionHub.BackEnds.Hardware;
+﻿using TTvActionHub.BackEnds.Hardware;
 
 namespace TTvActionHub.LuaTools.Hardware
 {
     public static class Keyboard
     {
-        // --- Public blokc ---
+        // --- Public block ---
 
         public enum Key : byte
         {
@@ -85,7 +84,7 @@ namespace TTvActionHub.LuaTools.Hardware
         public static void TypeMessage(IEnumerable<char> message)
         {
             List<NativeInputs.Input> inputs = [];
-            foreach(char c in message)
+            foreach(var c in message)
             {
                 inputs.Add(InputWrapper.ConstructCharDown(c));
                 inputs.Add(InputWrapper.ConstructCharUp(c));

@@ -34,20 +34,20 @@ namespace TTvActionHub.Managers
             {
                 if (!File.Exists(path))
                 {
-                    Logger.Log(LOGTYPE.INFO, ServiceName, $"Authorization file not found at {path}. No data loaded.");
+                    Logger.Log(LogType.INFO, ServiceName, $"Authorization file not found at {path}. No data loaded.");
                     return false;
                 }
                 var encryptedData = File.ReadAllText(path);
                 if (string.IsNullOrEmpty(encryptedData))
                 {
-                    Logger.Log(LOGTYPE.WARNING, ServiceName, $"Authorization file at {path} is empty. No data loaded.");
+                    Logger.Log(LogType.WARNING, ServiceName, $"Authorization file at {path} is empty. No data loaded.");
                     return false;
                 }
                 var decryptedData = Decrypt(encryptedData, _secret);
                 var data = decryptedData.Split('\n');
                 if (data.Length != 4)
                 {
-                    Logger.Log(LOGTYPE.WARNING, ServiceName, $"Invalid data format in authorization file at {path}. Expected 4 parts, found {data.Length}.");
+                    Logger.Log(LogType.WARNING, ServiceName, $"Invalid data format in authorization file at {path}. Expected 4 parts, found {data.Length}.");
                     return false;
                 }
                 else
@@ -56,13 +56,13 @@ namespace TTvActionHub.Managers
                     TwitchInfo.ID = data[1];
                     TwitchInfo.Token = data[2];
                     TwitchInfo.RefreshToken = data[3];
-                    Logger.Log(LOGTYPE.INFO, ServiceName, "Authorization information loaded succesfully");
+                    Logger.Log(LogType.INFO, ServiceName, "Authorization information loaded successfully");
                     return true;
                 }
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, "An unexpected error occurred while loading authorization information from {path}:", ex);
+                Logger.Log(LogType.ERROR, ServiceName, "An unexpected error occurred while loading authorization information from {path}:", ex);
                 return false;
             }
         }
@@ -73,21 +73,21 @@ namespace TTvActionHub.Managers
             {
                 Directory.CreateDirectory(AuthDir);
                 var path = Path.Combine(AuthDir, FileName);
-                var (login, id, token, rtoken) = TwitchInfo;
-                if (string.IsNullOrEmpty(login) || string.IsNullOrEmpty(id) || string.IsNullOrEmpty(token) || string.IsNullOrEmpty(rtoken))
+                var (login, id, token, refreshToken) = TwitchInfo;
+                if (string.IsNullOrEmpty(login) || string.IsNullOrEmpty(id) || string.IsNullOrEmpty(token) || string.IsNullOrEmpty(refreshToken))
                 {
-                    Logger.Log(LOGTYPE.WARNING, ServiceName, "Attempted to save incomplete Twitch info. Aborting save.");
+                    Logger.Log(LogType.WARNING, ServiceName, "Attempted to save incomplete Twitch info. Aborting save.");
                     return false;
                 }
-                var data = string.Join('\n', [login, id, token, rtoken]);
+                var data = string.Join('\n', [login, id, token, refreshToken]);
                 var encryptedData = Encrypt(data, _secret);
                 File.WriteAllText(path, encryptedData);
-                Logger.Log(LOGTYPE.INFO, ServiceName, $"Authorization information saved successfully at {path}");
+                Logger.Log(LogType.INFO, ServiceName, $"Authorization information saved successfully at {path}");
                 return true;
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, "An unexpected error occurred while saving authorization information:", ex);
+                Logger.Log(LogType.ERROR, ServiceName, "An unexpected error occurred while saving authorization information:", ex);
                 return false;
             }
         }
@@ -96,7 +96,7 @@ namespace TTvActionHub.Managers
         {
             if (string.IsNullOrEmpty(TwitchInfo.Token))
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, "Attempted to validate an empty token.");
+                Logger.Log(LogType.ERROR, ServiceName, "Attempted to validate an empty token.");
                 return false;
             }
             try
@@ -104,13 +104,13 @@ namespace TTvActionHub.Managers
                 var isValid = await _api.ValidateTokenAsync(TwitchInfo.Token).ConfigureAwait(false);
                 if (!isValid)
                 {
-                    Logger.Log(LOGTYPE.WARNING, ServiceName, "Twitch API reported the current access token is invalid.");
+                    Logger.Log(LogType.WARNING, ServiceName, "Twitch API reported the current access token is invalid.");
                 }
                 return isValid;
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, "An error  occurred while validating the Twitch token:", ex);
+                Logger.Log(LogType.ERROR, ServiceName, "An error  occurred while validating the Twitch token:", ex);
                 return false;
             }
         }
@@ -119,43 +119,43 @@ namespace TTvActionHub.Managers
         {
             if (string.IsNullOrEmpty(TwitchInfo.RefreshToken))
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, "Unable to refresh authentication: Refresh token is missing.");
+                Logger.Log(LogType.ERROR, ServiceName, "Unable to refresh authentication: Refresh token is missing.");
                 TwitchInfo = new();
                 return false;
             }
             try
             {
-                Logger.Log(LOGTYPE.INFO, ServiceName, "Attempting to refresh Twitch tokens.");
+                Logger.Log(LogType.INFO, ServiceName, "Attempting to refresh Twitch tokens.");
                 var (newAccessToken, newRefreshToken) =
                     await _api.RefreshAccessTokenAsync(TwitchInfo.RefreshToken).ConfigureAwait(false);
                 if (string.IsNullOrEmpty(newAccessToken) || string.IsNullOrEmpty(newRefreshToken))
                 {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName,
+                    Logger.Log(LogType.ERROR, ServiceName,
                         "Failed to refresh tokens: Received empty or invalid tokens from Twitch API (Refresh token might be expired or revoked).");
                     TwitchInfo = new();
                     return false;
                 }
                 TwitchInfo.Token = newAccessToken;
                 TwitchInfo.RefreshToken = newRefreshToken;
-                Logger.Log(LOGTYPE.INFO, ServiceName, "Twitch tokens refreshed successfully.");
+                Logger.Log(LogType.INFO, ServiceName, "Twitch tokens refreshed successfully.");
 
-                Logger.Log(LOGTYPE.INFO, ServiceName, "Attempting to update user info with new token.");
+                Logger.Log(LogType.INFO, ServiceName, "Attempting to update user info with new token.");
                 var (login, id) = await _api.GetChannelInfoAsync(TwitchInfo.Token).ConfigureAwait(false);
                 if (string.IsNullOrEmpty(login) || string.IsNullOrEmpty(id))
                 {
-                    Logger.Log(LOGTYPE.ERROR, ServiceName, "Refreshed token successfully, but failed to get user info with the new token.");
+                    Logger.Log(LogType.ERROR, ServiceName, "Refreshed token successfully, but failed to get user info with the new token.");
                     TwitchInfo.Login = string.Empty; // Clear potentially stale info
                     TwitchInfo.ID = string.Empty;
                     return true;
                 }
                 TwitchInfo.Login = login;
                 TwitchInfo.ID = id;
-                Logger.Log(LOGTYPE.INFO, ServiceName, $"Twitch authentication info fully updated for login: {login}");
+                Logger.Log(LogType.INFO, ServiceName, $"Twitch authentication info fully updated for login: {login}");
                 return true;
             }
             catch (Exception ex)
             {
-                Logger.Log(LOGTYPE.ERROR, ServiceName, "An error occurred during the authentication information update process:", ex);
+                Logger.Log(LogType.ERROR, ServiceName, "An error occurred during the authentication information update process:", ex);
                 TwitchInfo = new();
                 return false;
             }

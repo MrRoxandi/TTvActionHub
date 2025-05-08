@@ -7,25 +7,20 @@ using NStack;
 
 namespace TTvActionHub
 {
-   public class Shell(IConfig config,
+   public partial class Shell(IConfig config,
        Action<string>? startServicesCallBack = null,
        Action<string>? stopServiceCallBack = null,
        Action<string>? reloadServiceCallBack = null,
        Func<string, string[]?>? listServiceCallBack = null) : IDisposable
    {
 
-        //public ConcurrentDictionary<string, IService>? RunningServices { get; set; }
-
         // --- Main config and dependencies ---
         private readonly IConfig _config = config;
-        private readonly Action<string>? _reloadServiceCallBack = reloadServiceCallBack;
-        private readonly Action<string>? _startServiceCallBack = startServicesCallBack;
-        private readonly Action<string>? _stopServiceCallBack = stopServiceCallBack;
-        private readonly Func<string, string[]?>? _infoServiceCallBack = listServiceCallBack;
+
         // --- UI states ---
         private readonly ConcurrentDictionary<string, bool> _serviceStates = new(StringComparer.OrdinalIgnoreCase); // Service -> Status (Running = true)
         private readonly ConcurrentQueue<string> _commandsOutPutQueue = [];
-        private bool _showLogs = false;
+        private bool _showLogs;
 
         // --- UI for Terminal.GUI ---
 
@@ -40,14 +35,14 @@ namespace TTvActionHub
         private StatusItem? _modeStatusItem;
 
         // --- Control Updates ---
-        private const int _UiUpdateIntervalMs = 150;
-        private readonly int _maxCmdHistory = 50;
+        private const int UiUpdateIntervalMs = 150;
+        private const int MaxCmdHistory = 50;
         private IMainLoopDriver? _mainLoopDriver;
-        private List<ustring> _cmdOutputHistory = [];
+        private readonly List<ustring> _cmdOutputHistory = [];
         private object? _timeoutToken;
 
         // --- Command line interactions ---
-        private List<string> _enteredCommandHistory = [];
+        private readonly List<string> _enteredCommandHistory = [];
         private int _historyIndex = -1;
         private ustring _currentTypedCommand = string.Empty;
 
@@ -58,7 +53,7 @@ namespace TTvActionHub
         private ColorScheme? _inputColorScheme;
         private ColorScheme? _statusColorScheme;
                 
-        public void InitializeUI()
+        public void InitializeUi()
         {
             Application.Init();
             _top = Application.Top;
@@ -107,7 +102,7 @@ namespace TTvActionHub
                 ColorScheme = _headerColorScheme
             };
             
-            _headerTextView = new HeaderStatusView()
+            _headerTextView = new HeaderStatusView
             {
                 X = 0,
                 Y = 0,
@@ -119,7 +114,7 @@ namespace TTvActionHub
 
             // --- Body --- (Logs / Cmds)
 
-            _bodyTextView = new ScrollableContentView()
+            _bodyTextView = new ScrollableContentView
             {
                 X = 0,
                 Y = Pos.Bottom(_headerFrame),
@@ -155,7 +150,7 @@ namespace TTvActionHub
 
             _statusBar = new StatusBar([
                 _modeStatusItem,
-                new StatusItem(Key.F1, "~F1~ Help", () => ShowHelpDialog()),
+                new StatusItem(Key.F1, "~F1~ Help", ShowHelpDialog),
                 new StatusItem(Key.F2, "~F2~ Logs", () => ToggleLogView(true)),
                 new StatusItem(Key.F3, "~F3~ Cmds", () => ToggleLogView(false))
             ])
@@ -171,91 +166,109 @@ namespace TTvActionHub
         private void OnCommandInputKeyDown(View.KeyEventEventArgs args)
         {
             var key = args.KeyEvent.Key;
-            if (key == Key.Enter)
+            switch (key)
             {
-                args.Handled = true;
-                if(_commandInput?.Text.Length < 2)
-                {
-                    _commandInput.Text = ustring.Make("> ");
-                } 
-                var inputText = _commandInput?.Text.ToString()?[2..] ?? string.Empty;
-                _commandInput!.Text = ustring.Make("> ");
-                _commandInput!.CursorPosition = _commandInput.Text.Length;
-
-                if (!string.IsNullOrWhiteSpace(inputText))
-                {
-                    CmdOut($"> {inputText}");
-
-                    if (_enteredCommandHistory.Count == 0 || _enteredCommandHistory[^1] != inputText)
-                    {
-                        _enteredCommandHistory.Add(inputText);
-                        if (_enteredCommandHistory.Count > _maxCmdHistory)
-                        {
-                            _enteredCommandHistory.RemoveAt(0);
-                        }
-                    }
-                    _historyIndex = -1; 
-                    _currentTypedCommand = string.Empty;
-
-                    bool keepRunning = ExecInnerCommand(inputText);
-                    if (!keepRunning) { RequestStop(); }
-                }
-            }
-            // --- Commands history: backwards ---
-            else if (key == Key.CursorUp) 
-            {
-                args.Handled = true;
-                if (_enteredCommandHistory.Count > 0)
-                {
-                    if (_historyIndex == -1)
-                    {
-                        _currentTypedCommand = _commandInput?.Text ?? string.Empty; 
-                        _historyIndex = _enteredCommandHistory.Count - 1; 
-                    }
-                    else if (_historyIndex > 0)
-                    {
-                        _historyIndex--; 
-                    }
-                    if (_historyIndex >= 0)
-                    {
-                        _commandInput!.Text = ustring.Make($"> {_enteredCommandHistory[_historyIndex]}");
-                        _commandInput.CursorPosition = _commandInput.Text.Length;
-                    }
-                }
-            }
-            // --- Commands history: forward ---
-            else if (key == Key.CursorDown)
-            {
-                args.Handled = true;
-                if (_historyIndex != -1) // only if we are in histor 
-                {
-                    if (_historyIndex < _enteredCommandHistory.Count - 1)
-                    {
-                        _historyIndex++; 
-                        _commandInput!.Text = ustring.Make($"> {_enteredCommandHistory[_historyIndex]}");
-                    }
-                    else 
-                    {
-                        _historyIndex = -1;
-                        _commandInput!.Text = _currentTypedCommand;
-                    }
-                    _commandInput.CursorPosition = _commandInput.Text.Length; 
-                }
-            }
-            else if (key == Key.Esc)
-            {
-                if (_historyIndex != -1)
+                case Key.Enter:
                 {
                     args.Handled = true;
-                    _commandInput!.Text = _currentTypedCommand;
-                    _commandInput.CursorPosition = _commandInput.Text.Length;
-                    _historyIndex = -1;
+                    if(_commandInput?.Text.Length < 2)
+                    {
+                        _commandInput.Text = ustring.Make("> ");
+                    } 
+                    var inputText = _commandInput?.Text.ToString()?[2..] ?? string.Empty;
+                    _commandInput!.Text = ustring.Make("> ");
+                    _commandInput!.CursorPosition = _commandInput.Text.Length;
+
+                    if (!string.IsNullOrWhiteSpace(inputText))
+                    {
+                        CmdOut($"> {inputText}");
+
+                        if (_enteredCommandHistory.Count == 0 || _enteredCommandHistory[^1] != inputText)
+                        {
+                            _enteredCommandHistory.Add(inputText);
+                            if (_enteredCommandHistory.Count > MaxCmdHistory)
+                            {
+                                _enteredCommandHistory.RemoveAt(0);
+                            }
+                        }
+                        _historyIndex = -1; 
+                        _currentTypedCommand = string.Empty;
+
+                        var keepRunning = ExecInnerCommand(inputText);
+                        if (!keepRunning) { RequestStop(); }
+                    }
+
+                    break;
                 }
-            }
-            else if (_historyIndex != -1 && !(args.KeyEvent.IsShift || args.KeyEvent.IsCtrl || args.KeyEvent.IsAlt))
-            {
-                _historyIndex = -1;
+                // --- Commands history: backwards ---
+                case Key.CursorUp:
+                {
+                    args.Handled = true;
+                    if (_enteredCommandHistory.Count > 0)
+                    {
+                        switch (_historyIndex)
+                        {
+                            case -1:
+                                _currentTypedCommand = _commandInput?.Text ?? string.Empty; 
+                                _historyIndex = _enteredCommandHistory.Count - 1;
+                                break;
+                            case > 0:
+                                _historyIndex--;
+                                break;
+                        }
+
+                        if (_historyIndex >= 0)
+                        {
+                            _commandInput!.Text = ustring.Make($"> {_enteredCommandHistory[_historyIndex]}");
+                            _commandInput.CursorPosition = _commandInput.Text.Length;
+                        }
+                    }
+
+                    break;
+                }
+                // --- Commands history: forward ---
+                case Key.CursorDown:
+                {
+                    args.Handled = true;
+                    if (_historyIndex != -1) // only if we are in history 
+                    {
+                        if (_historyIndex < _enteredCommandHistory.Count - 1)
+                        {
+                            _historyIndex++; 
+                            _commandInput!.Text = ustring.Make($"> {_enteredCommandHistory[_historyIndex]}");
+                        }
+                        else 
+                        {
+                            _historyIndex = -1;
+                            _commandInput!.Text = _currentTypedCommand;
+                        }
+                        _commandInput.CursorPosition = _commandInput.Text.Length; 
+                    }
+
+                    break;
+                }
+                case Key.Esc:
+                {
+                    if (_historyIndex != -1)
+                    {
+                        args.Handled = true;
+                        _commandInput!.Text = _currentTypedCommand;
+                        _commandInput.CursorPosition = _commandInput.Text.Length;
+                        _historyIndex = -1;
+                    }
+
+                    break;
+                }
+                default:
+                {
+                    if (_historyIndex != -1 && !(args.KeyEvent.IsShift || args.KeyEvent.IsCtrl || args.KeyEvent.IsAlt))
+                    {
+                        _historyIndex = -1;
                 
+                    }
+
+                    break;
+                }
             }
         }
 
@@ -277,7 +290,7 @@ namespace TTvActionHub
                 return;
             }
             _timeoutToken = Application.MainLoop.AddTimeout(
-                TimeSpan.FromMilliseconds(_UiUpdateIntervalMs),
+                TimeSpan.FromMilliseconds(UiUpdateIntervalMs),
                 UpdateTimerCallback
             );
 
@@ -305,51 +318,45 @@ namespace TTvActionHub
             var statesCopy = _serviceStates.ToList();
             _headerTextView.SetData(statesCopy);
 
-            int serviceCount = statesCopy.Count;
+            var serviceCount = statesCopy.Count;
             
             // Some magic to expand header...
-            if (_headerFrame != null && _win != null)
-            {
-                int requiredHeight = Math.Max(3, serviceCount + 2);
-                int availableHeight = _win.Bounds.Height - 2;
-                requiredHeight = Math.Min(requiredHeight, availableHeight);
-                var currentFrameHeight = _headerFrame.Frame.Height;
-                if (currentFrameHeight != requiredHeight)
-                {
-                    _headerFrame.Height = requiredHeight;
-                    if (_bodyTextView != null) { _bodyTextView.Y = Pos.Bottom(_headerFrame); }
-                    _win.LayoutSubviews();
-                }
-            }
+            if (_headerFrame == null || _win == null) return;
+            var requiredHeight = Math.Max(3, serviceCount + 2);
+            var availableHeight = _win.Bounds.Height - 2;
+            requiredHeight = Math.Min(requiredHeight, availableHeight);
+            var currentFrameHeight = _headerFrame.Frame.Height;
+            if (currentFrameHeight == requiredHeight) return;
+            _headerFrame.Height = requiredHeight;
+            if (_bodyTextView != null) { _bodyTextView.Y = Pos.Bottom(_headerFrame); }
+            _win.LayoutSubviews();
         }
 
         private void UpdateBody()
         {
             if (_bodyTextView == null) return;
 
-            bool needsUpdate = false;
+            var needsUpdate = false;
 
             if (!_showLogs)
             {
-                bool added = false;
-                while (_commandsOutPutQueue.TryDequeue(out string? message))
+                var added = false;
+                while (_commandsOutPutQueue.TryDequeue(out var message))
                 {
-                    if (message != null)
-                    {
-                        _cmdOutputHistory.Add(ustring.Make(message));
-                        added = true;
-                    }
+                    if (!string.IsNullOrEmpty(message)) continue;
+                    _cmdOutputHistory.Add(ustring.Make(message));
+                    added = true;
                 }
-                if (_cmdOutputHistory.Count > _maxCmdHistory)
+                if (_cmdOutputHistory.Count > MaxCmdHistory)
                 {
-                    _cmdOutputHistory.RemoveRange(0, _cmdOutputHistory.Count - _maxCmdHistory);
+                    _cmdOutputHistory.RemoveRange(0, _cmdOutputHistory.Count - MaxCmdHistory);
                     needsUpdate = true; 
                 }
                 if (added) needsUpdate = true; 
             }
             if (_showLogs)
             {
-                var logs = Logger.LastLogs() ?? [];
+                var logs = Logger.LastLogs();
                 _bodyTextView.SetLines(logs.Select(s => (ustring)s));
             }
             else if (needsUpdate)
@@ -403,10 +410,10 @@ namespace TTvActionHub
 
         private bool ExecInnerCommand(string? input)
         {
-            string command = input?.Trim().ToLowerInvariant() ?? "";
-            string[] parts = command.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-            string commandName = parts.Length > 0 ? parts[0] : ""; // Main command
-            string argument = parts.Length > 1 ? parts[1] : ""; // Args string
+            var command = input?.Trim().ToLowerInvariant() ?? "";
+            var parts = command.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
+            var commandName = parts.Length > 0 ? parts[0] : ""; // Main command
+            var argument = parts.Length > 1 ? parts[1] : ""; // Args string
 
             switch (commandName)
             {
@@ -434,20 +441,20 @@ namespace TTvActionHub
             var target = argument.Trim();
             var serviceName = _serviceStates.FirstOrDefault(
                 kvp => kvp.Key.Equals(target, StringComparison.OrdinalIgnoreCase)).Key;
-            if (serviceName == default)
+            if (string.IsNullOrEmpty(serviceName))
             {
                 CmdOut($"Unable to find: {target}");
                 CmdOut($"Usage: info [<field>|{string.Join('|', _serviceStates.Keys)}]");
                 return;
             }
-            if (_infoServiceCallBack == null)
+            if (listServiceCallBack == null)
             {
-                CmdOut($"Getting info about service is not configured. Ignoring...");
+                CmdOut("Getting info about service is not configured. Ignoring...");
                 return;
             }
             try
             {
-                var information = _infoServiceCallBack(serviceName);
+                var information = listServiceCallBack(serviceName);
                 if (information == null) return;
                 if (information.Length == 0)
                 {
@@ -459,7 +466,6 @@ namespace TTvActionHub
             catch (Exception ex)
             {
                 HandleCallbackError($"info {serviceName}", ex);
-                return;
             }
 
         }
@@ -474,16 +480,16 @@ namespace TTvActionHub
             var target = argument.Trim();
             var serviceName = _serviceStates.FirstOrDefault(
                 kvp => kvp.Key.Equals(target, StringComparison.OrdinalIgnoreCase)).Key;
-            if (serviceName == default)
+            if (string.IsNullOrEmpty(serviceName))
             {
                 CmdOut($"Unable to find service: {serviceName}");
                 return;
             }
-            if(_stopServiceCallBack != null)
+            if(stopServiceCallBack != null)
             {
                 try
                 {
-                    _stopServiceCallBack(serviceName);
+                    stopServiceCallBack(serviceName);
                 }
                 catch (Exception ex)
                 {
@@ -491,7 +497,7 @@ namespace TTvActionHub
                 }
             } else
             {
-                CmdOut($"Stop service functionality is not configured. Ignoring...");
+                CmdOut("Stop service functionality is not configured. Ignoring...");
             }
         }
 
@@ -505,16 +511,16 @@ namespace TTvActionHub
             var target = argument.Trim();
             var serviceName = _serviceStates.FirstOrDefault(
                 kvp => kvp.Key.Equals(target, StringComparison.OrdinalIgnoreCase)).Key;
-            if (serviceName == default)
+            if (string.IsNullOrEmpty(serviceName))
             {
                 CmdOut($"Unable to find service: {serviceName}");
                 return;
             }
-            if (_startServiceCallBack != null)
+            if (startServicesCallBack != null)
             {
                 try
                 {
-                    _startServiceCallBack(serviceName);
+                    startServicesCallBack(serviceName);
                 }
                 catch (Exception ex)
                 {
@@ -523,7 +529,7 @@ namespace TTvActionHub
             }
             else
             {
-                CmdOut($"Start service functionality is not configured. Ignoring...");
+                CmdOut("Start service functionality is not configured. Ignoring...");
             }
         }
 
@@ -538,17 +544,17 @@ namespace TTvActionHub
             var target = argument.Trim();
             var serviceName = _serviceStates.FirstOrDefault(
                 kvp => kvp.Key.Equals(target, StringComparison.OrdinalIgnoreCase)).Key;
-            if (serviceName == default)
+            if (string.IsNullOrEmpty(serviceName))
             {
                 CmdOut($"Unable to find service: {serviceName}");
                 return;
             }
 
-            if (_reloadServiceCallBack != null)
+            if (reloadServiceCallBack != null)
             {
                 try
                 {
-                    _reloadServiceCallBack(serviceName);
+                    reloadServiceCallBack(serviceName);
                 }
                 catch (Exception ex)
                 {
@@ -557,7 +563,7 @@ namespace TTvActionHub
             }
             else
             {
-                CmdOut($"Reload service functionality is not configured. Ignoring...");
+                CmdOut("Reload service functionality is not configured. Ignoring...");
             }
         }
 
@@ -574,7 +580,7 @@ namespace TTvActionHub
             builder.AppendLine("cmd - Switch view to command output");
             builder.AppendLine("help - Shows this help message");
             builder.AppendLine("exit - Stops services and exits");
-            MessageBox.Query("Avalible commands", builder.ToString(), "Ok");
+            MessageBox.Query("Available commands", builder.ToString(), "Ok");
         }
 
         private void HandleCallbackError(string actionName, Exception ex)
@@ -585,11 +591,9 @@ namespace TTvActionHub
 
         public void Dispose()
         {
-            if (_timeoutToken != null && _mainLoopDriver != null)
-            {
-                try { Application.MainLoop.RemoveTimeout(_timeoutToken); } catch { /* Ignore */ }
-                _timeoutToken = null;
-            }
+            if (_timeoutToken == null || _mainLoopDriver == null) return;
+            try { Application.MainLoop.RemoveTimeout(_timeoutToken); } catch { /* Ignore */ }
+            _timeoutToken = null;
         }
     }
 }

@@ -2,12 +2,12 @@
 
 namespace TTvActionHub.LuaTools.Services.ContainerItems
 {
-    public class TwitchUser
+    public class JsonTable
     {
         [Key]
         public int Id { get; set; }
-        public long Points { get; set; }
         public string Name { get; set; } = string.Empty;
-        public string AdditionalInfo { get; set; } = string.Empty;
+        public string JsonData { get; set; } = string.Empty;
+
     }
 }

@@ -128,7 +128,7 @@ namespace TTvActionHub.BackEnds.Hardware
                 {
                     Mouse = new MouseInput
                     {
-                        dwFlags = (uint)(MouseFlag.Move),
+                        dwFlags = (uint)MouseFlag.Move,
                         dx = dx, dy = dy
                     }
                 }
@@ -210,19 +210,19 @@ namespace TTvActionHub.BackEnds.Hardware
             MouseButton.LeftButton => down switch
             {
                 true => MouseFlag.LeftDown,
-                _ => MouseFlag.LeftUp,
+                _ => MouseFlag.LeftUp
             },
             MouseButton.RightButton => down switch
             {
                 true => MouseFlag.RightDown,
-                _ => MouseFlag.RightUp,
+                _ => MouseFlag.RightUp
             },
             MouseButton.MiddleButton => down switch
             {
                 true => MouseFlag.MiddleDown,
-                _ => MouseFlag.MiddleUp,
+                _ => MouseFlag.MiddleUp
             },
-            _ => MouseFlag.LeftUp,
+            _ => MouseFlag.LeftUp
         };
 
 

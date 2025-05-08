@@ -15,21 +15,21 @@ namespace TTvActionHub.LuaTools.Services
 
         public static void SetVolume(float volume) 
         {
-            if (audio == null) { throw new Exception("Audio service was not provided"); };
+            if (audio == null) { throw new Exception("Audio service was not provided"); }
 
             audio.SetVolume(volume);
         }
 
         public static float GetVolume()
         {
-            if (audio == null) { throw new Exception("Audio service was not provided"); };
+            if (audio == null) { throw new Exception("Audio service was not provided"); }
 
             return audio.GetVolume();
         }
 
         public static void IncreaseVolume(float volume)
         {
-            if (audio == null) { throw new Exception("Audio service was not provided"); };
+            if (audio == null) { throw new Exception("Audio service was not provided"); }
             var res = audio.GetVolume() + volume;
 
             audio.SetVolume((float)(res > 1.0 ? 1.0 : res));
@@ -37,7 +37,7 @@ namespace TTvActionHub.LuaTools.Services
 
         public static void DecreaseVolume(float volume)
         {
-            if (audio == null) { throw new Exception("Audio service was not provided"); };
+            if (audio == null) { throw new Exception("Audio service was not provided"); }
 
             var res = audio.GetVolume() - volume;
 
@@ -46,7 +46,7 @@ namespace TTvActionHub.LuaTools.Services
 
         public static void SkipSound()
         {
-            if (audio == null) { throw new Exception("Audio service was not provided"); };
+            if (audio == null) { throw new Exception("Audio service was not provided"); }
             audio.SkipSound();
         }
     }

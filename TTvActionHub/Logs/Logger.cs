@@ -1,9 +1,8 @@
-﻿using TTvActionHub.Logs;
-using TTvActionHub.BackEnds;
+﻿using TTvActionHub.BackEnds;
 
 namespace TTvActionHub.Logs
 {
-    enum LOGTYPE : int
+    internal enum LogType
     {
         ERROR = -1, INFO = 0, WARNING = 1
     }
@@ -27,13 +26,13 @@ namespace TTvActionHub.Logs
             _logger.Warn(message); 
         }
 
-        public static void Log(LOGTYPE type, string name, string message, Exception? err = null)
+        public static void Log(LogType type, string name, string message, Exception? err = null)
         {
             string res = type switch
             {
-                LOGTYPE.ERROR => "ERR",
-                LOGTYPE.INFO => "INFO",
-                LOGTYPE.WARNING => "WARN",
+                LogType.ERROR => "ERR",
+                LogType.INFO => "INFO",
+                LogType.WARNING => "WARN",
                 _ => "NULL"
             };
 

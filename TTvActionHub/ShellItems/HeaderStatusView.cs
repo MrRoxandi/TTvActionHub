@@ -1,12 +1,10 @@
 ﻿using Terminal.Gui;
-using NStack;
-using System.Text;
 
 namespace TTvActionHub.ShellItems
 {
-    public class HeaderStatusView : View
+    public partial class HeaderStatusView : View
     {
-        private IEnumerable<KeyValuePair<string, bool>> _serviceStatesData = Enumerable.Empty<KeyValuePair<string, bool>>();
+        private IEnumerable<KeyValuePair<string, bool>> _serviceStatesData = [];
         
         private Terminal.Gui.Attribute _attrSuccess;
         private Terminal.Gui.Attribute _attrError;
@@ -35,7 +33,7 @@ namespace TTvActionHub.ShellItems
 
         public void SetData(IEnumerable<KeyValuePair<string, bool>> states)
         {
-            _serviceStatesData = states ?? Enumerable.Empty<KeyValuePair<string, bool>>();
+            _serviceStatesData = states;
             SetNeedsDisplay();
         }
 
