@@ -27,7 +27,7 @@ namespace TTvActionHub.LuaTools.Services
             return audio.GetVolume();
         }
 
-        public static void IncreeseVolume(float volume)
+        public static void IncreaseVolume(float volume)
         {
             if (audio == null) { throw new Exception("Audio service was not provided"); };
             var res = audio.GetVolume() + volume;
@@ -35,7 +35,7 @@ namespace TTvActionHub.LuaTools.Services
             audio.SetVolume((float)(res > 1.0 ? 1.0 : res));
         }
 
-        public static void DecreeseVolume(float volume)
+        public static void DecreaseVolume(float volume)
         {
             if (audio == null) { throw new Exception("Audio service was not provided"); };
 

@@ -198,11 +198,11 @@ namespace TTvActionHub.Managers
 
         // All avaliable static bridges for lua
         private static List<string> Bridges => [
-            "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Audio\").Sounds",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Hardware\").Keyboard",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Hardware\").Mouse",
-            "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Stuff\").TwitchTools",
-            "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Stuff\").Storage",
+            "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Services\").Audio",
+            "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Services\").Container",
+            "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Services\").TwitchTool",
             "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Stuff\").Funcs",
             ];
 
@@ -265,8 +265,6 @@ namespace TTvActionHub.Managers
             builder.AppendLine("configuration['force-relog'] = false");
             builder.AppendLine("configuration['timeout'] = 30000 -- 30000 ms == 30 s");
             builder.AppendLine("configuration['logs'] = false");
-            builder.AppendLine("--configuration['opening-bracket'] = '<'");
-            builder.AppendLine("--configuration['closing-bracket'] = '<'");
             builder.AppendLine();
             builder.AppendLine("return configuration");
             File.WriteAllText(filePath, builder.ToString());
@@ -275,7 +273,6 @@ namespace TTvActionHub.Managers
         public static void GenerateAllConfigs()
         {
             GenerateTwitchEventsFile();
-            //GenerateRewardsFile();
             GenerateTimerActionsFile();
             GenerateMainConfig();
         }
