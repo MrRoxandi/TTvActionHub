@@ -400,11 +400,10 @@ namespace TTvActionHub.Services
                                     Logger.Log(LogType.Info, ServiceName, $"Executing {eventIdentifier}...");
                                     eventDataToProcess.Event.Execute(eventDataToProcess.Args);
                                     Logger.Log(LogType.Info, ServiceName, $"Finished {eventIdentifier}.");
-                                    if (eventDataToProcess.Event.Cost > 0 && eventDataToProcess.Args.Sender != _configuration.Login)
-                                    {
-                                        _ = AddPointsToUserAsync(eventDataToProcess.Args.Sender, -eventDataToProcess.Event.Cost);
-                                        Logger.Log(LogType.Info, ServiceName, $"Consuming {eventDataToProcess.Event.Cost} points from user: {eventDataToProcess.Args.Sender}");
-                                    }
+                                    if (eventDataToProcess.Event.Cost <= 0 ||
+                                        eventDataToProcess.Args.Sender == _configuration.Login) return;
+                                    _ = AddPointsToUserAsync(eventDataToProcess.Args.Sender, -eventDataToProcess.Event.Cost);
+                                    Logger.Log(LogType.Info, ServiceName, $"Consuming {eventDataToProcess.Event.Cost} points from user: {eventDataToProcess.Args.Sender}");
                                 }
                                 catch (Exception ex)
                                 {

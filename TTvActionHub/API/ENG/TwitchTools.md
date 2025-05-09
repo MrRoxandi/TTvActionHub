@@ -9,10 +9,11 @@ local TwitchTools = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Twi
 ## Available Methods
 
 | Method                                       | Description                                                                                |
-| -------------------------------------------- | ------------------------------------------------------------------------------------------ |
+|----------------------------------------------|--------------------------------------------------------------------------------------------|
 | `SendMessage(string message)`                | Sends a message to the chat from your account.                                             |
 | `SendWhisper(string target, string message)` | Sends a private message (whisper) to the user (`target`) from your account.                |
 | `AddPoints(string name, int value)`          | Adds (or subtracts if negative) a certain amount (`value`) of points to the user (`name`). |
+| `SetPoints(string name)`                     | Sets certain amount (`value`) of points to the user (`name`).                              |
 | `GetPoints(string name)`                     | Gets the current number of points for the user (`name`).                                   |
 | `GetEventCost(string eventName)`             | Gets the cost to trigger the event (`eventName`).                                          |
 
