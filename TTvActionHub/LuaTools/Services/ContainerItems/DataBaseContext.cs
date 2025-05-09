@@ -5,7 +5,6 @@ namespace TTvActionHub.LuaTools.Services.ContainerItems
 {
     public partial class DataBaseContext : DbContext, IDataBaseContext
     {
-        public DbSet<TwitchUser> Users { get; set; }
 
         public DbSet<JsonTable> DataTable { get; set; }
 

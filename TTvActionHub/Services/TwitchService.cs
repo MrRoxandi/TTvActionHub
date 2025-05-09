@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using Microsoft.EntityFrameworkCore;
 using TTvActionHub.Items;
 using TTvActionHub.Logs;
 using TTvActionHub.Managers;
@@ -11,6 +12,7 @@ using TwitchLib.EventSub.Websockets.Core.EventArgs;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 using TwitchLib.Api.Core.Enums;
 using TTvActionHub.LuaTools.Services;
+using TTvActionHub.Services.Twitch;
 using TwitchLib.Api.Helix.Models.Chat.GetChatters;
 using TwitchLib.Api.Helix.Models.Clips.GetClips;
 using LogType = TTvActionHub.Logs.LogType;
@@ -23,7 +25,11 @@ namespace TTvActionHub.Services
         public event EventHandler<ServiceStatusEventArgs>? StatusChanged;
         public string ServiceName => nameof(TwitchService);
         public bool IsRunning { get; private set; }
+        
+        // --- Db for Twitch users --- 
 
+        private readonly TwitchDbContext _db;
+        
         // --- Connection checks ---
 
         public bool IsTwitchClientConnected => _twitchClient?.IsConnected ?? false;
@@ -70,7 +76,8 @@ namespace TTvActionHub.Services
         {
             _configManager = configManager ?? throw new ArgumentNullException(nameof(configManager));
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-
+            _db = new TwitchDbContext();
+            _db.EnsureCreated();
             TwitchEvents = _configManager.LoadTwitchEvents()
                 ?? throw new InvalidOperationException($"Failed to load initial TwitchEvents configuration for {ServiceName}");
         }
@@ -494,6 +501,7 @@ namespace TTvActionHub.Services
             _serviceCts = null;
 
             try { _eventsSemaphore?.Dispose(); } catch (ObjectDisposedException) { }
+
             _eventsSemaphore = null;
 
             _eventsQueue = null;
@@ -519,7 +527,7 @@ namespace TTvActionHub.Services
         private void UpdateOverallStatus(string? specificMessage = null)
         {
             string message;
-            var currentServiceRunningStatus = IsRunning; 
+            var currentServiceRunningStatus = IsRunning;
 
             if (currentServiceRunningStatus)
             {
@@ -532,32 +540,25 @@ namespace TTvActionHub.Services
                         : "All clients disconnected."
                 };
 
-                if (!string.IsNullOrEmpty(specificMessage))
-                {
-                    message = $"{specificMessage} ({message})";
-                }
+                if (!string.IsNullOrEmpty(specificMessage)) message = $"{specificMessage} ({message})";
             }
-            else 
+            else
             {
                 message = "Service not running.";
                 if (!string.IsNullOrEmpty(specificMessage))
-                {
-                    message = $"{specificMessage}"; 
-                }
-                else if (_stopRequested)
-                {
-                    message = "Service stopping...";
-                }
+                    message = $"{specificMessage}";
+                else if (_stopRequested) message = "Service stopping...";
             }
 
-            OnStatusChanged(currentServiceRunningStatus && (IsTwitchClientConnected || IsEventSubClientConnected), message);
+            OnStatusChanged(currentServiceRunningStatus && (IsTwitchClientConnected || IsEventSubClientConnected),
+                message);
         }
 
         // --- Points System Methods ---
         private void StartViewerPointsTimer()
         {
             if (_viewerPointsTimer != null) return;
-            _viewerPointsTimer = new Timer(AwardPointsToViewers, null, TimeSpan.Zero, TimeSpan.FromMinutes(ViewerPointsIntervalMinutes));
+            _viewerPointsTimer = new Timer(AwardPointsToViewers, null, TimeSpan.FromSeconds(20), TimeSpan.FromMinutes(ViewerPointsIntervalMinutes));
             Logger.Log(LogType.Info, ServiceName, $"Viewer points timer started. Interval: {ViewerPointsIntervalMinutes} min.");
         }
 
@@ -565,12 +566,15 @@ namespace TTvActionHub.Services
         {
             if (_clipPointsTimer == null && !string.IsNullOrEmpty(_configuration.Id))
             {
-                _clipPointsTimer = new Timer(CheckForNewClipsAndAwardPoints, null, TimeSpan.Zero, TimeSpan.FromMinutes(ClipCheckIntervalMinutes)); // Небольшая задержка перед первым запуском
-                Logger.Log(LogType.Info, ServiceName, $"Clip points timer started. Interval: {ClipCheckIntervalMinutes} min.");
+                _clipPointsTimer = new Timer(CheckForNewClipsAndAwardPoints, null, TimeSpan.FromSeconds(20),
+                    TimeSpan.FromMinutes(ClipCheckIntervalMinutes)); 
+                Logger.Log(LogType.Info, ServiceName,
+                    $"Clip points timer started. Interval: {ClipCheckIntervalMinutes} min.");
             }
             else if (string.IsNullOrEmpty(_configuration.Id))
             {
-                Logger.Log(LogType.Warning, ServiceName, "Cannot start Clip points timer: TwitchApi or Broadcaster ID is not configured.");
+                Logger.Log(LogType.Warning, ServiceName,
+                    "Cannot start Clip points timer: TwitchApi or Broadcaster ID is not configured.");
             }
         }
 
@@ -590,10 +594,7 @@ namespace TTvActionHub.Services
 
         private async void AwardPointsToViewers(object? state)
         {
-            if (!IsRunning || !IsTwitchClientConnected || string.IsNullOrEmpty(_configuration.Id))
-            {
-                return;
-            }
+            if (!IsRunning || !IsTwitchClientConnected || string.IsNullOrEmpty(_configuration.Id)) return;
 
             Logger.Log(LogType.Info, ServiceName, "Attempting to award points to viewers...");
             try
@@ -602,9 +603,10 @@ namespace TTvActionHub.Services
                 GetChattersResponse? response;
                 try
                 {
-                    response = await _configuration.TwitchApi.InnerApi.Helix.Chat.GetChattersAsync(broadcasterId, broadcasterId);
+                    response = await _configuration.TwitchApi.InnerApi.Helix.Chat.GetChattersAsync(broadcasterId,
+                        broadcasterId);
                 }
-                catch (Exception apiEx) 
+                catch (Exception apiEx)
                 {
                     Logger.Log(LogType.Error, ServiceName, "Failed to get chatters from Twitch API.", apiEx);
                     return;
@@ -615,14 +617,14 @@ namespace TTvActionHub.Services
                     var awardedCount = 0;
                     foreach (var chatter in response.Data)
                     {
-                        if (string.Equals(chatter.UserLogin, _configuration.Login, StringComparison.OrdinalIgnoreCase))
-                        {
-                            continue;
-                        }
+                        if (string.Equals(chatter.UserLogin, _configuration.Login,
+                                StringComparison.OrdinalIgnoreCase)) continue;
                         await AddPointsToUserAsync(chatter.UserLogin, PointsPerMinuteForViewers);
                         awardedCount++;
                     }
-                    Logger.Log(LogType.Info, ServiceName, $"Awarded {PointsPerMinuteForViewers} points to {awardedCount} active chatters.");
+
+                    Logger.Log(LogType.Info, ServiceName,
+                        $"Awarded {PointsPerMinuteForViewers} points to {awardedCount} active chatters.");
                 }
                 else
                 {
@@ -637,82 +639,107 @@ namespace TTvActionHub.Services
 
         private async void CheckForNewClipsAndAwardPoints(object? state)
         {
-            if (!IsRunning || string.IsNullOrEmpty(_configuration.Id))
-            {
-                return;
-            }
+            if (!IsRunning || string.IsNullOrEmpty(_configuration.Id)) return;
             Logger.Log(LogType.Info, ServiceName, "Checking for new clips...");
-
-            try
+            Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "debug"));
+            var cursor = string.Empty;
+            do
             {
-                var lastCheckTimeUtc = await Container.Storage!.GetItemAsync<DateTime?>(LastClipCheckTimeKey) ?? DateTime.Today.AddYears(-3);
-                
-                GetClipsResponse? clipsResponse;
+                var lastCheckTimeUtc = await Container.Storage!.GetItemAsync<DateTime?>(LastClipCheckTimeKey) ??
+                                       DateTime.Today.AddYears(-3);
+
                 try
                 {
-                    clipsResponse = await _configuration.TwitchApi.InnerApi.Helix.Clips.GetClipsAsync(
-                        broadcasterId: _configuration.Id,
-                        accessToken: _configuration.Token,
-                        startedAt: lastCheckTimeUtc,
-                        endedAt: DateTime.Now,
-                        first: 100
-                    );
+                    GetClipsResponse? result;
+                    if (string.IsNullOrEmpty(cursor))
+                        result = await _configuration.TwitchApi.InnerApi.Helix.Clips.GetClipsAsync(
+                            broadcasterId: _configuration.Id,
+                            accessToken: _configuration.Token,
+                            startedAt: lastCheckTimeUtc,
+                            endedAt: DateTime.Today,
+                            first: 100
+                        );
+                    else
+                        result = await _configuration.TwitchApi.InnerApi.Helix.Clips.GetClipsAsync(
+                            broadcasterId: _configuration.Id,
+                            accessToken: _configuration.Token,
+                            startedAt: lastCheckTimeUtc,
+                            endedAt: DateTime.Today,
+                            after: cursor,
+                            first: 100
+                        );
+                    if (result == null)
+                    {
+                        Logger.Log(LogType.Error, ServiceName, "Api error, get empty response.");
+                        break;
+                    }
+
+                    // checking clips in response 
+                    var clips = result.Clips;
+                    if (clips != null && clips.Length != 0)
+                    {
+                        Logger.Log(LogType.Info, ServiceName, $"Processing points reward for {clips.Length} clips...");
+                        foreach (var clip in clips.OrderByDescending(t => t.CreatedAt))
+                        {
+                            // Checking name
+                            if (string.IsNullOrWhiteSpace(clip.CreatorName)) continue;
+                            if (string.Equals(clip.CreatorName, _configuration.Login,
+                                    StringComparison.OrdinalIgnoreCase))
+                            {
+                                Logger.Log(LogType.Info, ServiceName,
+                                    $"Clip {clip.Id} by {clip.CreatorName} (bot/channel) skipped for points.");
+                                continue;
+                            }
+
+                            Logger.Log(LogType.Info, ServiceName,
+                                $"adding {PointsPerClip} point to {clip.CreatorName} for creating clip ({clip.Id[..8]})");
+                            await AddPointsToUserAsync(clip.CreatorName, PointsPerClip);
+                        }
+                    }
+                    else
+                    {
+                        Logger.Log(LogType.Info, ServiceName, "No new clips found since last check.");
+                    }
+
+                    //
+                    cursor = result.Pagination.Cursor;
                 }
                 catch (Exception apiEx)
                 {
-                    Logger.Log(LogType.Error, ServiceName, "Failed to get clips from Twitch API.", apiEx);
+                    Logger.Log(LogType.Error, ServiceName, "Failed to get clips from Twitch API:", apiEx);
                     return;
                 }
+            } while (!string.IsNullOrEmpty(cursor));
 
-                if (clipsResponse?.Clips != null && clipsResponse.Clips.Length != 0)
-                {
-                    lastCheckTimeUtc = DateTime.UtcNow;
-                    var sortedClips = clipsResponse.Clips.OrderBy(c => c.CreatedAt).ToList();
-
-                    foreach (var clip in sortedClips)
-                    {
-                        if (!string.IsNullOrWhiteSpace(clip.CreatorName))
-                        {
-                            if (string.Equals(clip.CreatorName, _configuration.Login, StringComparison.OrdinalIgnoreCase))
-                            {
-                                Logger.Log(LogType.Info, ServiceName, $"Clip {clip.Id} by {clip.CreatorName} (bot/channel) skipped for points.");
-                            }
-                            else
-                            {
-                                Logger.Log(LogType.Info, ServiceName, $"adding {PointsPerClip} point to {clip.CreatorName} for creating clip ({clip.Id[..8]})");
-                                await AddPointsToUserAsync(clip.CreatorName, PointsPerClip);
-                            }
-                        }
-                        else
-                        {
-                            Logger.Log(LogType.Warning, ServiceName, $"Clip {clip.Id} has no CreatorName. Cannot award points.");
-                        }
-                    }
-                    await Container.Storage.AddOrUpdateItemAsync(LastClipCheckTimeKey, lastCheckTimeUtc);
-                    Logger.Log(LogType.Info, ServiceName, $"Last clip check time updated to: {lastCheckTimeUtc:o}");
-                }
-                else
-                {
-                    Logger.Log(LogType.Info, ServiceName, "No new clips found since last check or API.");
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogType.Error, ServiceName, "Error in CheckForNewClipsAndAwardPoints.", ex);
-            }
+            await Container.Storage.AddOrUpdateItemAsync(LastClipCheckTimeKey, DateTime.UtcNow);
         }
 
         public async Task AddPointsToUserAsync(string username, long pointsToAdd)
         {
             if (string.IsNullOrWhiteSpace(username)) return;
-            await Container.Storage!.AddPointsToUserAsync(username, pointsToAdd);
-            /*var total = await GetPointsFromUser(username);*/
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+            user ??= new TwitchUser { Username = username };
+            user.Points += pointsToAdd;
+            if (user.Id == 0) 
+                _db.Users.Add(user);
+            await _db.SaveChangesAsync();
         }
 
-        public static async Task<long> GetPointsFromUser(string username)
+        public async Task SetPointsToUserAsync(string username, long pointsToSet)
+        {
+            if (string.IsNullOrWhiteSpace(username)) return;
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+            user ??= new TwitchUser { Username = username };
+            user.Points = pointsToSet;
+            if (user.Id == 0) 
+                _db.Users.Add(user);
+            await _db.SaveChangesAsync();
+        }
+        public async Task<long> GetPointsFromUser(string username)
         {
             if (string.IsNullOrWhiteSpace(username)) return 0;
-            return await Container.Storage!.GetPointsFromUserAsync(username);
+            var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
+            return user?.Points ?? 0;
         }
 
         // --- Status Changed event backend --- 
@@ -739,11 +766,8 @@ namespace TTvActionHub.Services
                     Logger.Log(LogType.Info, ServiceName, "Configuration updated successfully.");
                     return true;
                 }
-                else
-                {
-                    Logger.Log(LogType.Warning, ServiceName, "Failed to update configuration: LoadTwitchEvents returned null.");
-                    return false;
-                }
+                Logger.Log(LogType.Warning, ServiceName, "Failed to update configuration: LoadTwitchEvents returned null.");
+                return false;
             }
             catch (Exception ex)
             {
@@ -807,7 +831,7 @@ namespace TTvActionHub.Services
                 }
                 if (!subscriptionSuccessful)
                 {
-                    Logger.Log(LogType.Error, ServiceName, $"One or more EventSub subscriptions for did not report 'enabled' status.");
+                    Logger.Log(LogType.Error, ServiceName, "One or more EventSub subscriptions for did not report 'enabled' status.");
                 }
                 return subscriptionSuccessful;
             }
@@ -1001,37 +1025,34 @@ namespace TTvActionHub.Services
                         return;
                     }
 
-                    Logger.Log(LogType.Info, ServiceName, $"Reconnecting {(clientToReconnect ?? "service")}...");
+                    Logger.Log(LogType.Info, ServiceName, $"Reconnecting {clientToReconnect ?? "service"}...");
                     lock (_connectionLock) // Блокировка для изменения состояния клиентов
                     {
-                        if (clientToReconnect == "Twitch Chat" && !IsTwitchClientConnected)
+                        switch (clientToReconnect)
                         {
-                            Logger.Log(LogType.Info, ServiceName, "Attempting to reconnect Twitch Chat client specifically.");
-                            CleanupTwitchClientResources();
-                            _twitchClient = new();
-                            _credentials = new(_configuration.Login, _configuration.Token);
-                            _twitchClient.Initialize(_credentials, _configuration.Login);
-                            SubscribeToTwitchClientEvents();
-                            _twitchClient.Connect();
-
-                        }
-                        else if (clientToReconnect == "EventSub" && !IsEventSubClientConnected)
-                        {
-                            Logger.Log(LogType.Info, ServiceName, "Attempting to reconnect EventSub client specifically.");
-                            CleanupEventSubClientResources();
-                            _eventSubClient = new EventSubWebsocketClient();
-                            SubscribeToEventSubClientEvents();
-                            _ = _eventSubClient.ConnectAsync();
-
-                        }
-                        else if (clientToReconnect == null) 
-                        {
-                            Logger.Log(LogType.Info, ServiceName, "Attempting full service Run for reconnect.");
-                            Run(); 
-                        }
-                        else
-                        {
-                            Logger.Log(LogType.Info, ServiceName, $"Reconnect for {clientToReconnect} skipped, client is already connected or not specified for specific reconnect.");
+                            case "Twitch Chat" when !IsTwitchClientConnected:
+                                Logger.Log(LogType.Info, ServiceName, "Attempting to reconnect Twitch Chat client specifically.");
+                                CleanupTwitchClientResources();
+                                _twitchClient = new();
+                                _credentials = new(_configuration.Login, _configuration.Token);
+                                _twitchClient.Initialize(_credentials, _configuration.Login);
+                                SubscribeToTwitchClientEvents();
+                                _twitchClient.Connect();
+                                break;
+                            case "EventSub" when !IsEventSubClientConnected:
+                                Logger.Log(LogType.Info, ServiceName, "Attempting to reconnect EventSub client specifically.");
+                                CleanupEventSubClientResources();
+                                _eventSubClient = new EventSubWebsocketClient();
+                                SubscribeToEventSubClientEvents();
+                                _ = _eventSubClient.ConnectAsync();
+                                break;
+                            case null:
+                                Logger.Log(LogType.Info, ServiceName, "Attempting full service Run for reconnect.");
+                                Run();
+                                break;
+                            default:
+                                Logger.Log(LogType.Info, ServiceName, $"Reconnect for {clientToReconnect} skipped, client is already connected or not specified for specific reconnect.");
+                                break;
                         }
                     }
                 }
@@ -1042,7 +1063,7 @@ namespace TTvActionHub.Services
                 catch (Exception ex)
                 {
                     Logger.Log(LogType.Error, ServiceName, "Error during reconnect attempt execution.", ex);
-                    OnStatusChanged(false, $"Reconnect failed for {(clientToReconnect ?? "service")}: {ex.Message}");
+                    OnStatusChanged(false, $"Reconnect failed for {clientToReconnect ?? "service"}: {ex.Message}");
                 }
             });
         }

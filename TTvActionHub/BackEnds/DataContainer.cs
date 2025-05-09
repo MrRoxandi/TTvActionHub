@@ -16,67 +16,6 @@ namespace TTvActionHub.BackEnds
             _db.EnsureCreated();
         }
 
-        // --- User related methods ---
-        public void AddPointsToUser(string username, long points)
-        {
-            var user = _db.Users.FirstOrDefault(te => te.Name == username);
-            user ??= new TwitchUser { Name = username };
-            user.Points += points;
-            if (user.Id == 0)
-            {
-                _db.Users.Add(user);
-            }
-            _db.SaveChanges();
-        }
-
-        public long GetPointsFromUser(string username)
-        {
-            var user = _db.Users.FirstOrDefault(te => te.Name == username);
-            return user?.Points ?? 0;
-        }
-
-        public async Task<long> GetPointsFromUserAsync(string username)
-        {
-            var user = await _db.Users.FirstOrDefaultAsync(te => te.Name == username);
-            return user?.Points ?? 0;
-        }
-
-        public async Task AddPointsToUserAsync(string username, long points)
-        {
-            var user = _db.Users.FirstOrDefault(te => te.Name == username);
-            user ??= new() { Name = username };
-            user.Points += points;
-            if (user.Id == 0)
-            {
-                await _db.Users.AddAsync(user);
-            }
-            await _db.SaveChangesAsync();
-        }
-
-        public void AddAdditionalInfoToUser(string username, string data)
-        {
-            var user = _db.Users.FirstOrDefault(te => te.Name == username);
-            user ??= new() { Name = username };
-            user.AdditionalInfo = data;
-            if (user.Id == 0)
-            {
-                _db.Users.Add(user);
-            }
-            _db.SaveChanges();
-        }
-
-        public async Task AddAdditionalInfoToUserAsync(string username, string data)
-        {
-            var user = _db.Users.FirstOrDefault(te => te.Name == username);
-            user ??= new() { Name = username };
-            user.AdditionalInfo = data;
-            if (user.Id == 0)
-            {
-                await _db.Users.AddAsync(user);
-            }
-            await _db.SaveChangesAsync();
-        }
-
         // --- Random data related methods ---
 
         public void AddOrUpdateItem<T>(string name, T value)

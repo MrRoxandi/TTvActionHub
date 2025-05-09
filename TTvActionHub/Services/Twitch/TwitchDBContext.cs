@@ -1,15 +1,14 @@
 ﻿using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
-namespace TTvActionHub.Managers.AuthManagerItems;
+namespace TTvActionHub.Services.Twitch;
 
-public partial class AuthDbContext : DbContext
+public partial class TwitchDbContext : DbContext
 {
-    public DbSet<TwitchAuthData> AuthenticationData  { get; set; }
+    private static string DbPath => Path.Combine(Directory.GetCurrentDirectory(), ".storage", "TwitchUsers.db");
     
-    private static string DbPath => Path.Combine(Directory.GetCurrentDirectory(), ".storage", "AuthData.db");
-    
-    public AuthDbContext()
+    public DbSet<TwitchUser> Users { get; set; }
+    public TwitchDbContext()
     {
         var folderPath = Path.GetDirectoryName(DbPath);
         if (folderPath != null && !Directory.Exists(folderPath))
@@ -22,11 +21,7 @@ public partial class AuthDbContext : DbContext
     public async Task EnsureCreatedAsync() => await Database.EnsureCreatedAsync();
     public void EnsureDeleted() => Database.EnsureDeleted();
     public async Task EnsureDeletedAsync() => await Database.EnsureDeletedAsync();
-    
-    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
-    {
-        return await base.SaveChangesAsync(cancellationToken);
-    }
+    public async Task<int> SaveChangesAsync() => await base.SaveChangesAsync();
     
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
