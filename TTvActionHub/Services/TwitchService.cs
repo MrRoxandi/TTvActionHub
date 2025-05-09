@@ -565,7 +565,7 @@ namespace TTvActionHub.Services
         {
             if (_clipPointsTimer == null && !string.IsNullOrEmpty(_configuration.Id))
             {
-                _clipPointsTimer = new Timer(CheckForNewClipsAndAwardPoints, null, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(ClipCheckIntervalMinutes)); // Небольшая задержка перед первым запуском
+                _clipPointsTimer = new Timer(CheckForNewClipsAndAwardPoints, null, TimeSpan.Zero, TimeSpan.FromMinutes(ClipCheckIntervalMinutes)); // Небольшая задержка перед первым запуском
                 Logger.Log(LogType.Info, ServiceName, $"Clip points timer started. Interval: {ClipCheckIntervalMinutes} min.");
             }
             else if (string.IsNullOrEmpty(_configuration.Id))
@@ -645,14 +645,17 @@ namespace TTvActionHub.Services
 
             try
             {
-                var lastCheckTimeUtc = await Container.Storage!.GetItemAsync<DateTime?>(LastClipCheckTimeKey) ?? DateTime.Today;
+                var lastCheckTimeUtc = await Container.Storage!.GetItemAsync<DateTime?>(LastClipCheckTimeKey) ?? DateTime.Today.AddYears(-3);
                 
                 GetClipsResponse? clipsResponse;
                 try
                 {
                     clipsResponse = await _configuration.TwitchApi.InnerApi.Helix.Clips.GetClipsAsync(
                         broadcasterId: _configuration.Id,
-                        startedAt: lastCheckTimeUtc
+                        accessToken: _configuration.Token,
+                        startedAt: lastCheckTimeUtc,
+                        endedAt: DateTime.Now,
+                        first: 100
                     );
                 }
                 catch (Exception apiEx)
@@ -690,7 +693,7 @@ namespace TTvActionHub.Services
                 }
                 else
                 {
-                    Logger.Log(LogType.Info, ServiceName, "No new clips found since last check or API error.");
+                    Logger.Log(LogType.Info, ServiceName, "No new clips found since last check or API.");
                 }
             }
             catch (Exception ex)
@@ -731,7 +734,7 @@ namespace TTvActionHub.Services
             try
             {
                 if (_configManager.LoadTwitchEvents() is { } events)
-                {
+                { 
                     TwitchEvents = events;
                     Logger.Log(LogType.Info, ServiceName, "Configuration updated successfully.");
                     return true;
