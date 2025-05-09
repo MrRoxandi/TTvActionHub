@@ -220,7 +220,7 @@ namespace TTvActionHub
                 catch (Exception ex)
                 {
                     _shell.UpdateServicesStates(sName, false); // Anyway it is not working...
-                    _shell.CmdOut($"ERROR stopping {sName}: {ex.Message}");
+                    _shell.CmdOut($"Error stopping {sName}: {ex.Message}");
                     Logger.Error($"Failed to stop {sName}:", ex);
                 }
             }

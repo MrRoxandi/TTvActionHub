@@ -29,16 +29,16 @@ namespace TTvActionHub.Services
             }
             if (Actions.IsEmpty)
             {
-                Logger.Log(LogType.INFO, ServiceName, "Nothing to run. Skipping...");
+                Logger.Log(LogType.Info, ServiceName, "Nothing to run. Skipping...");
                 OnStatusChanged(true);
                 return;
             }
             foreach (var (_, e) in Actions)
             {
-                Logger.Log(LogType.INFO, ServiceName, $"Running [{e.Name}] action");
+                Logger.Log(LogType.Info, ServiceName, $"Running [{e.Name}] action");
                 e.Run();
             }
-            Logger.Log(LogType.INFO, ServiceName, "All actions are running");
+            Logger.Log(LogType.Info, ServiceName, "All actions are running");
             OnStatusChanged(true);
         }
 
@@ -51,17 +51,17 @@ namespace TTvActionHub.Services
             }
             if (Actions.IsEmpty)
             {
-                Logger.Log(LogType.INFO, ServiceName, "Nothing to stop. Skipping...");
+                Logger.Log(LogType.Info, ServiceName, "Nothing to stop. Skipping...");
                 OnStatusChanged(false);
                 return;
             }
             foreach (var (_, e) in Actions)
             {
                 if (!e.IsRunning) continue;
-                Logger.Log(LogType.INFO, ServiceName, $"Stopping [{e.Name}] action");
+                Logger.Log(LogType.Info, ServiceName, $"Stopping [{e.Name}] action");
                 e.Stop();
             }
-            Logger.Log(LogType.INFO, ServiceName, "All action stopped");
+            Logger.Log(LogType.Info, ServiceName, "All action stopped");
             OnStatusChanged(false);
         }
 
@@ -76,14 +76,14 @@ namespace TTvActionHub.Services
                 foreach (var (_, e) in Actions)
                 {
                     if (!e.IsRunning) continue;
-                    Logger.Log(LogType.INFO, ServiceName, $"Stopping [{e.Name}] action");
+                    Logger.Log(LogType.Info, ServiceName, $"Stopping [{e.Name}] action");
                     e.Stop();
                 }
             }
             Actions = tActions;
             foreach (var (_, e) in Actions)
             {
-                Logger.Log(LogType.INFO, ServiceName, $"Running [{e.Name}] action");
+                Logger.Log(LogType.Info, ServiceName, $"Running [{e.Name}] action");
                 e.Run();
             }
             return true;
@@ -101,7 +101,7 @@ namespace TTvActionHub.Services
             }
             catch (Exception ex)
             {
-                Logger.Log(LogType.ERROR, ServiceName, "Error invoking StatusChanged event handler.", ex);
+                Logger.Log(LogType.Error, ServiceName, "Error invoking StatusChanged event handler.", ex);
             }
 
         }

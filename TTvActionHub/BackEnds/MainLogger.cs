@@ -56,14 +56,14 @@ namespace TTvActionHub.BackEnds
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[CRITICAL LOGGER ERROR]: Failed to write log. {ex}");
+                Console.WriteLine($"[CRITICAL LOGGER Error]: Failed to write log. {ex}");
                 await Task.CompletedTask; 
             }
         }
 
         public Task Info(string message)
         {
-            return InternalLogAsync($"[INFO] {message}.");
+            return InternalLogAsync($"[Info] {message}.");
         }
 
         public Task Error(string message, Exception? err = null)

@@ -131,9 +131,9 @@ namespace TTvActionHub.ShellItems
         {
             if (string.IsNullOrEmpty(line)) return _colorDefault;
 
-            if (line.Contains("ERR", StringComparison.OrdinalIgnoreCase) || line.Contains("ERROR:", StringComparison.OrdinalIgnoreCase)) return _colorError;
+            if (line.Contains("ERR", StringComparison.OrdinalIgnoreCase) || line.Contains("Error:", StringComparison.OrdinalIgnoreCase)) return _colorError;
             if (line.Contains("WARN", StringComparison.OrdinalIgnoreCase) || line.Contains("WARN:", StringComparison.OrdinalIgnoreCase)) return _colorWarning;
-            if (line.Contains("INFO", StringComparison.OrdinalIgnoreCase)) return _colorInfo;
+            if (line.Contains("Info", StringComparison.OrdinalIgnoreCase)) return _colorInfo;
             return line.TrimStart().StartsWith('>') ? _colorInput : _colorDefault;
         }
 

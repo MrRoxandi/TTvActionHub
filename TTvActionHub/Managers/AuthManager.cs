@@ -2,101 +2,158 @@
 using TTvActionHub.Logs;
 using TTvActionHub.Twitch;
 using System.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
+using TTvActionHub.Managers.AuthManagerItems;
 
 namespace TTvActionHub.Managers
 {
     public class AuthManager
     {
-        public (string Login, string ID, string Token, string RefreshToken) TwitchInfo;
+        public (string Login, string ID, string Token, string RefreshToken) TwitchInfo { get; set; }
+        private readonly AuthDbContext _db;
         private static string ServiceName => "AuthManager";
-
-        private static string AuthDir => "auth";
-        private static string FileName => "data";
 
         private readonly string _secret;
         private readonly TwitchApi _api;
-
+        
         public AuthManager(TwitchApi api, string secret)
         {
             ArgumentNullException.ThrowIfNull(api, nameof(api));
             ArgumentException.ThrowIfNullOrWhiteSpace(secret, nameof(secret));
             _api = api;
             _secret = secret;
+            _db = new();
+            _db.EnsureCreated();
             // Initialize TwitchInfo with default/empty values
             TwitchInfo = (Login: string.Empty, ID: string.Empty, Token: string.Empty, RefreshToken: string.Empty);
         }
 
-        public bool LoadTwitchInfo()
+        public async Task<bool> LoadTwitchInfoAsync()
         {
-            var path = Path.Combine(AuthDir, FileName);
-            
             try
             {
-                if (!File.Exists(path))
+                var authData = await _db.AuthenticationData.FirstOrDefaultAsync();
+                if (authData == null)
                 {
-                    Logger.Log(LogType.INFO, ServiceName, $"Authorization file not found at {path}. No data loaded.");
+                    Logger.Log(LogType.Info, ServiceName,
+                        "No authorization information found in the database. No data loaded.");
                     return false;
                 }
-                var encryptedData = File.ReadAllText(path);
-                if (string.IsNullOrEmpty(encryptedData))
-                {
-                    Logger.Log(LogType.WARNING, ServiceName, $"Authorization file at {path} is empty. No data loaded.");
-                    return false;
-                }
-                var decryptedData = Decrypt(encryptedData, _secret);
-                var data = decryptedData.Split('\n');
-                if (data.Length != 4)
-                {
-                    Logger.Log(LogType.WARNING, ServiceName, $"Invalid data format in authorization file at {path}. Expected 4 parts, found {data.Length}.");
-                    return false;
-                }
-                else
-                {
-                    TwitchInfo.Login = data[0];
-                    TwitchInfo.ID = data[1];
-                    TwitchInfo.Token = data[2];
-                    TwitchInfo.RefreshToken = data[3];
-                    Logger.Log(LogType.INFO, ServiceName, "Authorization information loaded successfully");
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LogType.ERROR, ServiceName, "An unexpected error occurred while loading authorization information from {path}:", ex);
-                return false;
-            }
-        }
 
-        public bool SaveTwitchInfo()
-        {
-            try
-            {
-                Directory.CreateDirectory(AuthDir);
-                var path = Path.Combine(AuthDir, FileName);
-                var (login, id, token, refreshToken) = TwitchInfo;
-                if (string.IsNullOrEmpty(login) || string.IsNullOrEmpty(id) || string.IsNullOrEmpty(token) || string.IsNullOrEmpty(refreshToken))
+                if (string.IsNullOrEmpty(authData.EncryptedAccessToken) ||
+                    string.IsNullOrEmpty(authData.EncryptedRefreshToken))
                 {
-                    Logger.Log(LogType.WARNING, ServiceName, "Attempted to save incomplete Twitch info. Aborting save.");
+                    Logger.Log(LogType.Warning, ServiceName,
+                        "Stored authorization information is incomplete (missing tokens). No data loaded.");
                     return false;
                 }
-                var data = string.Join('\n', [login, id, token, refreshToken]);
-                var encryptedData = Encrypt(data, _secret);
-                File.WriteAllText(path, encryptedData);
-                Logger.Log(LogType.INFO, ServiceName, $"Authorization information saved successfully at {path}");
+
+                string decryptedToken;
+                string decryptedRefreshToken;
+                try
+                {
+                    decryptedToken = Decrypt(authData.EncryptedAccessToken, _secret);
+                    decryptedRefreshToken = Decrypt(authData.EncryptedRefreshToken, _secret);
+                }
+                catch (CryptographicException ex)
+                {
+                    Logger.Log(LogType.Error, ServiceName,
+                        "Failed to decrypt stored authorization information. Data might be corrupted or secret key changed.",
+                        ex);
+                    return false;
+                }
+                catch (FormatException ex)
+                {
+                    Logger.Log(LogType.Error, ServiceName,
+                        "Failed to decrypt stored authorization information due to invalid format. Data might be corrupted.",
+                        ex);
+                    return false;
+                }
+
+                TwitchInfo = (authData.Login, authData.TwitchUserId, decryptedToken, decryptedRefreshToken);
+                Logger.Log(LogType.Info, ServiceName, "Authorization information loaded successfully from database.");
                 return true;
             }
             catch (Exception ex)
             {
-                Logger.Log(LogType.ERROR, ServiceName, "An unexpected error occurred while saving authorization information:", ex);
+                Logger.Log(LogType.Error, ServiceName, "An unexpected error occurred while loading authorization information from database:", ex);
                 return false;
             }
         }
+        
+        public async Task<bool> SaveTwitchInfoAsync()
+        {
+            try
+            {
+                var (login, id, token, refreshToken) = TwitchInfo;
+                if (string.IsNullOrEmpty(login) || string.IsNullOrEmpty(id) || string.IsNullOrEmpty(token) || string.IsNullOrEmpty(refreshToken))
+                {
+                    Logger.Log(LogType.Warning, ServiceName, "Attempted to save incomplete Twitch info. Aborting save.");
+                    return false;
+                }
 
+                string encryptedToken;
+                string encryptedRefreshToken;
+                try
+                {
+                    encryptedToken = Encrypt(token, _secret);
+                    encryptedRefreshToken = Encrypt(refreshToken, _secret);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogType.Error, ServiceName, "Failed to encrypt tokens before saving:", ex);
+                    return false;
+                }
+
+
+                // Ищем существующую запись или создаем новую
+                var authData = await _db.AuthenticationData.FirstOrDefaultAsync();
+                if (authData == null)
+                {
+                    authData = new TwitchAuthData();
+                    _db.AuthenticationData.Add(authData);
+                }
+
+                authData.Login = login;
+                authData.TwitchUserId = id;
+                authData.EncryptedAccessToken = encryptedToken;
+                authData.EncryptedRefreshToken = encryptedRefreshToken;
+
+                await _db.SaveChangesAsync();
+                Logger.Log(LogType.Info, ServiceName, "Authorization information saved successfully to database.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogType.Error, ServiceName, "An unexpected error occurred while saving authorization information to database:", ex);
+                return false;
+            }
+        }
+        
+        public async Task ClearTwitchInfoAsync()
+        {
+            try
+            {
+                var authData = await _db.AuthenticationData.FirstOrDefaultAsync();
+                if (authData != null)
+                {
+                    _db.AuthenticationData.Remove(authData);
+                    await _db.SaveChangesAsync();
+                    Logger.Log(LogType.Info, ServiceName, "Authorization information cleared from database.");
+                }
+                TwitchInfo = (Login: string.Empty, ID: string.Empty, Token: string.Empty, RefreshToken: string.Empty);
+            }
+            catch (Exception ex)
+            {
+                Logger.Log(LogType.Error, ServiceName, "An error occurred while clearing authorization information from database:", ex);
+            }
+        }
+        
         public async Task<bool> IsValidTokensAsync()
         {
             if (string.IsNullOrEmpty(TwitchInfo.Token))
             {
-                Logger.Log(LogType.ERROR, ServiceName, "Attempted to validate an empty token.");
+                Logger.Log(LogType.Info, ServiceName, "Attempted to validate an empty token. No token loaded or previously cleared.");
                 return false;
             }
             try
@@ -104,59 +161,68 @@ namespace TTvActionHub.Managers
                 var isValid = await _api.ValidateTokenAsync(TwitchInfo.Token).ConfigureAwait(false);
                 if (!isValid)
                 {
-                    Logger.Log(LogType.WARNING, ServiceName, "Twitch API reported the current access token is invalid.");
+                    Logger.Log(LogType.Warning, ServiceName, "Twitch API reported the current access token is invalid.");
                 }
                 return isValid;
             }
             catch (Exception ex)
             {
-                Logger.Log(LogType.ERROR, ServiceName, "An error  occurred while validating the Twitch token:", ex);
+                Logger.Log(LogType.Error, ServiceName, "An error occurred while validating the Twitch token:", ex);
                 return false;
             }
         }
-
         public async Task<bool> UpdateAuthInfoAsync()
         {
             if (string.IsNullOrEmpty(TwitchInfo.RefreshToken))
             {
-                Logger.Log(LogType.ERROR, ServiceName, "Unable to refresh authentication: Refresh token is missing.");
-                TwitchInfo = new();
+                Logger.Log(LogType.Error, ServiceName, "Unable to refresh authentication: Refresh token is missing.");
+                TwitchInfo = (Login: string.Empty, ID: string.Empty, Token: string.Empty, RefreshToken: string.Empty); // Сброс
+                await ClearTwitchInfoAsync(); 
                 return false;
             }
+
             try
             {
-                Logger.Log(LogType.INFO, ServiceName, "Attempting to refresh Twitch tokens.");
+                Logger.Log(LogType.Info, ServiceName, "Attempting to refresh Twitch tokens.");
                 var (newAccessToken, newRefreshToken) =
                     await _api.RefreshAccessTokenAsync(TwitchInfo.RefreshToken).ConfigureAwait(false);
                 if (string.IsNullOrEmpty(newAccessToken) || string.IsNullOrEmpty(newRefreshToken))
                 {
-                    Logger.Log(LogType.ERROR, ServiceName,
-                        "Failed to refresh tokens: Received empty or invalid tokens from Twitch API (Refresh token might be expired or revoked).");
-                    TwitchInfo = new();
+                    Logger.Log(LogType.Error, ServiceName,
+                        "Failed to refresh tokens: Received empty or invalid tokens from Twitch API (Refresh token might be expired or revoked). Clearing stored tokens.");
+                    TwitchInfo = (Login: string.Empty, ID: string.Empty, Token: string.Empty,
+                        RefreshToken: string.Empty);
+                    await ClearTwitchInfoAsync();
                     return false;
                 }
-                TwitchInfo.Token = newAccessToken;
-                TwitchInfo.RefreshToken = newRefreshToken;
-                Logger.Log(LogType.INFO, ServiceName, "Twitch tokens refreshed successfully.");
 
-                Logger.Log(LogType.INFO, ServiceName, "Attempting to update user info with new token.");
+                TwitchInfo = (TwitchInfo.Login, TwitchInfo.ID, newAccessToken, newRefreshToken);
+                Logger.Log(LogType.Info, ServiceName, "Twitch tokens refreshed successfully.");
+
+                Logger.Log(LogType.Info, ServiceName, "Attempting to update user info with new token.");
                 var (login, id) = await _api.GetChannelInfoAsync(TwitchInfo.Token).ConfigureAwait(false);
+
                 if (string.IsNullOrEmpty(login) || string.IsNullOrEmpty(id))
                 {
-                    Logger.Log(LogType.ERROR, ServiceName, "Refreshed token successfully, but failed to get user info with the new token.");
-                    TwitchInfo.Login = string.Empty; // Clear potentially stale info
-                    TwitchInfo.ID = string.Empty;
-                    return true;
+                    Logger.Log(LogType.Error, ServiceName,
+                        "Refreshed token successfully, but failed to get user info with the new token. Using previous user info if available, but tokens are updated.");
+                    // Сохраняем обновленные токены, даже если инфо о пользователе не получено
+                    // Login и ID остаются прежними из TwitchInfo, если они были, или пустыми, если их не было
+                    TwitchInfo = (TwitchInfo.Login, TwitchInfo.ID, newAccessToken, newRefreshToken);
                 }
-                TwitchInfo.Login = login;
-                TwitchInfo.ID = id;
-                Logger.Log(LogType.INFO, ServiceName, $"Twitch authentication info fully updated for login: {login}");
+                else
+                {
+                    TwitchInfo = (login, id, newAccessToken, newRefreshToken);
+                    Logger.Log(LogType.Info, ServiceName,
+                        $"Twitch authentication info fully updated for login: {login}");
+                }
+
+                await SaveTwitchInfoAsync();
                 return true;
             }
             catch (Exception ex)
             {
-                Logger.Log(LogType.ERROR, ServiceName, "An error occurred during the authentication information update process:", ex);
-                TwitchInfo = new();
+                Logger.Log(LogType.Error, ServiceName, "An error occurred during the authentication information update process:", ex);
                 return false;
             }
         }
@@ -192,7 +258,7 @@ namespace TTvActionHub.Managers
             ArgumentNullException.ThrowIfNull(secret);
 
             // Convert the Base64 string back into bytes
-            byte[] buffer = Convert.FromBase64String(cipherTextBase64);
+            var buffer = Convert.FromBase64String(cipherTextBase64);
 
             using Aes aes = Aes.Create();
             int ivLength = aes.IV.Length; // Get the expected IV length (usually 16 bytes for AES)
@@ -213,9 +279,8 @@ namespace TTvActionHub.Managers
             using var decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
             using var ms = new MemoryStream(buffer, ivLength, buffer.Length - ivLength);
             using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
-            using var sr = new StreamReader(cs, Encoding.UTF8); // Specify UTF8 encoding
+            using var sr = new StreamReader(cs, Encoding.UTF8); 
 
-            // Read the decrypted plaintext
             return sr.ReadToEnd();
         }
 

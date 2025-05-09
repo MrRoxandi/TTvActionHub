@@ -109,7 +109,7 @@ namespace TTvActionHub.BackEnds
             } 
             catch (Exception ex)
             {
-                Logger.Log(LogType.ERROR, ServiceName, $"Error deserializing item '{name}' to type {typeof(T).Name}.", ex);
+                Logger.Log(LogType.Error, ServiceName, $"Error deserializing item '{name}' to type {typeof(T).Name}.", ex);
                 return default;
             }
         }
@@ -127,7 +127,7 @@ namespace TTvActionHub.BackEnds
                     }
                     catch (Exception ex)
                     {
-                        Logger.Log(LogType.ERROR, ServiceName, $"Error deserializing item '{name}' to type {typeof(T).Name}.", ex);
+                        Logger.Log(LogType.Error, ServiceName, $"Error deserializing item '{name}' to type {typeof(T).Name}.", ex);
                         return default;
                     }
                 }
@@ -140,7 +140,7 @@ namespace TTvActionHub.BackEnds
             if (dataTable == null) return false;
             _db.DataTable.Remove(dataTable);
             _db.SaveChanges();
-            Logger.Log(LogType.INFO, ServiceName, $"Item '{name}' was removed successfully.");
+            Logger.Log(LogType.Info, ServiceName, $"Item '{name}' was removed successfully.");
             return true;
         }
 
@@ -150,7 +150,7 @@ namespace TTvActionHub.BackEnds
             if (dataTable == null) return true;
             _db.DataTable.Remove(dataTable);
             await _db.SaveChangesAsync();
-            Logger.Log(LogType.INFO, ServiceName, $"Item '{name}' was removed successfully.");
+            Logger.Log(LogType.Info, ServiceName, $"Item '{name}' was removed successfully.");
             return true;
         }
 

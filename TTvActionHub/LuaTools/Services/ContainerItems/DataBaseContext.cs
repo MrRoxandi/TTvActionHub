@@ -23,7 +23,7 @@ namespace TTvActionHub.LuaTools.Services.ContainerItems
         {
             var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "container");
             Directory.CreateDirectory(folderPath);
-            var a = new SqliteConnectionStringBuilder()
+            var a = new SqliteConnectionStringBuilder
             {
                 DataSource = Path.Combine(folderPath, "d.db"),
                 Mode = SqliteOpenMode.ReadWriteCreate

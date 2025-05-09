@@ -59,11 +59,11 @@ namespace TTvActionHub
         private (string Login, string ID, string Token, string RefreshToken) AuthWithTwitch()
         {
             AuthManager manager = new(TwitchApi, ClientSecret);
-            if (_forceRelog || !manager.LoadTwitchInfo())
+            if (_forceRelog || !manager.LoadTwitchInfoAsync().GetAwaiter().GetResult())
             {
                 var result = GetAuthInfoFromApi();
                 manager.TwitchInfo = result;
-                manager.SaveTwitchInfo();
+                manager.SaveTwitchInfoAsync().GetAwaiter().GetResult();
                 return result;
             }
             var validationTask = manager.IsValidTokensAsync();
@@ -85,7 +85,7 @@ namespace TTvActionHub
             }
             finally
             {
-                manager.SaveTwitchInfo();
+                manager.SaveTwitchInfoAsync().GetAwaiter().GetResult();
             }
             return manager.TwitchInfo;
         }

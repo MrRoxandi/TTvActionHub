@@ -48,19 +48,19 @@ namespace TTvActionHub.Items
         {
             if (args.Permission < _permissionLevel)
             {
-                Logger.Log(LogType.INFO, ItemName, $"Unable to execute event [{Name}]. {args.Sender} has no permission to do that");
+                Logger.Log(LogType.Info, ItemName, $"Unable to execute event [{Name}]. {args.Sender} has no permission to do that");
                 return;
             }
             try
             {
                 if (!IsExecutable())
                 {
-                    Logger.Log(LogType.INFO, ItemName, $"Unable to execute event [{Name}]. Event still on cooldown");
+                    Logger.Log(LogType.Info, ItemName, $"Unable to execute event [{Name}]. Event still on cooldown");
                     return;
                 }
                 Function.Call(args.Sender, args.Args);
                 _coolDownTimer?.Restart();
-                Logger.Log(LogType.INFO, ItemName, $"Event [{Name}] was executed successfully");
+                Logger.Log(LogType.Info, ItemName, $"Event [{Name}] was executed successfully");
             }
             catch (Exception e)
             {

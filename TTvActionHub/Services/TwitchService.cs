@@ -85,7 +85,7 @@ namespace TTvActionHub.Services
             }
             else
             {
-                Logger.Log(LogType.WARNING, ServiceName, "Cannot send message: Twitch Chat client is not connected.");
+                Logger.Log(LogType.Warning, ServiceName, "Cannot send message: Twitch Chat client is not connected.");
             }
         }
         
@@ -97,7 +97,7 @@ namespace TTvActionHub.Services
             }
             else
             {
-                Logger.Log(LogType.WARNING, ServiceName, "Cannot send whisper: Twitch Chat client is not connected.");
+                Logger.Log(LogType.Warning, ServiceName, "Cannot send whisper: Twitch Chat client is not connected.");
             }
         }
 
@@ -114,12 +114,12 @@ namespace TTvActionHub.Services
         public void Run()
         {
             _stopRequested = false;
-            Logger.Log(LogType.INFO, ServiceName, "Starting service ...");
+            Logger.Log(LogType.Info, ServiceName, "Starting service ...");
             lock (_connectionLock)
             {
                 if (IsRunning && (IsTwitchClientConnected || IsEventSubClientConnected))
                 {
-                    Logger.Log(LogType.WARNING, ServiceName, "Service is already marked as running and at least one client is connected.");
+                    Logger.Log(LogType.Warning, ServiceName, "Service is already marked as running and at least one client is connected.");
                     var needsTwitchClientReconnect = _twitchClient == null || !IsTwitchClientConnected;
                     var needsEventSubClientReconnect = _eventSubClient == null || !IsEventSubClientConnected;
 
@@ -129,24 +129,24 @@ namespace TTvActionHub.Services
                         return;
                     }
 
-                    Logger.Log(LogType.INFO, ServiceName, "Service marked as running, but one or more clients need connection. Proceeding...");
+                    Logger.Log(LogType.Info, ServiceName, "Service marked as running, but one or more clients need connection. Proceeding...");
                 }
 
                 if (_twitchClient != null && !IsTwitchClientConnected)
                 {
-                    Logger.Log(LogType.INFO, ServiceName, "TwitchClient instance exists but not connected. Cleaning up before restart attempt.");
+                    Logger.Log(LogType.Info, ServiceName, "TwitchClient instance exists but not connected. Cleaning up before restart attempt.");
                     CleanupTwitchClientResources();
                 }
                 
                 if (_eventSubClient != null && !IsEventSubClientConnected)
                 {
-                    Logger.Log(LogType.INFO, ServiceName, "EventSubClient instance exists but not connected. Cleaning up before restart attempt.");
+                    Logger.Log(LogType.Info, ServiceName, "EventSubClient instance exists but not connected. Cleaning up before restart attempt.");
                     CleanupEventSubClientResources();
                 }
 
                 try
                 {
-                    Logger.Log(LogType.INFO, ServiceName, "Initializing resources and clients...");
+                    Logger.Log(LogType.Info, ServiceName, "Initializing resources and clients...");
 
                     _serviceCts ??= new CancellationTokenSource();
                     _eventsQueue ??= new ConcurrentQueue<(TwitchEvent, TwitchEventArgs)>();
@@ -154,7 +154,7 @@ namespace TTvActionHub.Services
                     
                     if (_twitchClient == null)
                     {
-                        Logger.Log(LogType.INFO, ServiceName, "Initializing Twitch Chat client...");
+                        Logger.Log(LogType.Info, ServiceName, "Initializing Twitch Chat client...");
                         _twitchClient = new TwitchClient();
                         _credentials = new ConnectionCredentials(_configuration.Login, _configuration.Token);
                         SubscribeToTwitchClientEvents();
@@ -162,19 +162,19 @@ namespace TTvActionHub.Services
                     }
                     if (!IsTwitchClientConnected) 
                     {
-                        Logger.Log(LogType.INFO, ServiceName, "Connecting Twitch Chat client...");
+                        Logger.Log(LogType.Info, ServiceName, "Connecting Twitch Chat client...");
                         _twitchClient.Connect();
                     }
 
                     if (_eventSubClient == null)
                     {
-                        Logger.Log(LogType.INFO, ServiceName, "Initializing EventSub client...");
+                        Logger.Log(LogType.Info, ServiceName, "Initializing EventSub client...");
                         _eventSubClient = new EventSubWebsocketClient();
                         SubscribeToEventSubClientEvents();
                     }
                     if (!IsEventSubClientConnected) 
                     {
-                        Logger.Log(LogType.INFO, ServiceName, "Connecting EventSub client...");
+                        Logger.Log(LogType.Info, ServiceName, "Connecting EventSub client...");
                         _ = _eventSubClient.ConnectAsync();
                     }
 
@@ -195,7 +195,7 @@ namespace TTvActionHub.Services
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log(LogType.ERROR, ServiceName, "Failed to start or connect one or more clients.", ex);
+                    Logger.Log(LogType.Error, ServiceName, "Failed to start or connect one or more clients.", ex);
                     OnStatusChanged(false, $"Startup failed: {ex.Message}");
                     IsRunning = false;
                     StopInternal(true);
@@ -208,12 +208,12 @@ namespace TTvActionHub.Services
         {
             if (_stopRequested)
             {
-                Logger.Log(LogType.INFO, ServiceName, "Stop already requested.");
+                Logger.Log(LogType.Info, ServiceName, "Stop already requested.");
                 return;
             }
             _stopRequested = true;
             IsRunning = false;
-            Logger.Log(LogType.INFO, ServiceName, "Stopping service requested...");
+            Logger.Log(LogType.Info, ServiceName, "Stopping service requested...");
 
             StopViewerPointsTimer();
             StopClipPointsTimer();
@@ -229,7 +229,7 @@ namespace TTvActionHub.Services
 
             CleanupNonClientResources();
 
-            Logger.Log(LogType.INFO, ServiceName, "Service stopped.");
+            Logger.Log(LogType.Info, ServiceName, "Service stopped.");
             OnStatusChanged(false, "Service stopped by request.");
         }
 
@@ -237,28 +237,28 @@ namespace TTvActionHub.Services
         {
             if (_serviceCts is { IsCancellationRequested: false })
             {
-                Logger.Log(LogType.INFO, ServiceName, "Requesting cancellation for event queue worker task...");
+                Logger.Log(LogType.Info, ServiceName, "Requesting cancellation for event queue worker task...");
                 try { _serviceCts.Cancel(); }
                 catch (ObjectDisposedException) { /* Expected */ }
             }
             
             if (waitWorker && _queueWorkerTask is { IsCompleted: false })
             {
-                Logger.Log(LogType.INFO, ServiceName, "Waiting for event queue worker task to stop...");
+                Logger.Log(LogType.Info, ServiceName, "Waiting for event queue worker task to stop...");
                 try
                 {
                     if (!_queueWorkerTask.Wait(TimeSpan.FromSeconds(WorkerTaskShutdownWaitSeconds)))
                     {
-                        Logger.Log(LogType.WARNING, ServiceName, "Event queue worker task did not complete within the timeout period.");
+                        Logger.Log(LogType.Warning, ServiceName, "Event queue worker task did not complete within the timeout period.");
                     }
                     else
                     {
-                        Logger.Log(LogType.INFO, ServiceName, "Event queue worker task stopped.");
+                        Logger.Log(LogType.Info, ServiceName, "Event queue worker task stopped.");
                     }
                 }
-                catch (OperationCanceledException) { Logger.Log(LogType.INFO, ServiceName, "Event queue worker task wait was canceled (expected)."); }
-                catch (AggregateException ae) { ae.Handle(ex => { Logger.Log(LogType.ERROR, ServiceName, "Exception occurred in worker task during shutdown.", ex); return true; }); }
-                catch (ObjectDisposedException) { Logger.Log(LogType.WARNING, ServiceName, "Worker task was already disposed during wait."); }
+                catch (OperationCanceledException) { Logger.Log(LogType.Info, ServiceName, "Event queue worker task wait was canceled (expected)."); }
+                catch (AggregateException ae) { ae.Handle(ex => { Logger.Log(LogType.Error, ServiceName, "Exception occurred in worker task during shutdown.", ex); return true; }); }
+                catch (ObjectDisposedException) { Logger.Log(LogType.Warning, ServiceName, "Worker task was already disposed during wait."); }
             }
             _queueWorkerTask = null;
         }
@@ -310,28 +310,28 @@ namespace TTvActionHub.Services
         private void DisconnectTwitchClient()
         {
             if (!IsTwitchClientConnected) return;
-            Logger.Log(LogType.INFO, ServiceName, "Disconnecting Twitch Chat client...");
+            Logger.Log(LogType.Info, ServiceName, "Disconnecting Twitch Chat client...");
             try
             {
                 _twitchClient?.Disconnect();
             }
             catch (Exception ex)
             {
-                Logger.Log(LogType.ERROR, ServiceName, "Error during Twitch Chat client disconnect request.", ex);
+                Logger.Log(LogType.Error, ServiceName, "Error during Twitch Chat client disconnect request.", ex);
             }
         }
 
         private void DisconnectEventSubClient()
         {
             if (!IsEventSubClientConnected || _eventSubClient == null) return;
-            Logger.Log(LogType.INFO, ServiceName, "Requesting EventSub WebSocket disconnect...");
+            Logger.Log(LogType.Info, ServiceName, "Requesting EventSub WebSocket disconnect...");
             try
             {
                 _ = _eventSubClient.DisconnectAsync();
             }
             catch (Exception ex)
             {
-                Logger.Log(LogType.ERROR, ServiceName, "Error during EventSub client disconnect request.", ex);
+                Logger.Log(LogType.Error, ServiceName, "Error during EventSub client disconnect request.", ex);
             }
             IsEventSubClientConnected = false;
         }
@@ -340,17 +340,17 @@ namespace TTvActionHub.Services
         {
             if (_eventsQueue == null || _serviceCts?.IsCancellationRequested == true)
             {
-                Logger.Log(LogType.WARNING, ServiceName, $"Cannot enqueue {twitchEvent.Name}: Queue is null or service is stopping.");
+                Logger.Log(LogType.Warning, ServiceName, $"Cannot enqueue {twitchEvent.Name}: Queue is null or service is stopping.");
                 return;
             }
 
-            Logger.Log(LogType.INFO, ServiceName, $"Queueing {twitchEvent.Name} from {eventArgs.Sender}.");
+            Logger.Log(LogType.Info, ServiceName, $"Queueing {twitchEvent.Name} from {eventArgs.Sender}.");
             _eventsQueue.Enqueue((twitchEvent, eventArgs));
         }
 
         private async Task ProcessEventsQueueAsync(CancellationToken cancellationToken)
         {
-            Logger.Log(LogType.INFO, ServiceName, "Event processing worker started.");
+            Logger.Log(LogType.Info, ServiceName, "Event processing worker started.");
             var runningEventTasks = new List<Task>();
 
             try
@@ -363,7 +363,7 @@ namespace TTvActionHub.Services
                     {
                         if (_eventsSemaphore == null) 
                         {
-                            Logger.Log(LogType.ERROR, ServiceName, "Events semaphore is null, cannot process event. This is a critical error.");
+                            Logger.Log(LogType.Error, ServiceName, "Events semaphore is null, cannot process event. This is a critical error.");
                             await Task.Delay(WorkerQueuePollDelayMs * 10, cancellationToken); 
                             _eventsQueue.Enqueue(eventDataToProcess);
                             continue;
@@ -390,18 +390,18 @@ namespace TTvActionHub.Services
                                         var points = GetPointsFromUser(eventDataToProcess.Args.Sender).GetAwaiter().GetResult();
                                         if (points < eventDataToProcess.Event.Cost) return;
                                     }
-                                    Logger.Log(LogType.INFO, ServiceName, $"Executing {eventIdentifier}...");
+                                    Logger.Log(LogType.Info, ServiceName, $"Executing {eventIdentifier}...");
                                     eventDataToProcess.Event.Execute(eventDataToProcess.Args);
-                                    Logger.Log(LogType.INFO, ServiceName, $"Finished {eventIdentifier}.");
+                                    Logger.Log(LogType.Info, ServiceName, $"Finished {eventIdentifier}.");
                                     if (eventDataToProcess.Event.Cost > 0 && eventDataToProcess.Args.Sender != _configuration.Login)
                                     {
                                         _ = AddPointsToUserAsync(eventDataToProcess.Args.Sender, -eventDataToProcess.Event.Cost);
-                                        Logger.Log(LogType.INFO, ServiceName, $"Consuming {eventDataToProcess.Event.Cost} points from user: {eventDataToProcess.Args.Sender}");
+                                        Logger.Log(LogType.Info, ServiceName, $"Consuming {eventDataToProcess.Event.Cost} points from user: {eventDataToProcess.Args.Sender}");
                                     }
                                 }
                                 catch (Exception ex)
                                 {
-                                    Logger.Log(LogType.ERROR, ServiceName, $"Error executing {eventIdentifier}", ex);
+                                    Logger.Log(LogType.Error, ServiceName, $"Error executing {eventIdentifier}", ex);
                                 }
                                 finally
                                 {
@@ -413,13 +413,13 @@ namespace TTvActionHub.Services
                         }
                         catch (OperationCanceledException)
                         {
-                            Logger.Log(LogType.INFO, ServiceName, "Operation canceled while waiting for semaphore or starting event task.");
+                            Logger.Log(LogType.Info, ServiceName, "Operation canceled while waiting for semaphore or starting event task.");
                             _eventsQueue.Enqueue(eventDataToProcess); 
                             break; 
                         }
                         catch (Exception ex)
                         {
-                            Logger.Log(LogType.ERROR, ServiceName, $"Error dispatching event '{eventDataToProcess.Event.Name}':", ex);
+                            Logger.Log(LogType.Error, ServiceName, $"Error dispatching event '{eventDataToProcess.Event.Name}':", ex);
                             _eventsSemaphore?.Release();
                         }
                     }
@@ -431,36 +431,36 @@ namespace TTvActionHub.Services
             }
             catch (OperationCanceledException)
             {
-                Logger.Log(LogType.INFO, ServiceName, "Event processing loop was canceled.");
+                Logger.Log(LogType.Info, ServiceName, "Event processing loop was canceled.");
             }
             catch (Exception ex)
             {
-                Logger.Log(LogType.ERROR, ServiceName, "Unhandled error in event processing loop.", ex);
+                Logger.Log(LogType.Error, ServiceName, "Unhandled error in event processing loop.", ex);
             }
             finally
             {
-                Logger.Log(LogType.INFO, ServiceName, $"Event worker loop finished. Waiting for {runningEventTasks.Count(t => !t.IsCompleted)} running event action(s) to complete...");
+                Logger.Log(LogType.Info, ServiceName, $"Event worker loop finished. Waiting for {runningEventTasks.Count(t => !t.IsCompleted)} running event action(s) to complete...");
                 try
                 {
                     await Task.WhenAll([.. runningEventTasks]).WaitAsync(TimeSpan.FromSeconds(EventActionShutdownWaitSeconds), CancellationToken.None); 
-                    Logger.Log(LogType.INFO, ServiceName, "All tracked event actions finished or timed out.");
+                    Logger.Log(LogType.Info, ServiceName, "All tracked event actions finished or timed out.");
                 }
                 catch (TimeoutException)
                 {
-                    Logger.Log(LogType.WARNING, ServiceName, "Timeout waiting for running event actions to complete upon shutdown.");
+                    Logger.Log(LogType.Warning, ServiceName, "Timeout waiting for running event actions to complete upon shutdown.");
                 }
                 catch (Exception ex) 
                 {
-                    Logger.Log(LogType.WARNING, ServiceName, $"Exception while waiting for running event actions: {ex.Message}");
+                    Logger.Log(LogType.Warning, ServiceName, $"Exception while waiting for running event actions: {ex.Message}");
                 }
-                Logger.Log(LogType.INFO, ServiceName, "Event processing worker stopped.");
+                Logger.Log(LogType.Info, ServiceName, "Event processing worker stopped.");
             }
         }
 
         private void CleanupTwitchClientResources()
         {
             if (_twitchClient == null) return;
-            Logger.Log(LogType.INFO, ServiceName, "Cleaning up Twitch Chat client resources...");
+            Logger.Log(LogType.Info, ServiceName, "Cleaning up Twitch Chat client resources...");
             UnsubscribeFromTwitchClientEvents();
             if (IsTwitchClientConnected)
             { 
@@ -468,13 +468,13 @@ namespace TTvActionHub.Services
             }
             _twitchClient = null;
             _credentials = null;
-            Logger.Log(LogType.INFO, ServiceName, "Twitch Chat client resources cleaned up.");
+            Logger.Log(LogType.Info, ServiceName, "Twitch Chat client resources cleaned up.");
         }
 
         private void CleanupEventSubClientResources()
         {
             if (_eventSubClient == null) return;
-            Logger.Log(LogType.INFO, ServiceName, "Cleaning up EventSub client resources...");
+            Logger.Log(LogType.Info, ServiceName, "Cleaning up EventSub client resources...");
             UnsubscribeFromEventSubClientEvents();
             if (IsEventSubClientConnected)
             {
@@ -482,12 +482,12 @@ namespace TTvActionHub.Services
             }
             _eventSubClient = null;
             IsEventSubClientConnected = false; 
-            Logger.Log(LogType.INFO, ServiceName, "EventSub client resources cleaned up.");
+            Logger.Log(LogType.Info, ServiceName, "EventSub client resources cleaned up.");
         }
 
         private void CleanupNonClientResources()
         {
-            Logger.Log(LogType.INFO, ServiceName, "Cleaning up non-client resources (CTS, Semaphore, Queue)...");
+            Logger.Log(LogType.Info, ServiceName, "Cleaning up non-client resources (CTS, Semaphore, Queue)...");
 
             try { _serviceCts?.Cancel(); } catch (ObjectDisposedException) { }
             try { _serviceCts?.Dispose(); } catch (ObjectDisposedException) { }
@@ -497,12 +497,12 @@ namespace TTvActionHub.Services
             _eventsSemaphore = null;
 
             _eventsQueue = null;
-            Logger.Log(LogType.INFO, ServiceName, "Non-client resources cleaned up.");
+            Logger.Log(LogType.Info, ServiceName, "Non-client resources cleaned up.");
         }
 
         private void CleanupFullResources()
         {
-            Logger.Log(LogType.INFO, ServiceName, "Performing full resource cleanup...");
+            Logger.Log(LogType.Info, ServiceName, "Performing full resource cleanup...");
             StopInternal(false); 
 
             lock (_connectionLock) 
@@ -513,7 +513,7 @@ namespace TTvActionHub.Services
                 CleanupEventSubClientResources();
             }
             CleanupNonClientResources();
-            Logger.Log(LogType.INFO, ServiceName, "Full resource cleanup finished.");
+            Logger.Log(LogType.Info, ServiceName, "Full resource cleanup finished.");
         }
 
         private void UpdateOverallStatus(string? specificMessage = null)
@@ -558,7 +558,7 @@ namespace TTvActionHub.Services
         {
             if (_viewerPointsTimer != null) return;
             _viewerPointsTimer = new Timer(AwardPointsToViewers, null, TimeSpan.Zero, TimeSpan.FromMinutes(ViewerPointsIntervalMinutes));
-            Logger.Log(LogType.INFO, ServiceName, $"Viewer points timer started. Interval: {ViewerPointsIntervalMinutes} min.");
+            Logger.Log(LogType.Info, ServiceName, $"Viewer points timer started. Interval: {ViewerPointsIntervalMinutes} min.");
         }
 
         private void StartClipPointsTimer()
@@ -566,11 +566,11 @@ namespace TTvActionHub.Services
             if (_clipPointsTimer == null && !string.IsNullOrEmpty(_configuration.Id))
             {
                 _clipPointsTimer = new Timer(CheckForNewClipsAndAwardPoints, null, TimeSpan.FromMinutes(10), TimeSpan.FromMinutes(ClipCheckIntervalMinutes)); // Небольшая задержка перед первым запуском
-                Logger.Log(LogType.INFO, ServiceName, $"Clip points timer started. Interval: {ClipCheckIntervalMinutes} min.");
+                Logger.Log(LogType.Info, ServiceName, $"Clip points timer started. Interval: {ClipCheckIntervalMinutes} min.");
             }
             else if (string.IsNullOrEmpty(_configuration.Id))
             {
-                Logger.Log(LogType.WARNING, ServiceName, "Cannot start Clip points timer: TwitchApi or Broadcaster ID is not configured.");
+                Logger.Log(LogType.Warning, ServiceName, "Cannot start Clip points timer: TwitchApi or Broadcaster ID is not configured.");
             }
         }
 
@@ -578,14 +578,14 @@ namespace TTvActionHub.Services
         {
             _viewerPointsTimer?.Dispose();
             _viewerPointsTimer = null;
-            Logger.Log(LogType.INFO, ServiceName, "Viewer points timer stopped.");
+            Logger.Log(LogType.Info, ServiceName, "Viewer points timer stopped.");
         }
 
         private void StopClipPointsTimer()
         {
             _clipPointsTimer?.Dispose();
             _clipPointsTimer = null;
-            Logger.Log(LogType.INFO, ServiceName, "Clip points timer stopped.");
+            Logger.Log(LogType.Info, ServiceName, "Clip points timer stopped.");
         }
 
         private async void AwardPointsToViewers(object? state)
@@ -595,7 +595,7 @@ namespace TTvActionHub.Services
                 return;
             }
 
-            Logger.Log(LogType.INFO, ServiceName, "Attempting to award points to viewers...");
+            Logger.Log(LogType.Info, ServiceName, "Attempting to award points to viewers...");
             try
             {
                 var broadcasterId = _configuration.Id;
@@ -606,7 +606,7 @@ namespace TTvActionHub.Services
                 }
                 catch (Exception apiEx) 
                 {
-                    Logger.Log(LogType.ERROR, ServiceName, "Failed to get chatters from Twitch API.", apiEx);
+                    Logger.Log(LogType.Error, ServiceName, "Failed to get chatters from Twitch API.", apiEx);
                     return;
                 }
 
@@ -622,16 +622,16 @@ namespace TTvActionHub.Services
                         await AddPointsToUserAsync(chatter.UserLogin, PointsPerMinuteForViewers);
                         awardedCount++;
                     }
-                    Logger.Log(LogType.INFO, ServiceName, $"Awarded {PointsPerMinuteForViewers} points to {awardedCount} active chatters.");
+                    Logger.Log(LogType.Info, ServiceName, $"Awarded {PointsPerMinuteForViewers} points to {awardedCount} active chatters.");
                 }
                 else
                 {
-                    Logger.Log(LogType.INFO, ServiceName, "No chatters found to award points to or API error.");
+                    Logger.Log(LogType.Info, ServiceName, "No chatters found to award points to or API error.");
                 }
             }
             catch (Exception ex)
             {
-                Logger.Log(LogType.ERROR, ServiceName, "Error in AwardPointsToViewers.", ex);
+                Logger.Log(LogType.Error, ServiceName, "Error in AwardPointsToViewers.", ex);
             }
         }
 
@@ -641,7 +641,7 @@ namespace TTvActionHub.Services
             {
                 return;
             }
-            Logger.Log(LogType.INFO, ServiceName, "Checking for new clips...");
+            Logger.Log(LogType.Info, ServiceName, "Checking for new clips...");
 
             try
             {
@@ -657,7 +657,7 @@ namespace TTvActionHub.Services
                 }
                 catch (Exception apiEx)
                 {
-                    Logger.Log(LogType.ERROR, ServiceName, "Failed to get clips from Twitch API.", apiEx);
+                    Logger.Log(LogType.Error, ServiceName, "Failed to get clips from Twitch API.", apiEx);
                     return;
                 }
 
@@ -672,30 +672,30 @@ namespace TTvActionHub.Services
                         {
                             if (string.Equals(clip.CreatorName, _configuration.Login, StringComparison.OrdinalIgnoreCase))
                             {
-                                Logger.Log(LogType.INFO, ServiceName, $"Clip {clip.Id} by {clip.CreatorName} (bot/channel) skipped for points.");
+                                Logger.Log(LogType.Info, ServiceName, $"Clip {clip.Id} by {clip.CreatorName} (bot/channel) skipped for points.");
                             }
                             else
                             {
-                                Logger.Log(LogType.INFO, ServiceName, $"adding {PointsPerClip} point to {clip.CreatorName} for creating clip ({clip.Id[..8]})");
+                                Logger.Log(LogType.Info, ServiceName, $"adding {PointsPerClip} point to {clip.CreatorName} for creating clip ({clip.Id[..8]})");
                                 await AddPointsToUserAsync(clip.CreatorName, PointsPerClip);
                             }
                         }
                         else
                         {
-                            Logger.Log(LogType.WARNING, ServiceName, $"Clip {clip.Id} has no CreatorName. Cannot award points.");
+                            Logger.Log(LogType.Warning, ServiceName, $"Clip {clip.Id} has no CreatorName. Cannot award points.");
                         }
                     }
                     await Container.Storage.AddOrUpdateItemAsync(LastClipCheckTimeKey, lastCheckTimeUtc);
-                    Logger.Log(LogType.INFO, ServiceName, $"Last clip check time updated to: {lastCheckTimeUtc:o}");
+                    Logger.Log(LogType.Info, ServiceName, $"Last clip check time updated to: {lastCheckTimeUtc:o}");
                 }
                 else
                 {
-                    Logger.Log(LogType.INFO, ServiceName, "No new clips found since last check or API error.");
+                    Logger.Log(LogType.Info, ServiceName, "No new clips found since last check or API error.");
                 }
             }
             catch (Exception ex)
             {
-                Logger.Log(LogType.ERROR, ServiceName, "Error in CheckForNewClipsAndAwardPoints.", ex);
+                Logger.Log(LogType.Error, ServiceName, "Error in CheckForNewClipsAndAwardPoints.", ex);
             }
         }
 
@@ -721,30 +721,30 @@ namespace TTvActionHub.Services
             }
             catch (Exception ex)
             {
-                Logger.Log(LogType.ERROR, ServiceName, "Error invoking StatusChanged event handler.", ex);
+                Logger.Log(LogType.Error, ServiceName, "Error invoking StatusChanged event handler.", ex);
             }
         }
 
         public bool UpdateConfiguration()
         {
-            Logger.Log(LogType.INFO, ServiceName, "Attempting to update configuration...");
+            Logger.Log(LogType.Info, ServiceName, "Attempting to update configuration...");
             try
             {
                 if (_configManager.LoadTwitchEvents() is { } events)
                 {
                     TwitchEvents = events;
-                    Logger.Log(LogType.INFO, ServiceName, "Configuration updated successfully.");
+                    Logger.Log(LogType.Info, ServiceName, "Configuration updated successfully.");
                     return true;
                 }
                 else
                 {
-                    Logger.Log(LogType.WARNING, ServiceName, "Failed to update configuration: LoadTwitchEvents returned null.");
+                    Logger.Log(LogType.Warning, ServiceName, "Failed to update configuration: LoadTwitchEvents returned null.");
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                Logger.Log(LogType.ERROR, ServiceName, "Failed to update configuration due to an error.", ex);
+                Logger.Log(LogType.Error, ServiceName, "Failed to update configuration due to an error.", ex);
                 return false;
             }
         }
@@ -753,12 +753,12 @@ namespace TTvActionHub.Services
         {
             if (_eventSubClient == null || string.IsNullOrEmpty(_eventSubClient.SessionId))
             {
-                Logger.Log(LogType.ERROR, ServiceName, "Cannot register EventSub topics: Client is not connected or Session ID is missing.");
+                Logger.Log(LogType.Error, ServiceName, "Cannot register EventSub topics: Client is not connected or Session ID is missing.");
                 return false;
             }
             if (string.IsNullOrEmpty(_configuration.Id)) 
             {
-                Logger.Log(LogType.ERROR, ServiceName, "Cannot register EventSub topics: Broadcaster User ID is missing in configuration.");
+                Logger.Log(LogType.Error, ServiceName, "Cannot register EventSub topics: Broadcaster User ID is missing in configuration.");
                 return false;
             }
            
@@ -780,22 +780,22 @@ namespace TTvActionHub.Services
             }
             try
             {
-                Logger.Log(LogType.INFO, ServiceName, $"Attempting to subscribe to [{type}:{version}]");
+                Logger.Log(LogType.Info, ServiceName, $"Attempting to subscribe to [{type}:{version}]");
                 var response = await _configuration.TwitchApi.InnerApi.Helix.EventSub.CreateEventSubSubscriptionAsync(
                     type: type, version: version, condition: condition,
                     method: EventSubTransportMethod.Websocket, websocketSessionId: _eventSubClient.SessionId
                 );
                 if (response?.Subscriptions == null || response.Subscriptions.Length == 0)
                 {
-                    Logger.Log(LogType.ERROR, ServiceName, $"EventSub subscription request for [{type}:{version}] failed or returned empty data. Check scopes and broadcaster ID. Cost: {response?.TotalCost}, MaxCost: {response?.MaxTotalCost}");
+                    Logger.Log(LogType.Error, ServiceName, $"EventSub subscription request for [{type}:{version}] failed or returned empty data. Check scopes and broadcaster ID. Cost: {response?.TotalCost}, MaxCost: {response?.MaxTotalCost}");
                     return false;
                 }
                 var subscriptionSuccessful = true;
                 foreach (var sub in response.Subscriptions)
                 {
-                    Logger.Log(LogType.INFO, ServiceName, $"EventSub subscription to [{sub.Type} v{sub.Version}] Status: {sub.Status}. Cost: {sub.Cost}. ID: {sub.Id}");
+                    Logger.Log(LogType.Info, ServiceName, $"EventSub subscription to [{sub.Type} v{sub.Version}] Status: {sub.Status}. Cost: {sub.Cost}. ID: {sub.Id}");
                     if (sub.Status is "enabled" or "webhook_callback_verification_pending") continue; // "enabled" for websocket
-                    Logger.Log(LogType.WARNING, ServiceName, $"EventSub subscription for [{sub.Type}] has status: {sub.Status}. Expected 'enabled'.");
+                    Logger.Log(LogType.Warning, ServiceName, $"EventSub subscription for [{sub.Type}] has status: {sub.Status}. Expected 'enabled'.");
                         
                     if (sub.Status.Contains("fail") || sub.Status.Contains("revoked") || sub.Status.Contains("error"))
                     {
@@ -804,13 +804,13 @@ namespace TTvActionHub.Services
                 }
                 if (!subscriptionSuccessful)
                 {
-                    Logger.Log(LogType.ERROR, ServiceName, $"One or more EventSub subscriptions for did not report 'enabled' status.");
+                    Logger.Log(LogType.Error, ServiceName, $"One or more EventSub subscriptions for did not report 'enabled' status.");
                 }
                 return subscriptionSuccessful;
             }
             catch (Exception ex)
             {
-                Logger.Log(LogType.ERROR, ServiceName, $"Failed to subscribe to EventSub topic [{type}:{version}] due to an API error.", ex);
+                Logger.Log(LogType.Error, ServiceName, $"Failed to subscribe to EventSub topic [{type}:{version}] due to an API error.", ex);
                 return false;
             }
         }
@@ -829,7 +829,7 @@ namespace TTvActionHub.Services
 
             if (!twitchEvent.Executable)
             {
-                Logger.Log(LogType.INFO, ServiceName, $"Command '{cmdName}' from {chatCommand.ChatMessage.Username} cannot be executed right now (e.g., on cooldown).");
+                Logger.Log(LogType.Info, ServiceName, $"Command '{cmdName}' from {chatCommand.ChatMessage.Username} cannot be executed right now (e.g., on cooldown).");
                 return;
             }
 
@@ -854,30 +854,30 @@ namespace TTvActionHub.Services
 
         private void TwitchClient_OnConnected(object? sender, OnConnectedArgs e)
         {
-            Logger.Log(LogType.INFO, ServiceName, $"Twitch Chat client connected to '{_configuration.Login}'.");
+            Logger.Log(LogType.Info, ServiceName, $"Twitch Chat client connected to '{_configuration.Login}'.");
             UpdateOverallStatus("Twitch Chat Connected");
         }
 
         private void TwitchClient_OnDisconnected(object? sender, OnDisconnectedEventArgs e)
         {
-            Logger.Log(LogType.WARNING, ServiceName, "Twitch Chat client disconnected.");
+            Logger.Log(LogType.Warning, ServiceName, "Twitch Chat client disconnected.");
             HandleClientDisconnection("Twitch Chat", "Disconnected");
         }
 
         private void TwitchClient_OnConnectionError(object? sender, OnConnectionErrorArgs e)
         {
-            Logger.Log(LogType.ERROR, ServiceName, $"Twitch Chat client connection error: {e.Error.Message}");
+            Logger.Log(LogType.Error, ServiceName, $"Twitch Chat client connection error: {e.Error.Message}");
             HandleClientDisconnection("Twitch Chat", $"Connection Error: {e.Error.Message}");
         }
 
         private void TwitchClient_OnError(object? sender, OnErrorEventArgs e)
         {
-            Logger.Log(LogType.ERROR, ServiceName, "TwitchLib (Chat Client) internal error.", e.Exception);
+            Logger.Log(LogType.Error, ServiceName, "TwitchLib (Chat Client) internal error.", e.Exception);
         }
 
         private void TwitchClient_OnLog(object? sender, OnLogArgs e)
         {
-            Logger.Log(LogType.INFO, $"{ServiceName} [TwitchClient Log]", e.Data);
+            Logger.Log(LogType.Info, $"{ServiceName} [TwitchClient Log]", e.Data);
         }
 
         private void TwitchClient_OnMessageReceived(object? sender, OnMessageReceivedArgs e)
@@ -890,34 +890,34 @@ namespace TTvActionHub.Services
         private async Task EventSubClient_WebsocketConnectedHandler(object? sender, WebsocketConnectedArgs args)
         {
             IsEventSubClientConnected = true;
-            Logger.Log(LogType.INFO, ServiceName, $"EventSub WebSocket connected. IsRequestedReconnect: {args.IsRequestedReconnect}");
+            Logger.Log(LogType.Info, ServiceName, $"EventSub WebSocket connected. IsRequestedReconnect: {args.IsRequestedReconnect}");
             
             if (!args.IsRequestedReconnect && _eventSubClient != null)
             {
-                Logger.Log(LogType.INFO, ServiceName, "Attempting to subscribe to EventSub topics...");
+                Logger.Log(LogType.Info, ServiceName, "Attempting to subscribe to EventSub topics...");
                 try
                 {
                     bool success = await RegisterEventSubTopicsAsync();
                     if (success)
                     {
-                        Logger.Log(LogType.INFO, ServiceName, "Successfully subscribed to EventSub topics.");
+                        Logger.Log(LogType.Info, ServiceName, "Successfully subscribed to EventSub topics.");
                         UpdateOverallStatus("EventSub Connected and Subscribed");
                     }
                     else
                     {
-                        Logger.Log(LogType.ERROR, ServiceName, "Failed to subscribe to one or more EventSub topics.");
+                        Logger.Log(LogType.Error, ServiceName, "Failed to subscribe to one or more EventSub topics.");
                         UpdateOverallStatus("EventSub Connected but Subscription Failed");
                     }
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log(LogType.ERROR, ServiceName, "Error during EventSub topic subscription.", ex);
+                    Logger.Log(LogType.Error, ServiceName, "Error during EventSub topic subscription.", ex);
                     UpdateOverallStatus($"EventSub Connected but Subscription Error: {ex.Message}");
                 }
             }
             else
             {
-                Logger.Log(LogType.INFO, ServiceName, "EventSub reconnected. Assuming subscriptions persist or will be re-established by TwitchLib if needed.");
+                Logger.Log(LogType.Info, ServiceName, "EventSub reconnected. Assuming subscriptions persist or will be re-established by TwitchLib if needed.");
                 UpdateOverallStatus("EventSub Reconnected");
             }
         }
@@ -925,14 +925,14 @@ namespace TTvActionHub.Services
         private Task EventSubClient_WebsocketDisconnectedHandler(object? sender, EventArgs args)
         {
             IsEventSubClientConnected = false;
-            Logger.Log(LogType.WARNING, ServiceName, "EventSub WebSocket disconnected.");
+            Logger.Log(LogType.Warning, ServiceName, "EventSub WebSocket disconnected.");
             HandleClientDisconnection("EventSub", "WebSocket Disconnected");
             return Task.CompletedTask;
         }
 
         private Task EventSubClient_ErrorOccurredHandler(object? sender, ErrorOccuredArgs args)
         {
-            Logger.Log(LogType.ERROR, ServiceName, $"EventSub client error: {args.Message}", args.Exception);
+            Logger.Log(LogType.Error, ServiceName, $"EventSub client error: {args.Message}", args.Exception);
             return Task.CompletedTask;
         }
 
@@ -976,14 +976,14 @@ namespace TTvActionHub.Services
             }
             else
             {
-                Logger.Log(LogType.INFO, ServiceName, $"Reconnect for {clientName} skipped, service stop was requested.");
+                Logger.Log(LogType.Info, ServiceName, $"Reconnect for {clientName} skipped, service stop was requested.");
             }
         }
 
         private void AttemptReconnect(string? clientToReconnect = null)
         {
             if (_stopRequested) return;
-            Logger.Log(LogType.INFO, ServiceName, $"Attempting to reconnect {(clientToReconnect ?? "service")} in {ReconnectDelaySeconds} seconds...");
+            Logger.Log(LogType.Info, ServiceName, $"Attempting to reconnect {(clientToReconnect ?? "service")} in {ReconnectDelaySeconds} seconds...");
 
             Task.Run(async () =>
             {
@@ -994,16 +994,16 @@ namespace TTvActionHub.Services
 
                     if (_stopRequested || token.IsCancellationRequested)
                     {
-                        Logger.Log(LogType.INFO, ServiceName, "Reconnect cancelled (stop requested or token canceled).");
+                        Logger.Log(LogType.Info, ServiceName, "Reconnect cancelled (stop requested or token canceled).");
                         return;
                     }
 
-                    Logger.Log(LogType.INFO, ServiceName, $"Reconnecting {(clientToReconnect ?? "service")}...");
+                    Logger.Log(LogType.Info, ServiceName, $"Reconnecting {(clientToReconnect ?? "service")}...");
                     lock (_connectionLock) // Блокировка для изменения состояния клиентов
                     {
                         if (clientToReconnect == "Twitch Chat" && !IsTwitchClientConnected)
                         {
-                            Logger.Log(LogType.INFO, ServiceName, "Attempting to reconnect Twitch Chat client specifically.");
+                            Logger.Log(LogType.Info, ServiceName, "Attempting to reconnect Twitch Chat client specifically.");
                             CleanupTwitchClientResources();
                             _twitchClient = new();
                             _credentials = new(_configuration.Login, _configuration.Token);
@@ -1014,7 +1014,7 @@ namespace TTvActionHub.Services
                         }
                         else if (clientToReconnect == "EventSub" && !IsEventSubClientConnected)
                         {
-                            Logger.Log(LogType.INFO, ServiceName, "Attempting to reconnect EventSub client specifically.");
+                            Logger.Log(LogType.Info, ServiceName, "Attempting to reconnect EventSub client specifically.");
                             CleanupEventSubClientResources();
                             _eventSubClient = new EventSubWebsocketClient();
                             SubscribeToEventSubClientEvents();
@@ -1023,22 +1023,22 @@ namespace TTvActionHub.Services
                         }
                         else if (clientToReconnect == null) 
                         {
-                            Logger.Log(LogType.INFO, ServiceName, "Attempting full service Run for reconnect.");
+                            Logger.Log(LogType.Info, ServiceName, "Attempting full service Run for reconnect.");
                             Run(); 
                         }
                         else
                         {
-                            Logger.Log(LogType.INFO, ServiceName, $"Reconnect for {clientToReconnect} skipped, client is already connected or not specified for specific reconnect.");
+                            Logger.Log(LogType.Info, ServiceName, $"Reconnect for {clientToReconnect} skipped, client is already connected or not specified for specific reconnect.");
                         }
                     }
                 }
                 catch (OperationCanceledException)
                 {
-                    Logger.Log(LogType.INFO, ServiceName, "Reconnect delay or operation was canceled.");
+                    Logger.Log(LogType.Info, ServiceName, "Reconnect delay or operation was canceled.");
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log(LogType.ERROR, ServiceName, "Error during reconnect attempt execution.", ex);
+                    Logger.Log(LogType.Error, ServiceName, "Error during reconnect attempt execution.", ex);
                     OnStatusChanged(false, $"Reconnect failed for {(clientToReconnect ?? "service")}: {ex.Message}");
                 }
             });

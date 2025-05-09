@@ -4,7 +4,7 @@ namespace TTvActionHub.Logs
 {
     internal enum LogType
     {
-        ERROR = -1, INFO = 0, WARNING = 1
+        Error = -1, Info = 0, Warning = 1
     }
 
     internal static class Logger
@@ -30,9 +30,9 @@ namespace TTvActionHub.Logs
         {
             string res = type switch
             {
-                LogType.ERROR => "ERR",
-                LogType.INFO => "INFO",
-                LogType.WARNING => "WARN",
+                LogType.Error => "ERR",
+                LogType.Info => "Info",
+                LogType.Warning => "WARN",
                 _ => "NULL"
             };
 
