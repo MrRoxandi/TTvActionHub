@@ -61,18 +61,18 @@ namespace TTvActionHub
             _headerColorScheme = new()
             {
                 Normal = Application.Driver.MakeAttribute(Color.White, Color.Black),
-                Focus = Application.Driver.MakeAttribute(Color.White, Color.Black),
+                Focus = Application.Driver.MakeAttribute(Color.White, Color.Black)
             };
 
             _bodyColorScheme = new()
             {
                 Normal = Application.Driver.MakeAttribute(Color.Gray, Color.Black),
-                Focus = Application.Driver.MakeAttribute(Color.Gray, Color.Black),
+                Focus = Application.Driver.MakeAttribute(Color.Gray, Color.Black)
             };
             _inputColorScheme = new()
             {
                 Normal = Application.Driver.MakeAttribute(Color.BrightYellow, Color.Black),
-                Focus = Application.Driver.MakeAttribute(Color.BrightYellow, Color.Black),
+                Focus = Application.Driver.MakeAttribute(Color.BrightYellow, Color.Black)
             };
             _statusColorScheme = new()
             {
@@ -343,6 +343,7 @@ namespace TTvActionHub
                 var added = false;
                 while (_commandsOutPutQueue.TryDequeue(out var message))
                 {
+                    if (string.IsNullOrEmpty(message)) continue;
                     _cmdOutputHistory.Add(ustring.Make(message));
                     added = true;
                 }

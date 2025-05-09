@@ -217,6 +217,12 @@ namespace TTvActionHub
                     _shell.CmdOut($"{sName} stopped.");
                     Logger.Info($"{sName} stopped successfully.");
                 }
+                catch (OperationCanceledException)
+                {
+                    _shell.UpdateServicesStates(sName, false);
+                    _shell.CmdOut($"{sName} stopped.");
+                    Logger.Info($"{sName} stopped successfully.");
+                }
                 catch (Exception ex)
                 {
                     _shell.UpdateServicesStates(sName, false); // Anyway it is not working...
