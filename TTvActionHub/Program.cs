@@ -31,8 +31,8 @@ namespace TTvActionHub
                 try
                 {
                     LuaConfigManager.GenerateAllConfigs();
-                    Logger.Info($"Configurations generated. Please review the files and restart the program.");
-                    Console.WriteLine($"Configurations generated. Please review the files and restart the program.");
+                    Logger.Info("Configurations generated. Please review the files and restart the program.");
+                    Console.WriteLine("Configurations generated. Please review the files and restart the program.");
                 }
                 catch (Exception ex)
                 {

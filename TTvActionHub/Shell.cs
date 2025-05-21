@@ -414,7 +414,7 @@ namespace TTvActionHub
             var parts = command.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
             var commandName = parts.Length > 0 ? parts[0] : ""; // Main command
             var argument = parts.Length > 1 ? parts[1] : ""; // Args string
-
+        
             switch (commandName)
             {
                 case "": return true;

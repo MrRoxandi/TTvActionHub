@@ -23,16 +23,16 @@ namespace TTvActionHub.BackEnds
 
         private async Task InternalLogAsync(string message, Exception? err = null)
         {
-            string consoleMessage, fileMessage;
+            string consoleMessage = $"[{DateTime.Now:HH:mm:ss}]: ", fileMessage = $"[{DateTime.Now:HH:mm:ss}]: ";
             if (err is null)
             {
-                consoleMessage = $"{message}";
-                fileMessage = message + Environment.NewLine;
+                consoleMessage += message;
+                fileMessage += message + Environment.NewLine;
             }
             else
             {
-                consoleMessage = $"{message} {err.Message} (full trace in file)"; 
-                fileMessage = $"{message}\n" +
+                consoleMessage += $"{message} {err.Message} (full trace in file)"; 
+                fileMessage += $"{message}\n" +
                     $"\tError message: {err.Message}\n" +
                     $"\tStack trace: {err.StackTrace}\n";
             }

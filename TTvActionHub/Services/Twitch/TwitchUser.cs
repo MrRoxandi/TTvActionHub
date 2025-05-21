@@ -9,4 +9,6 @@ public class TwitchUser
     public long Points { get; set; }
     [MaxLength(100)]
     public string Username { get; set; } = string.Empty;
+    [MaxLength(256)]
+    public string TwitchID { get; set; } = string.Empty;
 }
