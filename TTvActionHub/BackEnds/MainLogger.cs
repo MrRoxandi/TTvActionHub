@@ -14,7 +14,7 @@ namespace TTvActionHub.BackEnds
             var dir = Path.Combine(Directory.GetCurrentDirectory(), "logs");
             Directory.CreateDirectory(dir);
             var filepath = Path.Combine(dir, DateTime.Now.ToString("yyyy-MM-dd-HH.mm") + ".txt");
-            _writer = new(new FileStream(filepath, FileMode.Create, FileAccess.Write, FileShare.Read))
+            _writer = new StreamWriter(new FileStream(filepath, FileMode.Create, FileAccess.Write, FileShare.Read))
             {
                 AutoFlush = true
             };

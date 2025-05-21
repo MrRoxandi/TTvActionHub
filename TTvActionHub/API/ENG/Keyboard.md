@@ -41,13 +41,13 @@ Currently, all available keys are located in the `Key` field of the `Keyboard` m
 
 ## Available keyboard simulation methods
 
-| Method                                   | Description                                                       |
-| ---------------------------------------- | ----------------------------------------------------------------- |
-| `PressKey(Key key)`                      | Simulates pressing a key (does not release it).                   |
-| `ReleaseKey(Key key)`                    | Releases a pressed key.                                           |
-| `TypeKey(Key key)`                       | Simulates a short key press (press, then release).                |
-| `TypeMessage(string message)`            | Simulates typing a message from the given string.                 |
-| `HoldKey(Key key, int timeDelay = 1000)` | Holds a key down for the specified duration (default is 1000 ms). |
+| Method                                   | Description                                                        |
+|:-----------------------------------------|:-------------------------------------------------------------------|
+| `PressKey(Key key)`                      | Simulates pressing a key (does not release it).                    |
+| `ReleaseKey(Key key)`                    | Releases a pressed key.                                            |
+| `TypeKey(Key key)`                       | Simulates a short key press (press, then release).                 |
+| `TypeMessage(string message)`            | Simulates typing a message from the given string.                  |
+| `HoldKey(Key key, int timeDelay = 1000)` | Holds a key down for the specified duration (default is 1000 ms).  |
 
 Example of using `TypeMessage` in the configuration file:
 

@@ -31,7 +31,7 @@ print('Pause finished.')
 Below is a list of available methods in the `Funcs` module.
 
 | Method                                                   | Description                                                                                                                                   |
-| -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+|:---------------------------------------------------------|:----------------------------------------------------------------------------------------------------------------------------------------------|
 | `RandomNumber(int min, int max)`                         | Returns a random integer in the range [`min`,`max`] (inclusive).                                                                              |
 | `RandomDouble(double min, double max)`                   | Returns a random floating-point number in the range [`min`, `max`) (min inclusive, max exclusive).                                            |
 | `RandomElement(table elements)`                          | Returns a random element from the provided list. If the list is empty, returns an empty string.                                               |

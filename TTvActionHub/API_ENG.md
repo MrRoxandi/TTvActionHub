@@ -6,16 +6,14 @@ This document describes how to write `LUA` "code" to use the program's features 
 
 Any module is imported via `TTvActionHub.LuaTools.<module_name>`. The table below lists all available modules, and following the table is an example of importing the audio module.
 
-| Module                                       | Description                                                                                   | Documentation                          |
-| -------------------------------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------- |
-| `TTvActionHub.LuaTools.Hardware.Keyboard`    | This module is responsible for keyboard emulation.                                            | [Documentation](API/EN/Keyboard.md)    |
-| `TTvActionHub.LuaTools.Hardware.Mouse`       | This module is responsible for mouse emulation.                                               | [Documentation](API/EN/Mouse.md)       |
-| `TTvActionHub.LuaTools.Services.Audio`       | This module handles interaction with the audio service (playing audio files, music playback). | [Documentation](API/EN/Audio.md)       |
-| `TTvActionHub.LuaTools.Services.Container`   | This module is responsible for interacting with a special internal storage.                   | [Documentation](API/EN/Container.md)   |
-| `TTvActionHub.LuaTools.Services.TwitchTools` | This module is responsible for interacting with Twitch.                                       | [Documentation](API/EN/TwitchTools.md) |
-| `TTvActionHub.LuaTools.Stuff.Funcs`          | This module contains useful functions for writing configurations.                             | [Documentation](API/EN/Funcs.md)       |
-
-_Note: I've changed the documentation links to `/EN/` assuming you'll have English versions there. If not, adjust accordingly._
+| Module                                       | Description                                                                                   | Documentation                           |
+|----------------------------------------------|-----------------------------------------------------------------------------------------------|-----------------------------------------|
+| `TTvActionHub.LuaTools.Hardware.Keyboard`    | This module is responsible for keyboard emulation.                                            | [Documentation](API/ENG/Keyboard.md)    |
+| `TTvActionHub.LuaTools.Hardware.Mouse`       | This module is responsible for mouse emulation.                                               | [Documentation](API/ENG/Mouse.md)       |
+| `TTvActionHub.LuaTools.Services.Audio`       | This module handles interaction with the audio service (playing audio files, music playback). | [Documentation](API/ENG/Audio.md)       |
+| `TTvActionHub.LuaTools.Services.Container`   | This module is responsible for interacting with a special internal storage.                   | [Documentation](API/ENG/Container.md)   |
+| `TTvActionHub.LuaTools.Services.TwitchTools` | This module is responsible for interacting with Twitch.                                       | [Documentation](API/ENG/TwitchTools.md) |
+| `TTvActionHub.LuaTools.Stuff.Funcs`          | This module contains useful functions for writing configurations.                             | [Documentation](API/ENG/Funcs.md)       |
 
 ## Example of importing the music playback module
 
@@ -36,7 +34,7 @@ local Audio = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Audio
 The configuration table contains several parameters:
 
 | Parameter   | Type   | Values     | Description                                                                                               | Optional | Default Value |
-| ----------- | ------ | ---------- | --------------------------------------------------------------------------------------------------------- | -------- | ------------- |
+|-------------|--------|------------|-----------------------------------------------------------------------------------------------------------|----------|---------------|
 | force-relog | `bool` | true/false | If `true`, authorization via browser will be forcibly requested without attempting to update information. | +        | `false`       |
 | timeout     | `int`  | Number     | Default cooldown time (in ms) for chat commands if they don't have their own specified.                   | +        | `30000`       |
 | logs        | `bool` | true/false | If `true`, internal logs of services related to Twitch will be output.                                    | +        | `false`       |
@@ -46,7 +44,7 @@ The configuration table contains several parameters:
 The `twitchevents` table contains definitions for your custom events. Each key in this table represents an event name. The value associated with each event name is another table containing the following keys:
 
 | Key     | Type       | Description                                                                                                | Optional | Default Value           |
-| ------- | ---------- | ---------------------------------------------------------------------------------------------------------- | -------- | ----------------------- |
+|---------|------------|------------------------------------------------------------------------------------------------------------|----------|-------------------------|
 | kind    | Event Type | Defines the event type: Command, Channel Points Reward, or other.                                          | -        | -                       |
 | action  | Function   | The function that will be executed when the event triggers. It accepts two arguments: `sender` and `args`. | -        | -                       |
 | timeout | int        | Cooldown time for the event. Measured in ms. Three possible values: -1, 0, > 0.                            | +        | timeout from config.lua |
@@ -111,7 +109,7 @@ twitchevents['test']['perm'] = TwitchTools.PermissionLevel.Vip -- or TwitchTools
 The `tactions` table contains definitions for your custom timer actions. Each key in this table represents an action name (which you specified in the Twitch panel). The value associated with each action name is another table containing the following keys:
 
 | Key     | Type     | Description                                                                                     | Optional |
-| ------- | -------- | ----------------------------------------------------------------------------------------------- | -------- |
+|---------|----------|-------------------------------------------------------------------------------------------------|----------|
 | action  | Function | The function that will be executed when the action is triggered. It takes no arguments.         | -        |
 | timeout | integer  | The time interval (in ms) after which this action will be triggered. Any value >= 1 is allowed. | -        |
 

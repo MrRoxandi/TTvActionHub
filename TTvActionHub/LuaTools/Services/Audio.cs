@@ -1,53 +1,52 @@
 ﻿using TTvActionHub.Services;
 
-namespace TTvActionHub.LuaTools.Services
+namespace TTvActionHub.LuaTools.Services;
+
+public static class Audio
 {
-    public static class Audio
+    public static AudioService? audio;
+
+    public static async Task PlaySound(string uri)
     {
-        public static AudioService? audio;
-        
-        public static async Task PlaySound(string uri)
-        {
-            if (string.IsNullOrEmpty(uri)) throw new ArgumentNullException(nameof(uri));
-            if (audio == null) throw new FieldAccessException("Audio service was not provided");
-            await audio.PlaySoundAsync(new Uri(uri));
-        }
+        if (string.IsNullOrEmpty(uri)) throw new ArgumentNullException(nameof(uri));
+        if (audio == null) throw new FieldAccessException("Audio service was not provided");
+        await audio.PlaySoundAsync(new Uri(uri));
+    }
 
-        public static void SetVolume(float volume) 
-        {
-            if (audio == null) { throw new Exception("Audio service was not provided"); }
+    public static void SetVolume(float volume)
+    {
+        if (audio == null) throw new Exception("Audio service was not provided");
 
-            audio.SetVolume(volume);
-        }
+        audio.SetVolume(volume);
+    }
 
-        public static float GetVolume()
-        {
-            if (audio == null) { throw new Exception("Audio service was not provided"); }
+    public static float GetVolume()
+    {
+        if (audio == null) throw new Exception("Audio service was not provided");
 
-            return audio.GetVolume();
-        }
+        return audio.GetVolume();
+    }
 
-        public static void IncreaseVolume(float volume)
-        {
-            if (audio == null) { throw new Exception("Audio service was not provided"); }
-            var res = audio.GetVolume() + volume;
+    public static void IncreaseVolume(float volume)
+    {
+        if (audio == null) throw new Exception("Audio service was not provided");
+        var res = audio.GetVolume() + volume;
 
-            audio.SetVolume((float)(res > 1.0 ? 1.0 : res));
-        }
+        audio.SetVolume((float)(res > 1.0 ? 1.0 : res));
+    }
 
-        public static void DecreaseVolume(float volume)
-        {
-            if (audio == null) { throw new Exception("Audio service was not provided"); }
+    public static void DecreaseVolume(float volume)
+    {
+        if (audio == null) throw new Exception("Audio service was not provided");
 
-            var res = audio.GetVolume() - volume;
+        var res = audio.GetVolume() - volume;
 
-            audio.SetVolume((float)(res < 0.0 ? 0.0 : res));
-        }
+        audio.SetVolume((float)(res < 0.0 ? 0.0 : res));
+    }
 
-        public static void SkipSound()
-        {
-            if (audio == null) { throw new Exception("Audio service was not provided"); }
-            audio.SkipSound();
-        }
+    public static void SkipSound()
+    {
+        if (audio == null) throw new Exception("Audio service was not provided");
+        audio.SkipSound();
     }
 }

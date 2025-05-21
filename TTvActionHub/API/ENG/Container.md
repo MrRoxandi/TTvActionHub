@@ -14,17 +14,17 @@ local Container = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Conta
 
 ### Basic Operations
 
-| Method                     | Description                                                                                                                     |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `Contains(string name)`    | Checks if an entry with the specified name (`name`) exists in the store. Returns `boolean` (`true` or `false`).                 |
-| `RemoveValue(string name)` | Removes the entry with the specified name (`name`) from the store. Returns `boolean` (`true` if successful, `false` otherwise). |
+| Method                      | Description                                                                                                                      |
+|:----------------------------|:---------------------------------------------------------------------------------------------------------------------------------|
+| `Contains(string name)`     | Checks if an entry with the specified name (`name`) exists in the store. Returns `boolean` (`true` or `false`).                  |
+| `RemoveValue(string name)`  | Removes the entry with the specified name (`name`) from the store. Returns `boolean` (`true` if successful, `false` otherwise).  |
 
 ### Methods for Basic Types (Recommended for Lua)
 
 These methods provide a convenient way to work with basic Lua data types.
 
 | Method                                    | Description                                                                                                                                     |
-| :---------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------------------------- |
+|:------------------------------------------|:------------------------------------------------------------------------------------------------------------------------------------------------|
 | `InsertInt(string name, int value)`       | Saves or updates an integer (`number`) value `value` under the name `name`.                                                                     |
 | `GetInt(string name)`                     | Retrieves an integer (`number`) value by name `name`. Returns `number` or `nil` if the entry is not found or has a different type.              |
 | `InsertChar(string name, char value)`     | Saves or updates a character (`string` of length 1) value `value` under the name `name`.                                                        |

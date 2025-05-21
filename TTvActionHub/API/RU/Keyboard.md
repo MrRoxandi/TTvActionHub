@@ -8,7 +8,7 @@
 local Keyboard = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Keyboard
 ```
 
-Пример получения кода клавиши 'B' и разование нажатие этой клавиши:
+Пример получения кода клавиши 'B' и разовое нажатие этой клавиши:
 
 ```lua
 local key = Keyboard.Key.B -- Получение кода клавиши 'B'
@@ -36,17 +36,17 @@ Keyboard.TypeKey(key)
    `Shift`, `RShiftKey`, `LShiftKey`, `Alt`, `LAlt`, `RAlt`, `Control`, `LControlKey`, `RControlKey`
 6. **Дополнительные клавиши**:
    `LWin`, `RWin`, `Backspace`, `Tab`, `LineFeed`, `Clear`, `Enter`, `Pause`, `CapsLock`, `Escape`, `Space`, `PageUp`, `PageDown`, `End`, `Home`, `PrintScreen`, `Insert`, `Delete`, `Scroll`, `Sleep`,
-7. **Стрекли**:
+7. **Стрелки**:
    `Up`, `Right`, `Left`, `Down`
 
 ## Доступные методы симуляции клавиатуры
 
 | Метод                                    | Описание                                                              |
-| ---------------------------------------- | --------------------------------------------------------------------- |
+|------------------------------------------|-----------------------------------------------------------------------|
 | `PressKey(Key key)`                      | Имитирует нажатие клавиши (не отпускает обратно)                      |
 | `ReleaseKey(Key key)`                    | Отпускает нажатую клавишу                                             |
 | `TypeKey(Key key)`                       | Имитирует краткое нажатие на клавишу (нажал, отпустил)                |
-| `TypeMessage(string message)`            | Имитирует набор сообщения по заданой строке                           |
+| `TypeMessage(string message)`            | Имитирует набор сообщения по заданной строке                          |
 | `HoldKey(Key key, int timeDelay = 1000)` | Удерживает клавишу в течение заданного времени (по умолчанию 1000 мс) |
 
 Пример использования `TypeMessage` в файле конфигурации:

@@ -13,7 +13,7 @@ local Audio = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Audio
 ## Available Methods
 
 | Function                       | Description                                                                                                |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------- |
+|--------------------------------|------------------------------------------------------------------------------------------------------------|
 | `PlaySound(string uri)`        | Asynchronously plays a sound from the specified URL or local file path given by `uri`.                     |
 | `SetVolume(float volume)`      | Sets the sound volume. The `volume` value must be in the range from 0.0 (silence) to 1.0 (maximum volume). |
 | `GetVolume()`                  | Returns the current sound volume. The value is in the range from 0.0 to 1.0.                               |

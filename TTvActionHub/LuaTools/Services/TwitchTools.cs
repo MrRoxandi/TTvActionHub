@@ -61,7 +61,7 @@ public static class TwitchTools
     public enum TwitchEventKind : byte
     {
         Command = 0,
-        TwitchReward 
+        TwitchReward
     }
 
     public static PermissionLevel ParseFromTwitchLib(UserType type, bool isSub, bool isVip)

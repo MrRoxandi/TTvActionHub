@@ -30,17 +30,17 @@ Currently, all available buttons are located in the `Button` field of the `Mouse
 
 Methods for interacting with main mouse buttons:
 
-| Method                              | Description                                                                         |
-| ----------------------------------- | ----------------------------------------------------------------------------------- |
-| `Press(Button button)`              | Simulates pressing the `button` (but does not release it).                          |
-| `Release(Button button)`            | Simulates releasing the `button`.                                                   |
-| `Click(Button button)`              | Simulates a quick, single click of the `button`.                                    |
-| `Hold(Button button, int duration)` | Simulates holding down the `button` for the specified `duration` (in milliseconds). |
+| Method                               | Description                                                                          |
+|:-------------------------------------|:-------------------------------------------------------------------------------------|
+| `Press(Button button)`               | Simulates pressing the `button` (but does not release it).                           |
+| `Release(Button button)`             | Simulates releasing the `button`.                                                    |
+| `Click(Button button)`               | Simulates a quick, single click of the `button`.                                     |
+| `Hold(Button button, int duration)`  | Simulates holding down the `button` for the specified `duration` (in milliseconds).  |
 
 Methods for interacting with additional mouse buttons, where `xid` is the number of the additional button, starting from **1**:
 
 | Method                         | Description                                                                             |
-| ------------------------------ | --------------------------------------------------------------------------------------- |
+|--------------------------------|-----------------------------------------------------------------------------------------|
 | `XPress(int xid)`              | Simulates pressing the `xid` button (but does not release it).                          |
 | `XRelease(int xid)`            | Simulates releasing the `xid` button.                                                   |
 | `XClick(int xid)`              | Simulates a quick, single click of the `xid` button.                                    |
@@ -49,7 +49,7 @@ Methods for interacting with additional mouse buttons, where `xid` is the number
 Methods for interacting with the mouse pointer:
 
 | Method                      | Description                                                                  |
-| --------------------------- | ---------------------------------------------------------------------------- |
+|-----------------------------|------------------------------------------------------------------------------|
 | `SetPosition(int x, int y)` | Simulates setting the cursor to the specified coordinates.                   |
 | `Move(int dx, int dy)`      | Simulates moving the cursor by the specified delta coordinates (`dx`, `dy`). |
 
@@ -58,7 +58,7 @@ Methods for interacting with the mouse pointer:
 Methods for interacting with the mouse wheel (scrolling):
 
 | Method                  | Description                                                 |
-| ----------------------- | ----------------------------------------------------------- |
+|-------------------------|-------------------------------------------------------------|
 | `VScroll(int distance)` | Simulates vertical scrolling by the specified `distance`.   |
 | `HScroll(int distance)` | Simulates horizontal scrolling by the specified `distance`. |
 
