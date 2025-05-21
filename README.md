@@ -1,19 +1,31 @@
-# TTvActionHub
+<div width="100%" display="flex" justify-content="center" align-items="center">
+    <table>
+    <tr>
+        <td>
+            <img src="readme-assets/loog.png" alt="Logo" width="100">
+        </td>
+        <td>
+            <h2>TTvActionHub</h2>
+        </td>
+    </tr>
+  </table>
+</div>
 
-> This project focuses on gathering all the most useful tools for Twitch streaming in one place.
-> Music playback.
-> Keyboard and mouse emulation.
-> Storing interesting data.
-> And all of this is tied to actions that can be triggered through Twitch channel points or Twitch commands (yes, your own personal chat bot).
+> This project consolidates essential Twitch streaming tools into one platform, including music playback, keyboard and mouse emulation, and data storage. All features are activated via Twitch channel points or commands using a personalized chat bot.
 
 ## Features
 
-- **Sound playback**
-- **Data storage under names**
-- **Custom events for Twitch chat commands**
-- **Custom events for Twitch channel points**
-- **Keyboard emulation**
-- **Mouse emulation**
+- **TwitchService:**
+  - Fully customizable own events though chat commands and Twitch points redemptions
+  - Own points system supported
+- **AudioService:**
+  - Play almost any audio files with this service
+  - Also accepts internet links like: `https://example.com/audiofile.mp3`
+- **Container:**
+  - Stores almost any data under specified name
+- **Hardware:**
+  - Allows to emulate keyboard actions
+  - Allows to emulate mouse actions
 
 ## Highlights
 
@@ -28,8 +40,8 @@
 ## Running (Windows)
 
 1. Navigate to the extracted directory.
-2. Place `config.lua` file in root directory. (or just run the program)
-3. Run the `TwitchController.exe`.
+2. Run the `TwitchController.exe` and let it generate all files.
+3. If you want to configure this program, then navigate to `..\configs\`
 
 ## LUA Scripting
 

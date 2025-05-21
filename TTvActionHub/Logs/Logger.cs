@@ -1,18 +1,17 @@
-﻿using TTvActionHub.Logs;
-using TTvActionHub.Logs.BackEnds;
+﻿using TTvActionHub.BackEnds;
 
 namespace TTvActionHub.Logs
 {
-    enum LOGTYPE : int
+    internal enum LogType
     {
-        ERROR = -1, INFO = 0, WARNING = 1
+        Error = -1, Info = 0, Warning = 1
     }
 
     internal static class Logger
     {
-        private static readonly ILogger _logger = new ConsoleFileLogger();
+        private static readonly ILogger _logger = new MainLogger();
 
-        public static void Error(string message, string? err = null)
+        public static void Error(string message, Exception? err = null)
         {
             _logger.Error(message, err);
         }
@@ -27,18 +26,20 @@ namespace TTvActionHub.Logs
             _logger.Warn(message); 
         }
 
-        public static void Log(LOGTYPE type, string name, string message, string? err = null)
+        public static void Log(LogType type, string name, string message, Exception? err = null)
         {
             string res = type switch
             {
-                LOGTYPE.ERROR => "ERR",
-                LOGTYPE.INFO => "INFO",
-                LOGTYPE.WARNING => "WARN",
+                LogType.Error => "ERR",
+                LogType.Info => "Info",
+                LogType.Warning => "WARN",
                 _ => "NULL"
             };
 
             _logger.Log(res, name, message, err);
         }
+
+        public static IEnumerable<string> LastLogs() => _logger.GetLastLogs();
 
     }
 }

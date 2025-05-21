@@ -3,11 +3,11 @@ using TTvActionHub.Logs;
 
 namespace TTvActionHub.Items
 {
-    public class TimerAction
+    public class TimerAction : IAction
     {
-        public bool IsRunning { get => _timer != null; }
+        public required LuaFunction Function { get; set; }
+        public bool IsRunning => _timer != null;
         private System.Timers.Timer? _timer;
-        public required LuaFunction Action;
         public required string Name;
         public required long TimeOut;
 
@@ -35,12 +35,12 @@ namespace TTvActionHub.Items
             {
                 try
                 {
-                    Action.Call();
+                    Function.Call();
                     Logger.Info($"Timer event [{Name}] was executed at [{e.SignalTime}]");
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error($"While executing timer event [{Name}] occured an error", ex.Message);
+                    Logger.Error($"While executing timer event [{Name}] occured an error", ex);
                     Logger.Info($"Stopping timer event [{Name}]");
                     this.Stop();
                 }

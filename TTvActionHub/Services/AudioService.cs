@@ -1,312 +1,260 @@
-﻿using NAudio.Vorbis;
-using NAudio.Wave;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
+using LibVLCSharp.Shared;
 using TTvActionHub.Logs;
 
-namespace TTvActionHub.Services
+namespace TTvActionHub.Services;
+
+internal enum PlaybackState
 {
-    public class AudioService: IService, IDisposable 
+    Playing = 0,
+    Stopped = 1,
+    Paused = 2
+}
+
+public sealed partial class AudioService : IService, IDisposable
+{
+    private CancellationTokenSource? _serviceCancellationToken;
+    private TaskCompletionSource<bool>? _soundCompletionSource;
+    private readonly ConcurrentQueue<Uri> _soundQueue = new();
+    private PlaybackState _playbackState = PlaybackState.Stopped;
+    private string _currentPlayingFile = string.Empty;
+    private MediaPlayer? _mediaPlayer;
+    private Task? _workerTask;
+    private LibVLC? _libVlc;
+
+    public event EventHandler<ServiceStatusEventArgs>? StatusChanged;
+
+    private void OnPlaybackEncounteredError(object? sender, EventArgs e)
     {
-        private readonly HttpClient _httpClient = new();
-        private readonly WaveOutEvent _waveOut = new();
-        private readonly ConcurrentQueue<(string? url, string? path)> _soundQueue = new();
-        private readonly CancellationTokenSource _serviceCancellationToken = new();
-        private TaskCompletionSource<bool> _soundCompletionSource = new();
-        private Task? _workerTask;
+        if (_playbackState != PlaybackState.Playing) return;
+        _playbackState = PlaybackState.Stopped;
+        _soundCompletionSource?.TrySetException(new Exception($"{ServiceName} failed to play audio"));
+        Logger.Log(LogType.Error, ServiceName, $"Error during playback for: {_currentPlayingFile}");
+    }
 
-        private static bool IsValidUrl(string url_end) => url_end switch
-        {
-            ".mp3" => true,
-            ".wav" => true,
-            ".ogg" => true,
-            _ => false
-        };
+    private void OnPlaybackEndReached(object? sender, EventArgs e)
+    {
+        if (_playbackState != PlaybackState.Playing) return;
+        _playbackState = PlaybackState.Stopped;
+        if (!_soundCompletionSource!.TrySetResult(true))
+            _soundCompletionSource.TrySetException(new Exception($"{ServiceName} failed to set stop state"));
+        Logger.Log(LogType.Info, ServiceName, $"Playback finished for: {_currentPlayingFile}");
+    }
 
-        private static IWaveProvider GetReader(Stream stream, string fileExtension) => fileExtension switch
+    public void Run()
+    {
+        try
         {
-            ".mp3" => new Mp3FileReader(stream),
-            ".wav" => new WaveFileReader(stream),
-            ".ogg" => new VorbisWaveReader(stream),
-            _ => throw new Exception("Format of this audio file is not supporting")
-        };
-
-        public void Run()
+            Core.Initialize();
+        }
+        catch (Exception ex)
         {
-            _workerTask = Task.Run(ProcessSoundQueueAsync, _serviceCancellationToken.Token);
-            Logger.Log(LOGTYPE.INFO,  ServiceName, "Sound service is running");
+            Logger.Log(LogType.Error, ServiceName, "Unable to initialize service due to error:", ex);
+            OnStatusChanged(false, "Unable to initialize service due to error. Check logs");
+            return;
         }
 
-        public void Stop()
+        _libVlc = new LibVLC();
+        _mediaPlayer = new MediaPlayer(_libVlc);
+        _mediaPlayer.EndReached += OnPlaybackEndReached;
+        _mediaPlayer.EncounteredError += OnPlaybackEncounteredError;
+        _serviceCancellationToken = new CancellationTokenSource();
+        _soundCompletionSource = new TaskCompletionSource<bool>();
+        _workerTask = Task.Run(ProcessSoundQueueAsync, _serviceCancellationToken.Token);
+        _soundCompletionSource.TrySetResult(true);
+        Logger.Log(LogType.Info, ServiceName, "Sound service is running");
+        OnStatusChanged(true);
+        IsRunning = true;
+    }
+
+    public void Stop()
+    {
+        Logger.Log(LogType.Info, ServiceName, "Sound service is stopping");
+        _serviceCancellationToken?.Cancel();
+        try
         {
-            Logger.Log(LOGTYPE.INFO,  ServiceName, "Sound service is stopping");
-            _serviceCancellationToken.Cancel();
-
-            // Wait for worker task to complete
-            try
-            {
-                _workerTask?.Wait();
-            }
-            catch (AggregateException ex)
-            {
-                // Log exceptions from the worker task
-                foreach (var innerEx in ex.InnerExceptions)
-                {
-                    Logger.Log(LOGTYPE.ERROR,  ServiceName, "Exception during sound processing:", innerEx.Message);
-                }
-            }
-
-
-            _waveOut.Stop();
-            _waveOut.Dispose();
-            _httpClient.Dispose();
+            _workerTask?.GetAwaiter().GetResult();
+        }
+        catch (AggregateException ex)
+        {
+            foreach (var innerEx in ex.InnerExceptions)
+                if (!_soundCompletionSource?.Task.Result ?? true)
+                    Logger.Log(LogType.Error, ServiceName, "Exception during sound processing:", innerEx);
         }
 
-        public void StopPlaying()
+        _mediaPlayer!.EndReached -= OnPlaybackEndReached;
+        _mediaPlayer!.EncounteredError -= OnPlaybackEncounteredError;
+        _mediaPlayer?.Stop();
+        _mediaPlayer?.Dispose();
+        _libVlc?.Dispose();
+        OnStatusChanged(false);
+        IsRunning = false;
+    }
+
+    public void StopPlaying()
+    {
+        _mediaPlayer?.Stop();
+        _playbackState = PlaybackState.Stopped;
+    }
+
+    public void SkipSound()
+    {
+        if (_mediaPlayer?.IsPlaying != true)
         {
-            _waveOut.Stop();
+            Logger.Log(LogType.Warning, ServiceName, "Nothing to skip right now");
+            return;
         }
 
-        public void SkipSound()
+        Logger.Log(LogType.Info, ServiceName, $"Skipping playback for {_currentPlayingFile}");
+        _soundCompletionSource!.TrySetResult(false);
+        _playbackState = PlaybackState.Stopped;
+        _mediaPlayer?.Stop();
+    }
+
+    public float GetVolume()
+    {
+        return (_mediaPlayer?.Volume ?? 0) / (float)100.0;
+    }
+
+    public void SetVolume(float volume)
+    {
+        switch (volume)
         {
-            if(_waveOut.PlaybackState != PlaybackState.Playing)
-            {
-                Logger.Log(LOGTYPE.WARNING,  ServiceName, "Nothing to skip right now");
-                return;
-            }
-            _soundCompletionSource.TrySetResult(false);
+            case < 0:
+                throw new ArgumentOutOfRangeException(nameof(volume), "Minimum value for volume is 0.0");
+            case > 1:
+                throw new ArgumentOutOfRangeException(nameof(volume), "Maximum value for volume is 1.0");
+            default:
+                Logger.Log(LogType.Info, ServiceName, $"Setting volume to {volume}");
+                _mediaPlayer!.Volume = (int)(volume * 100);
+                break;
         }
+    }
 
-        public float GetVolume()
-        {
-            return _waveOut.Volume;
-        }
+    public Task PlaySoundAsync(Uri audioSourceUri)
+    {
+        ArgumentNullException.ThrowIfNull(audioSourceUri, nameof(audioSourceUri));
+        _soundQueue.Enqueue(audioSourceUri);
+        return Task.CompletedTask;
+    }
 
-        public void SetVolume(float volume)
-        {
-            if(volume < 0) throw new Exception("Minimun value for voleme is 0.0");
-            if (volume > 1) throw new Exception("Maximum value for voleme is 1.0");
-            Logger.Log(LOGTYPE.INFO,  ServiceName, $"Setting volume to {volume}");
-            _waveOut.Volume = volume;
-        }
-
-        public Task PlaySoundFromDiskAsync(string path)
-        {
-            if (string.IsNullOrEmpty(path))
+    private async Task ProcessSoundQueueAsync()
+    {
+        while (!_serviceCancellationToken!.IsCancellationRequested)
+            if (_soundCompletionSource!.Task.IsCompleted && _soundQueue.TryDequeue(out var audioUri))
             {
-                throw new ArgumentException("Path cannot be null or empty.", nameof(path));
-            }
-
-            if (!File.Exists(path))
-            {
-                throw new FileNotFoundException($"File not found: {path}");
-            }
-
-            _soundQueue.Enqueue((null, path));
-            return Task.CompletedTask;
-        }
-
-        public Task PlaySoundFromUrlAsync(string url)
-        {
-            if (string.IsNullOrEmpty(url))
-            {
-                throw new ArgumentException("URL cannot be null or empty.", nameof(url));
-            }
-
-            _soundQueue.Enqueue((url, null));
-            return Task.CompletedTask;
-        }
-
-        private async Task ProcessSoundQueueAsync()
-        {
-            while (!_serviceCancellationToken.Token.IsCancellationRequested)
-            {
-                if (_soundQueue.TryDequeue(out var soundRequest))
-                {
-                    string? url = soundRequest.url;
-                    string? path = soundRequest.path;
-
-                    try
-                    {
-                        if (path != null)
-                        {
-                            await InternalSoundFromDiskAsync(path);
-                        }
-                        else if (url != null)
-                        {
-                            await InternalSoundFromUrlAsync(url);
-                        }
-
-                    }
-                    catch (Exception ex)
-                    {
-                        Logger.Log(LOGTYPE.ERROR,  ServiceName, "Error processing sound request.", ex.Message);
-                    }
-                }
-                else
-                {
-                    await Task.Delay(100, _serviceCancellationToken.Token); // Wait if queue is empty
-                }
-            }
-        }
-
-        private async Task InternalSoundFromDiskAsync(string path)
-        {
-            try
-            {
-                string fileExtension = Path.GetExtension(path).ToLowerInvariant();
-
-                using (var audioStream = File.OpenRead(path))
-                {
-                    await PlayAudioStreamAsync(audioStream, fileExtension);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LOGTYPE.ERROR,  ServiceName, $"Error playing sound from disk: {path}", ex.Message);
-                throw; // Re-throw to allow handling higher up.
-            }
-        }
-
-        private async Task InternalSoundFromUrlAsync(string url)
-        {
-            if (!IsValidUrl(Path.GetExtension(url))) return;
-            string tempFilePath = Path.GetTempFileName();
-            string? fileExtension = null;
-
-            try
-            {
-                Logger.Log(LOGTYPE.INFO,  ServiceName, $"Downloading audio from: {url}");
-                using (var response = await _httpClient.GetAsync(url, _serviceCancellationToken.Token))
-                {
-                    response.EnsureSuccessStatusCode();
-                    fileExtension = Path.GetExtension(url).ToLowerInvariant();
-                    using (var stream = await response.Content.ReadAsStreamAsync(_serviceCancellationToken.Token).ConfigureAwait(false))
-                    using (var fileStream = File.Create(tempFilePath))
-                    {
-                        await stream.CopyToAsync(fileStream, _serviceCancellationToken.Token).ConfigureAwait(false);
-                    }
-                }
-
-                using (var audioStream = File.OpenRead(tempFilePath))
-                {
-                    await PlayAudioStreamAsync(audioStream, fileExtension).ConfigureAwait(false);
-                }
-            }
-            catch (HttpRequestException ex)
-            {
-                Logger.Log(LOGTYPE.ERROR,  ServiceName, $"Error downloading audio from: {url}", ex.Message);
-                throw;
-            }
-            catch (OperationCanceledException)
-            {
-                Logger.Log(LOGTYPE.INFO,  ServiceName, "Download cancelled.");
-            }
-            catch (Exception ex)
-            {
-                Logger.Log(LOGTYPE.ERROR,  ServiceName, $"Error playing sound from URL: {url}", ex.Message);
-                throw;
-            }
-            finally
-            {
+                // if for some reason audioUri is null. Skipping
+                if (string.IsNullOrEmpty(audioUri.OriginalString)) continue;
                 try
                 {
-                    if (File.Exists(tempFilePath))
-                    {
-                        File.Delete(tempFilePath);
-                        Logger.Log(LOGTYPE.INFO,  ServiceName, $"Deleted temporary file: {tempFilePath}");
-                    }
+                    // Handle audioUri here.
+                    await ProcessSoundUri(audioUri);
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log(LOGTYPE.ERROR,  ServiceName, $"Error deleting temporary file: {tempFilePath}", ex.Message);
+                    Logger.Log(LogType.Error, ServiceName, "Error processing sound request:", ex);
                 }
             }
-        }
-
-
-        private async Task PlayAudioStreamAsync(Stream audioStream, string? fileExtension)
-        {
-            if (string.IsNullOrEmpty(fileExtension))
+            else
             {
-                throw new ArgumentException("File extension cannot be null or empty.", nameof(fileExtension));
+                // Wait if we cant get audioUri from queue.
+                await Task.Delay(TimeSpan.FromMilliseconds(100), _serviceCancellationToken.Token);
             }
-            // Get WaveOutEvent from the pool
-            IWaveProvider? reader = null;
-            try
+
+        Logger.Log(LogType.Info, ServiceName, "Sound queue processing stopped");
+    }
+
+    private async Task ProcessSoundUri(Uri audioUri)
+    {
+        var path = audioUri.LocalPath;
+        _currentPlayingFile = audioUri.OriginalString;
+        try
+        {
+            if (audioUri.IsFile)
             {
-                reader = GetReader(audioStream, fileExtension);
-                _waveOut.Init(reader);
-                _waveOut.Play();
-                Logger.Log(LOGTYPE.INFO,  ServiceName, "Playback started");
+                if (!File.Exists(path)) throw new FileNotFoundException($"File not found: {path}");
+                using var media = new Media(_libVlc!, audioUri);
+                await PlayMediaAsync(media);
+            }
+            else
+            {
+                using var media = new Media(_libVlc!, audioUri.OriginalString, FromType.FromLocation);
+                await media.Parse(MediaParseOptions.ParseNetwork);
+                await PlayMediaAsync(media);
+            }
+        }
+        catch (Exception e)
+        {
+            Logger.Log(LogType.Error, ServiceName, "Error occurred during processing sound uri: ", e);
+        }
+    }
 
-                _soundCompletionSource = new();
-                bool isCompleted = false; // Add a flag
+    private async Task PlayMediaAsync(Media media)
+    {
+        if (_mediaPlayer == null) throw new InvalidOperationException("Media player is not initialized");
+        try
+        {
+            _playbackState = PlaybackState.Playing;
+            _soundCompletionSource = new TaskCompletionSource<bool>();
+            _mediaPlayer.Play(media.SubItems.Count > 0 ? media.SubItems.First() : media);
+            Logger.Log(LogType.Info, ServiceName, $"Playback started for: {_currentPlayingFile}");
 
-                _waveOut.PlaybackStopped += (sender, args) =>
+            var completedTask = await Task.WhenAny(_soundCompletionSource.Task,
+                Task.Delay(Timeout.Infinite, _serviceCancellationToken!.Token));
+            if (completedTask == _soundCompletionSource.Task)
+            {
+                if (completedTask.IsFaulted)
                 {
-                    if (isCompleted) return;  // Prevent multiple executions
-
-                    isCompleted = true; // Set the flag
-                    if (args.Exception != null)
-                    {
-                        Logger.Log(LOGTYPE.ERROR,  ServiceName, "Error during playback", args.Exception.Message);
-                        _soundCompletionSource.TrySetException(args.Exception);
-                    }
-                    else
-                    {
-                        _soundCompletionSource.TrySetResult(true);
-                    }
-                };
-
-                // Wait for playback to complete or be cancelled.
-                await Task.WhenAny(_soundCompletionSource.Task, Task.Delay(Timeout.Infinite, _serviceCancellationToken.Token));
-
-                if (_soundCompletionSource.Task.IsFaulted)
+                    var ex = completedTask.Exception.InnerException;
+                    if (ex != null) throw ex;
+                }
+                else if (_soundCompletionSource.Task.Result == false)
                 {
-                    var ex = _soundCompletionSource.Task.Exception;
-                    if (ex != null && ex.InnerException != null) throw ex.InnerException;
-                } 
-                else if(_soundCompletionSource.Task.Result == false)
-                {
-                    Logger.Log(LOGTYPE.INFO,  ServiceName, "Playback cancelled");
-                    //_waveOut.Stop();
-                } else
-                {
-                    Logger.Log(LOGTYPE.INFO,  ServiceName, "Playback finished successfully");
+                    Logger.Log(LogType.Info, ServiceName, "Playback cancelled externally");
                 }
             }
-            finally
+            else if (completedTask.IsCanceled)
             {
-                // Ensure resources are cleaned up even if an exception occurs.
-                _waveOut.Stop();
-
-                if (reader != null)
-                {
-                    if (reader is IDisposable disposableReader)
-                    {
-                        disposableReader.Dispose();
-                    }
-                    reader = null;
-                }
+                Logger.Log(LogType.Info, ServiceName, "Playback cancelled via CancellationToken");
+                _playbackState = PlaybackState.Stopped;
             }
         }
-
-        public void Dispose()
+        catch (Exception ex)
         {
-            Dispose(true);
-            GC.SuppressFinalize(this);
+            Logger.Log(LogType.Error, ServiceName, $"Error during PlayMediaAsync for {_currentPlayingFile}", ex);
+            throw;
         }
-
-        protected virtual void Dispose(bool disposing)
+        finally
         {
-            if (disposing)
-            {
-                Stop(); // Ensure the worker task and WaveOutEvent instances are stopped.
-                _httpClient.Dispose();  //Dispose of the http client
-                _serviceCancellationToken.Dispose();       // Dispose of the cancellation token source.
-            }
+            _playbackState = PlaybackState.Stopped;
         }
+    }
 
-        public string ServiceName { get => "AudioService"; }
+    public void Dispose()
+    {
+        Dispose(true);
+    }
+
+    private void Dispose(bool disposing)
+    {
+        if (!disposing) return;
+        Stop();
+        _serviceCancellationToken?.Dispose();
+    }
+
+    public string ServiceName => "AudioService";
+
+    public bool IsRunning { get; private set; }
+
+    private void OnStatusChanged(bool isRunning, string? message = null)
+    {
+        try
+        {
+            StatusChanged?.Invoke(this, new ServiceStatusEventArgs(ServiceName, isRunning, message));
+        }
+        catch (Exception ex)
+        {
+            Logger.Log(LogType.Error, ServiceName, "Error invoking StatusChanged event handler.", ex);
+        }
     }
 }

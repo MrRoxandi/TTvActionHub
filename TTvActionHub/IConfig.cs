@@ -1,21 +1,16 @@
-﻿using System.Collections.Concurrent;
-using TTvActionHub.Items;
-using TTvActionHub.Twitch;
+﻿using TTvActionHub.Twitch;
 
 namespace TTvActionHub
 {
     public interface IConfig
     {
-        public ConcurrentDictionary<string, Command> Commands { get; }
-        public ConcurrentDictionary<string, Reward> Rewards { get; }
-        public List<TimerAction> TActions { get; }
+        public string RefreshToken { get; }
+        public string Token { get; }
+        public string Login { get; }
+        public string Id { get; }
         
-        public bool LogState { get; }
-        public (string Login, string ID, string Token, string RefreshToken) TwitchInfo { get; }
-
-        public (string obr, string cbr) Brackets { get; }
         public TwitchApi TwitchApi { get; }
-        //static abstract void CreateConfig(string path);
 
+        public bool LogState { get; }
     }
 }
