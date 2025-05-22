@@ -1,11 +1,8 @@
 ﻿using System.Collections.Concurrent;
-using System.Linq.Expressions;
-using Microsoft.EntityFrameworkCore;
 using TTvActionHub.Items;
 using TTvActionHub.Logs;
 using TTvActionHub.LuaTools.Services;
 using TTvActionHub.Managers;
-using TTvActionHub.Services.Twitch;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Helix.Models.Chat.GetChatters;
 using TwitchLib.Client;
@@ -28,7 +25,7 @@ public class TwitchService : IService, IUpdatableConfiguration
 
     // --- Db for Twitch users --- 
 
-    private readonly TwitchDbContext _db;
+    private readonly PointsManager _db;
 
     // --- Connection checks ---
 
@@ -79,8 +76,7 @@ public class TwitchService : IService, IUpdatableConfiguration
         _configManager = configManager ?? throw new ArgumentNullException(nameof(configManager));
         _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
         /*twitchAPI = _configuration.TwitchApi.InnerApi;*/
-        _db = new TwitchDbContext();
-        _db.EnsureCreated();
+        _db = new PointsManager("Twitch");
         TwitchEvents = _configManager.LoadTwitchEvents()
                        ?? throw new InvalidOperationException(
                            $"Failed to load initial TwitchEvents configuration for {ServiceName}");
@@ -113,9 +109,9 @@ public class TwitchService : IService, IUpdatableConfiguration
     public long? GetEventCost(string eventName)
     {
         if (TwitchEvents == null) return null;
-        var result = TwitchEvents.TryGetValue((eventName, TwitchTools.TwitchEventKind.Command), out var tevent);
-        if (!result || tevent is null) return null;
-        return tevent.Cost;
+        var result = TwitchEvents.TryGetValue((eventName, TwitchTools.TwitchEventKind.Command), out var tEvent);
+        if (!result || tEvent is null) return null;
+        return tEvent.Cost;
     }
 
     // --- Running and Stopping service --- 
@@ -753,55 +749,37 @@ public class TwitchService : IService, IUpdatableConfiguration
         await Container.Storage.AddOrUpdateItemAsync(LastClipCheckTimeKey, DateTime.UtcNow);
     }
 
-    private async Task<(TwitchUser? user, bool isNew)> GetOrCreateUser(
-        Expression<Func<TwitchUser, bool>> predicate,
-        Func<Task<TwitchUser?>> createUser)
-    {
-        var user = await _db.Users.FirstOrDefaultAsync(predicate);
-        if (user != null) return (user, false);
-
-        var newUser = await createUser();
-        return (newUser, newUser != null);
-    }
-
     private async Task ModifyUserPoints(string username, long points, bool isAdding = true)
     {
         if (string.IsNullOrWhiteSpace(username)) return;
-
-        var (user, isNew) = await GetOrCreateUser(u => u.Username == username,
-            async () =>
-            {
-                var id = await GetUserId(username);
-                return string.IsNullOrEmpty(id)
-                    ? null
-                    : new TwitchUser { Username = username.ToLowerInvariant(), TwitchID = id };
-            });
-
-        if (user == null) return;
-
-        user.Points = isAdding ? user.Points + points : points;
-        if (isNew) _db.Users.Add(user);
-        await _db.SaveChangesAsync();
+        var userId = await GetUserId(username);
+        if (userId is null) return;
+        var needToCreate = ! await _db.ContainsIdAsync(userId);
+        if (needToCreate)
+        {
+            await _db.CreateUserAsync(username, userId);
+        }
+        if (isAdding)
+            await _db.AddUserPointsByIdAsync(userId, points);
+        else 
+            await _db.SetUserPointsByIdAsync(userId, points);
     }
 
-    private async Task ModifyUserPointsById(string id, long points, bool isAdding = true)
+    private async Task ModifyUserPointsById(string userId, long points, bool isAdding = true)
     {
-        if (string.IsNullOrWhiteSpace(id)) return;
+        if (string.IsNullOrWhiteSpace(userId)) return;
+        var needToCreate = ! await _db.ContainsIdAsync(userId);
+        if (needToCreate)
+        {
+            var username = await GetUserLogin(userId);
+            if (username is null) return;
+            await _db.CreateUserAsync(username, userId);
+        }
 
-        var (user, isNew) = await GetOrCreateUser(u => u.TwitchID == id,
-            async () =>
-            {
-                var username = await GetUserLogin(id);
-                return string.IsNullOrEmpty(username)
-                    ? null
-                    : new TwitchUser { Username = username.ToLowerInvariant(), TwitchID = id };
-            });
-
-        if (user == null) return;
-
-        user.Points = isAdding ? user.Points + points : points;
-        if (isNew) _db.Users.Add(user);
-        await _db.SaveChangesAsync();
+        if (isAdding)
+            await _db.AddUserPointsByIdAsync(userId, points);
+        else 
+            await _db.SetUserPointsByIdAsync(userId, points);
     }
 
     public async Task AddPointsToUserAsync(string username, long pointsToAdd)
@@ -839,15 +817,15 @@ public class TwitchService : IService, IUpdatableConfiguration
     public async Task<long> GetPointsFromUser(string username)
     {
         if (string.IsNullOrWhiteSpace(username)) return 0;
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.Username == username);
-        return user?.Points ?? 0;
+        var userId = await GetUserId(username);
+        if (userId is null) return 0;
+        return await _db.GetUserPointsByIdAsync(userId);
     }
 
     public async Task<long> GetPointsFromUserById(string id)
     {
         if (string.IsNullOrWhiteSpace(id)) return 0;
-        var user = await _db.Users.FirstOrDefaultAsync(u => u.TwitchID == id);
-        return user?.Points ?? 0;
+        return await _db.GetUserPointsByIdAsync(id);
     }
 
     // --- Status Changed event backend --- 

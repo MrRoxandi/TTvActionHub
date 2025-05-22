@@ -4,7 +4,6 @@ using Terminal.Gui;
 using TTvActionHub.BackEnds;
 using TTvActionHub.Logs;
 using TTvActionHub.LuaTools.Services;
-using TTvActionHub.LuaTools.Services.ContainerItems;
 using TTvActionHub.Managers;
 using TTvActionHub.Services;
 
@@ -51,7 +50,6 @@ internal abstract class Program
         try
         {
             ServiceCollection collection = new();
-            collection.AddSingleton<IDataBaseContext, DataBaseContext>();
             collection.AddSingleton<DataContainer>();
 
             collection.AddSingleton<LuaConfigManager>();

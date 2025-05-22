@@ -1,18 +1,18 @@
 ﻿using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using TTvActionHub.BackEnds.ContainerItems;
 using TTvActionHub.Logs;
-using TTvActionHub.LuaTools.Services.ContainerItems;
 
 namespace TTvActionHub.BackEnds;
 
 public sealed class DataContainer
 {
     private const string ServiceName = "Container";
-    private readonly IDataBaseContext _db;
+    private readonly JsonDbContext _db;
 
-    public DataContainer(IDataBaseContext context)
+    public DataContainer()
     {
-        _db = context;
+        _db = new JsonDbContext();
         _db.EnsureCreated();
     }
 
