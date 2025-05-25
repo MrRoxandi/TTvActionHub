@@ -1,9 +1,10 @@
 ﻿using System.Collections.Concurrent;
-using System.Text;
 using NStack;
 using Terminal.Gui;
 using TTvActionHub.Logs;
 using TTvActionHub.ShellItems;
+using TTvActionHub.ShellItems.InnerCommands;
+using TTvActionHub.ShellItems.Interfaces;
 
 namespace TTvActionHub;
 
@@ -12,14 +13,23 @@ public partial class Shell(
     Action<string>? startServicesCallBack = null,
     Action<string>? stopServiceCallBack = null,
     Action<string>? reloadServiceCallBack = null,
-    Func<string, string[]?>? listServiceCallBack = null) : IDisposable
+    Func<string, string[]?>? serviceInfoCallBack = null) : IDisposable
 {
+    // --- Callbacks ---
+
+    public Func<string, string[]?>? ServiceInfoCallBack { get; } = serviceInfoCallBack;
+    public Action<string>? StopServiceCallBack { get; } = stopServiceCallBack;
+    public Action<string>? StartServiceCallBack { get; } = startServicesCallBack;
+
+    public Action<string>? ReloadServiceCallBack { get; } = reloadServiceCallBack;
+
     // --- Main config and dependencies ---
     private readonly IConfig _config = config;
 
     // --- UI states ---
-    private readonly ConcurrentDictionary<string, bool>
-        _serviceStates = new(StringComparer.OrdinalIgnoreCase); // Service -> Status (Running = true)
+    public ConcurrentDictionary<string, bool> ServiceStates { get; }
+        = new(StringComparer.OrdinalIgnoreCase); // Service -> Status (Running = true)
+
 
     private readonly ConcurrentQueue<string> _commandsOutPutQueue = [];
     private bool _showLogs;
@@ -55,8 +65,13 @@ public partial class Shell(
     private ColorScheme? _inputColorScheme;
     private ColorScheme? _statusColorScheme;
 
+    // --- Other stuff ---
+
+    public ConcurrentDictionary<string, IInnerCommand> InnerCommands { get; } = new(StringComparer.OrdinalIgnoreCase);
+
     public void InitializeUi()
     {
+        RegInnerCommands();
         Application.Init();
         _top = Application.Top;
         _mainLoopDriver = Application.MainLoop.Driver;
@@ -152,7 +167,7 @@ public partial class Shell(
 
         _statusBar = new StatusBar([
             _modeStatusItem,
-            new StatusItem(Key.F1, "~F1~ Help", ShowHelpDialog),
+            /*new StatusItem(Key.F1, "~F1~ Help", ShowHelpDialog),*/ // TODO: Fix later
             new StatusItem(Key.F2, "~F2~ Logs", () => ToggleLogView(true)),
             new StatusItem(Key.F3, "~F3~ Cmds", () => ToggleLogView(false))
         ])
@@ -173,26 +188,28 @@ public partial class Shell(
             case Key.Enter:
             {
                 args.Handled = true;
-                if (_commandInput?.Text.Length < 2) _commandInput.Text = ustring.Make("> ");
-                var inputText = _commandInput?.Text.ToString()?[2..] ?? string.Empty;
+                if (_commandInput is null) break;
+                var text = _commandInput.Text ?? ustring.Empty;
+                var userInput = text.ToString() ?? string.Empty;
+                var commandInput = userInput.StartsWith("> ") ? userInput[2..] : userInput;
                 _commandInput!.Text = ustring.Make("> ");
                 _commandInput!.CursorPosition = _commandInput.Text.Length;
 
-                if (!string.IsNullOrWhiteSpace(inputText))
+                if (!string.IsNullOrWhiteSpace(commandInput))
                 {
-                    CmdOut($"> {inputText}");
+                    CmdOut($"> {commandInput}");
 
-                    if (_enteredCommandHistory.Count == 0 || _enteredCommandHistory[^1] != inputText)
+                    if (_enteredCommandHistory.Count == 0 || _enteredCommandHistory[^1] != commandInput)
                     {
-                        _enteredCommandHistory.Add(inputText);
+                        _enteredCommandHistory.Add(commandInput);
                         if (_enteredCommandHistory.Count > MaxCmdHistory) _enteredCommandHistory.RemoveAt(0);
                     }
 
                     _historyIndex = -1;
                     _currentTypedCommand = string.Empty;
 
-                    var keepRunning = ExecInnerCommand(inputText);
-                    if (!keepRunning) RequestStop();
+                    var commandResult = ExecInnerCommand(commandInput);
+                    //if (!keepRunning) Stop();
                 }
 
                 break;
@@ -267,7 +284,7 @@ public partial class Shell(
         }
     }
 
-    private void RequestStop()
+    public void Stop()
     {
         if (_timeoutToken != null && _mainLoopDriver != null)
         {
@@ -309,7 +326,7 @@ public partial class Shell(
     {
         if (_headerTextView == null) return;
 
-        var statesCopy = _serviceStates.ToList();
+        var statesCopy = ServiceStates.ToList();
         _headerTextView.SetData(statesCopy);
 
         var serviceCount = statesCopy.Count;
@@ -365,14 +382,14 @@ public partial class Shell(
     public void AddService(string serviceName)
     {
         if (string.IsNullOrWhiteSpace(serviceName)) return;
-        _serviceStates.TryAdd(serviceName, false);
+        ServiceStates.TryAdd(serviceName, false);
         CmdOut($"Service '{serviceName}' registered.");
     }
 
     public void UpdateServicesStates(string serviceName, bool newState)
     {
         if (string.IsNullOrWhiteSpace(serviceName)) return;
-        if (_serviceStates.ContainsKey(serviceName)) _serviceStates[serviceName] = newState;
+        if (ServiceStates.ContainsKey(serviceName)) ServiceStates[serviceName] = newState;
     }
 
     public void CmdOut(string message)
@@ -390,7 +407,7 @@ public partial class Shell(
         if (!_showLogs && _bodyTextView != null) Application.MainLoop.Invoke(() => _bodyTextView.ClearLines());
     }
 
-    private void ToggleLogView(bool showLogs)
+    public void ToggleLogView(bool showLogs)
     {
         if (_showLogs == showLogs) return;
         _showLogs = showLogs;
@@ -403,197 +420,35 @@ public partial class Shell(
 
     private bool ExecInnerCommand(string? input)
     {
-        var command = input?.Trim().ToLowerInvariant() ?? "";
-        var parts = command.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-        var commandName = parts.Length > 0 ? parts[0] : ""; // Main command
-        var argument = parts.Length > 1 ? parts[1] : ""; // Args string
-
-        switch (commandName)
+        var userInput = input?.Trim().ToLowerInvariant() ?? string.Empty;
+        if (string.IsNullOrEmpty(userInput)) return false;
+        var parts = userInput.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var commandName = parts[0];
+        var commandArgs = parts[1..];
+        var found = InnerCommands.TryGetValue(commandName, out var innerCommand);
+        if (!found || innerCommand == null)
         {
-            case "": return true;
-            case "cmd":
-                ToggleLogView(false);
-                CmdOut("Switched to command output view.");
-                return true;
-            case "logs":
-                ToggleLogView(true);
-                CmdOut("Switched to logs view.");
-                return true;
-            case "clear":
-                CmdClear();
-                CmdOut("Command output cleared.");
-                return true;
-            case "start":
-                HandleStartCommand(argument);
-                return true;
-            case "stop":
-                HandleStopCommand(argument);
-                return true;
-            case "info":
-                HandleInfoCommand(argument);
-                return true;
-            case "reload":
-                HandleReloadCommand(argument);
-                return true;
-            case "help":
-                ShowHelpDialog();
-                return true;
-            case "exit": return false;
-            default:
-                CmdOut($"Unknown command: '{input}'. Type 'help' for available commands.");
-                return true;
+            CmdOut($"Unknown command '{commandName}'. Check 'help' for more information.");
+            return false;
         }
+
+        var result = innerCommand.Execute(this, commandArgs);
+        return result;
     }
 
-    private void HandleInfoCommand(string argument)
+    private void RegInnerCommands()
     {
-        if (string.IsNullOrEmpty(argument))
-        {
-            CmdOut($"Usage: info [<service>|{string.Join('|', _serviceStates.Keys)}]");
-            return;
-        }
-
-        var target = argument.Trim();
-        var serviceName = _serviceStates
-            .FirstOrDefault(kvp => kvp.Key.Equals(target, StringComparison.OrdinalIgnoreCase)).Key;
-        if (string.IsNullOrEmpty(serviceName))
-        {
-            CmdOut($"Unable to find: {target}");
-            CmdOut($"Usage: info [<field>|{string.Join('|', _serviceStates.Keys)}]");
-            return;
-        }
-
-        if (listServiceCallBack == null)
-        {
-            CmdOut("Getting info about service is not configured. Ignoring...");
-            return;
-        }
-
-        try
-        {
-            var information = listServiceCallBack(serviceName);
-            if (information == null) return;
-            if (information.Length == 0)
-            {
-                CmdOut($"Service: {serviceName} -> Actions: empty");
-                return;
-            }
-
-            CmdOut($"Service: {serviceName} -> Actions: [{string.Join(',', information)}]");
-        }
-        catch (Exception ex)
-        {
-            HandleCallbackError($"info {serviceName}", ex);
-        }
+        InnerCommands.TryAdd(InfoInnerCommand.CommandName, new InfoInnerCommand());
+        InnerCommands.TryAdd(StopInnerCommand.CommandName, new StopInnerCommand());
+        InnerCommands.TryAdd(StartInnerCommand.CommandName, new StartInnerCommand());
+        InnerCommands.TryAdd(ReloadInnerCommand.CommandName, new ReloadInnerCommand());
+        InnerCommands.TryAdd(HelpInnerCommand.CommandName, new HelpInnerCommand());
+        InnerCommands.TryAdd(ExitInnerCommand.CommandName, new ExitInnerCommand());
+        InnerCommands.TryAdd(LogViewInnerCommand.CommandName, new LogViewInnerCommand());
+        InnerCommands.TryAdd(CmdViewInnerCommand.CommandName, new CmdViewInnerCommand());
     }
 
-    private void HandleStopCommand(string argument)
-    {
-        if (string.IsNullOrEmpty(argument))
-        {
-            CmdOut($"Usage: stop [<service_name>|{string.Join('|', _serviceStates.Keys)}]");
-            return;
-        }
-
-        var target = argument.Trim();
-        var serviceName = _serviceStates
-            .FirstOrDefault(kvp => kvp.Key.Equals(target, StringComparison.OrdinalIgnoreCase)).Key;
-        if (string.IsNullOrEmpty(serviceName))
-        {
-            CmdOut($"Unable to find service: {serviceName}");
-            return;
-        }
-
-        if (stopServiceCallBack != null)
-            try
-            {
-                stopServiceCallBack(serviceName);
-            }
-            catch (Exception ex)
-            {
-                HandleCallbackError($"stop {serviceName}", ex);
-            }
-        else
-            CmdOut("Stop service functionality is not configured. Ignoring...");
-    }
-
-    private void HandleStartCommand(string argument)
-    {
-        if (string.IsNullOrEmpty(argument))
-        {
-            CmdOut($"Usage: start [<service_name>|{string.Join('|', _serviceStates.Keys)}]");
-            return;
-        }
-
-        var target = argument.Trim();
-        var serviceName = _serviceStates
-            .FirstOrDefault(kvp => kvp.Key.Equals(target, StringComparison.OrdinalIgnoreCase)).Key;
-        if (string.IsNullOrEmpty(serviceName))
-        {
-            CmdOut($"Unable to find service: {serviceName}");
-            return;
-        }
-
-        if (startServicesCallBack != null)
-            try
-            {
-                startServicesCallBack(serviceName);
-            }
-            catch (Exception ex)
-            {
-                HandleCallbackError($"start {serviceName}", ex);
-            }
-        else
-            CmdOut("Start service functionality is not configured. Ignoring...");
-    }
-
-    private void HandleReloadCommand(string argument)
-    {
-        if (string.IsNullOrEmpty(argument))
-        {
-            CmdOut($"Usage: reload [<service_name>|{string.Join('|', _serviceStates.Keys)}]");
-            return;
-        }
-
-        var target = argument.Trim();
-        var serviceName = _serviceStates
-            .FirstOrDefault(kvp => kvp.Key.Equals(target, StringComparison.OrdinalIgnoreCase)).Key;
-        if (string.IsNullOrEmpty(serviceName))
-        {
-            CmdOut($"Unable to find service: {serviceName}");
-            return;
-        }
-
-        if (reloadServiceCallBack != null)
-            try
-            {
-                reloadServiceCallBack(serviceName);
-            }
-            catch (Exception ex)
-            {
-                HandleCallbackError($"reload {serviceName}", ex);
-            }
-        else
-            CmdOut("Reload service functionality is not configured. Ignoring...");
-    }
-
-    private static void ShowHelpDialog()
-    {
-        var builder = new StringBuilder();
-        builder.AppendLine("Available commands:");
-        builder.AppendLine("reload <name> - Attempt to reload configuration of specified service");
-        builder.AppendLine("stop <name> - Attempt to stop the specified service");
-        builder.AppendLine("start <name> - Attempt to start specified service");
-        builder.AppendLine("info <name> - Show info about service");
-        builder.AppendLine("clear - Clears the command output area");
-        builder.AppendLine("logs - Switch view to application logs");
-        builder.AppendLine("cmd - Switch view to command output");
-        builder.AppendLine("help - Shows this help message");
-        builder.AppendLine("exit - Stops services and exits");
-        MessageBox.Query("Available commands", builder.ToString(), "Ok");
-    }
-
-    private void HandleCallbackError(string actionName, Exception ex)
+    public void HandleCallbackError(string actionName, Exception ex)
     {
         CmdOut($"Error during '{actionName}' execution: {ex.Message}");
         Logger.Error($"Exception during '{actionName}' callback execution from Shell:", ex);
