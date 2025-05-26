@@ -2,6 +2,7 @@
 using NStack;
 using Terminal.Gui;
 using TTvActionHub.Logs;
+using TTvActionHub.Services.Interfaces;
 using TTvActionHub.ShellItems;
 using TTvActionHub.ShellItems.InnerCommands;
 using TTvActionHub.ShellItems.Interfaces;
@@ -9,22 +10,19 @@ using TTvActionHub.ShellItems.Interfaces;
 namespace TTvActionHub;
 
 public partial class Shell(
-    IConfig config,
     Action<string>? startServicesCallBack = null,
     Action<string>? stopServiceCallBack = null,
     Action<string>? reloadServiceCallBack = null,
+    Func<string, IService?>? getServiceByNameCallBack = null,
     Func<string, string[]?>? serviceInfoCallBack = null) : IDisposable
 {
     // --- Callbacks ---
 
     public Func<string, string[]?>? ServiceInfoCallBack { get; } = serviceInfoCallBack;
+    public Func<string, IService?>? GetServiceByNameCallBack { get; } = getServiceByNameCallBack;
     public Action<string>? StopServiceCallBack { get; } = stopServiceCallBack;
     public Action<string>? StartServiceCallBack { get; } = startServicesCallBack;
-
     public Action<string>? ReloadServiceCallBack { get; } = reloadServiceCallBack;
-
-    // --- Main config and dependencies ---
-    private readonly IConfig _config = config;
 
     // --- UI states ---
     public ConcurrentDictionary<string, bool> ServiceStates { get; }
@@ -48,16 +46,16 @@ public partial class Shell(
 
     // --- Control Updates ---
     private const int UiUpdateIntervalMs = 150;
-    private const int MaxCmdHistory = 50;
+    private const int MaxCmdHistory = 350;
     private IMainLoopDriver? _mainLoopDriver;
     private readonly List<ustring> _cmdOutputHistory = [];
     private object? _timeoutToken;
 
     // --- Command line interactions ---
     private readonly List<string> _enteredCommandHistory = [];
-    private int _historyIndex = -1;
     private ustring _currentTypedCommand = string.Empty;
-
+    private const string CommandPrompt = "> ";
+    private int _historyIndex = -1;
     // --- Colors ---
 
     private ColorScheme? _headerColorScheme;
@@ -80,7 +78,6 @@ public partial class Shell(
             Normal = Application.Driver.MakeAttribute(Color.White, Color.Black),
             Focus = Application.Driver.MakeAttribute(Color.White, Color.Black)
         };
-
         _bodyColorScheme = new ColorScheme
         {
             Normal = Application.Driver.MakeAttribute(Color.Gray, Color.Black),
@@ -124,7 +121,8 @@ public partial class Shell(
             X = 0,
             Y = 0,
             Width = Dim.Fill(),
-            Height = Dim.Fill()
+            Height = Dim.Fill(),
+            ColorScheme = _headerColorScheme
         };
 
         _headerFrame.Add(_headerTextView);
@@ -161,13 +159,13 @@ public partial class Shell(
         _commandInputFrame.Add(_commandInput);
 
         _commandInput.KeyDown += OnCommandInputKeyDown;
-        _commandInput.Text = ustring.Make("> ");
+        _commandInput.Text = CommandPrompt;
         _commandInput.CursorPosition = _commandInput.Text.Length;
         _modeStatusItem = new StatusItem(Key.Null, "Mode: CMD", null);
 
         _statusBar = new StatusBar([
             _modeStatusItem,
-            /*new StatusItem(Key.F1, "~F1~ Help", ShowHelpDialog),*/ // TODO: Fix later
+            new StatusItem(Key.F1, "~F1~ Help", () => new HelpInnerCommand().Execute(this, [])), // TODO: Fix later
             new StatusItem(Key.F2, "~F2~ Logs", () => ToggleLogView(true)),
             new StatusItem(Key.F3, "~F3~ Cmds", () => ToggleLogView(false))
         ])
@@ -191,8 +189,8 @@ public partial class Shell(
                 if (_commandInput is null) break;
                 var text = _commandInput.Text ?? ustring.Empty;
                 var userInput = text.ToString() ?? string.Empty;
-                var commandInput = userInput.StartsWith("> ") ? userInput[2..] : userInput;
-                _commandInput!.Text = ustring.Make("> ");
+                var commandInput = userInput.StartsWith(CommandPrompt) ? userInput[CommandPrompt.Length..] : userInput;
+                _commandInput!.Text = CommandPrompt;
                 _commandInput!.CursorPosition = _commandInput.Text.Length;
 
                 if (!string.IsNullOrWhiteSpace(commandInput))
@@ -414,6 +412,7 @@ public partial class Shell(
         _modeStatusItem!.Title = $"Mode: {(_showLogs ? "LOGS" : "CMD")}";
         _bodyTextView?.ClearLines();
         _statusBar?.SetNeedsDisplay();
+        _bodyTextView?.SetNeedsDisplay();
     }
 
     // --- Private block ---
@@ -446,8 +445,16 @@ public partial class Shell(
         InnerCommands.TryAdd(ExitInnerCommand.CommandName, new ExitInnerCommand());
         InnerCommands.TryAdd(LogViewInnerCommand.CommandName, new LogViewInnerCommand());
         InnerCommands.TryAdd(CmdViewInnerCommand.CommandName, new CmdViewInnerCommand());
+        InnerCommands.TryAdd(PointsInnerCommand.CommandName, new PointsInnerCommand());
     }
 
+    public string GetProperServiceName(string serviceName)
+    {
+        if (string.IsNullOrWhiteSpace(serviceName)) return string.Empty;
+        return ServiceStates.Keys.FirstOrDefault(srv => srv.StartsWith(serviceName, StringComparison.OrdinalIgnoreCase)) ?? string.Empty;
+    }
+        
+    
     public void HandleCallbackError(string actionName, Exception ex)
     {
         CmdOut($"Error during '{actionName}' execution: {ex.Message}");

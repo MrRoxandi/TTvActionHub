@@ -12,7 +12,7 @@ public class HelpInnerCommand : IInnerCommand
     public bool Execute(Shell shell, string[] arguments)
     {
         var stringBuilder = new StringBuilder();
-        foreach (var (name, command) in shell.InnerCommands.OrderByDescending(kvp => kvp.Key))
+        foreach (var (name, command) in shell.InnerCommands.OrderByDescending(kvp => kvp.Key.Length + kvp.Value.CommandDescription.Length))
         {
             stringBuilder.AppendLine($"{name} : {command.CommandDescription}");
         }

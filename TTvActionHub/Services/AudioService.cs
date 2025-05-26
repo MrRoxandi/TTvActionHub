@@ -2,7 +2,7 @@
 using LibVLCSharp.Shared;
 using TTvActionHub.Logs;
 
-namespace TTvActionHub.Services;
+namespace TTvActionHub.Services.Interfaces;
 
 internal enum PlaybackState
 {

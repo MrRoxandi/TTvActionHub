@@ -7,17 +7,12 @@ public class InfoInnerCommand : IInnerCommand
     public string CommandDescription => "Allows to get information about service";
     public bool Execute(Shell shell, string[] arguments)
     {
-        var argument = arguments.Length > 0 ? arguments[0].Trim() : string.Empty;
-        if (string.IsNullOrEmpty(argument))
-        {
-            shell.CmdOut($"Usage: info [<service>|{string.Join('|', shell.ServiceStates.Keys)}]");
-            return false;
-        }
-        var properServiceName = shell.ServiceStates.Keys.FirstOrDefault(key => key.Equals(argument, StringComparison.OrdinalIgnoreCase));
+        var target = arguments.Length > 0 ? arguments[0].Trim() : string.Empty;
+        var properServiceName = shell.GetProperServiceName(target);
         if (string.IsNullOrEmpty(properServiceName))
         {
-            shell.CmdOut($"Unable to find: {argument}");
-            shell.CmdOut($"Usage: info [<field>|{string.Join('|', shell.ServiceStates.Keys)}]");
+            shell.CmdOut($"Unable to find: {target}");
+            shell.CmdOut($"Usage: stop [<field>|{string.Join('|', shell.ServiceStates.Keys)}]");
             return false;
         }
         

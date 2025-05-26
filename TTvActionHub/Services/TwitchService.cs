@@ -13,10 +13,11 @@ using TwitchLib.EventSub.Websockets;
 using TwitchLib.EventSub.Websockets.Core.EventArgs;
 using TwitchLib.EventSub.Websockets.Core.EventArgs.Channel;
 using LogType = TTvActionHub.Logs.LogType;
+using TTvActionHub.Services.Interfaces;
 
 namespace TTvActionHub.Services;
 
-public class TwitchService : IService, IUpdatableConfiguration
+public class TwitchService : IService, IUpdatableConfiguration, IPointsService
 {
     // --- IConfig impl ---
     public event EventHandler<ServiceStatusEventArgs>? StatusChanged;
@@ -115,7 +116,7 @@ public class TwitchService : IService, IUpdatableConfiguration
     }
 
     // --- Running and Stopping service --- 
-
+#region init
     public void Run()
     {
         _stopRequested = false;
@@ -367,7 +368,9 @@ public class TwitchService : IService, IUpdatableConfiguration
 
         IsEventSubClientConnected = false;
     }
-
+#endregion 
+   
+#region EventQueue
     private void EnqueueTwitchEvent(TwitchEvent twitchEvent, TwitchEventArgs eventArgs)
     {
         if (_eventsQueue == null || _serviceCts?.IsCancellationRequested == true)
@@ -416,7 +419,7 @@ public class TwitchService : IService, IUpdatableConfiguration
                                 if (eventDataToProcess.Event.Cost > 0 &&
                                     eventDataToProcess.Args.Sender != _configuration.Login)
                                 {
-                                    var points = GetPointsFromUser(eventDataToProcess.Args.Sender).GetAwaiter()
+                                    var points = GetPointsAsync(eventDataToProcess.Args.Sender).GetAwaiter()
                                         .GetResult();
                                     if (points < eventDataToProcess.Event.Cost) return;
                                 }
@@ -426,7 +429,7 @@ public class TwitchService : IService, IUpdatableConfiguration
                                 Logger.Log(LogType.Info, ServiceName, $"Finished {eventIdentifier}.");
                                 if (eventDataToProcess.Event.Cost <= 0 ||
                                     eventDataToProcess.Args.Sender == _configuration.Login) return;
-                                _ = AddPointsToUserAsync(eventDataToProcess.Args.Sender,
+                                _ = AddPointsAsync(eventDataToProcess.Args.Sender,
                                     -eventDataToProcess.Event.Cost);
                                 Logger.Log(LogType.Info, ServiceName,
                                     $"Consuming {eventDataToProcess.Event.Cost} points from user: {eventDataToProcess.Args.Sender}");
@@ -495,7 +498,9 @@ public class TwitchService : IService, IUpdatableConfiguration
             Logger.Log(LogType.Info, ServiceName, "Event processing worker stopped.");
         }
     }
-
+#endregion    
+    
+#region cleanUp
     private void CleanupTwitchClientResources()
     {
         if (_twitchClient == null) return;
@@ -570,7 +575,8 @@ public class TwitchService : IService, IUpdatableConfiguration
         CleanupNonClientResources();
         Logger.Log(LogType.Info, ServiceName, "Full resource cleanup finished.");
     }
-
+#endregion
+    
     private void UpdateOverallStatus(string? specificMessage = null)
     {
         string message;
@@ -667,7 +673,7 @@ public class TwitchService : IService, IUpdatableConfiguration
                 {
                     if (string.Equals(chatter.UserLogin, _configuration.Login,
                             StringComparison.OrdinalIgnoreCase)) continue;
-                    await AddPointsToUserAsync(chatter.UserLogin, PointsPerMinuteForViewers);
+                    await AddPointsAsync(chatter.UserLogin, PointsPerMinuteForViewers);
                     awardedCount++;
                 }
 
@@ -728,7 +734,7 @@ public class TwitchService : IService, IUpdatableConfiguration
 
                         Logger.Log(LogType.Info, ServiceName,
                             $"adding {PointsPerClip} point to {clip.CreatorName} for creating clip ({clip.Id[..8]})");
-                        await AddPointsToUserByIdAsync(clip.CreatorId, PointsPerClip);
+                        await AddPointsByIdAsync(clip.CreatorId, PointsPerClip);
                     }
                 }
                 else
@@ -748,86 +754,90 @@ public class TwitchService : IService, IUpdatableConfiguration
 
         await Container.Storage.AddOrUpdateItemAsync(LastClipCheckTimeKey, DateTime.UtcNow);
     }
-
-    private async Task ModifyUserPoints(string username, long points, bool isAdding = true)
+    
+    private async Task<bool> ModifyUserPoints(string username, long points, bool isAdding = true)
     {
-        if (string.IsNullOrWhiteSpace(username)) return;
-        var userId = await GetUserId(username);
-        if (userId is null) return;
-        var needToCreate = ! await _db.ContainsIdAsync(userId);
-        if (needToCreate)
+        if (string.IsNullOrWhiteSpace(username)) return false;
+        var userId = await GetUserIdFromApi(username);
+        if (userId is null)
         {
-            await _db.CreateUserAsync(username, userId);
+            Logger.Log(LogType.Warning, ServiceName, $"Cannot modify points for '{username}': User ID not found.");
+            return false;
         }
-        if (isAdding)
-            await _db.AddUserPointsByIdAsync(userId, points);
-        else 
+
+        var userExists = await _db.ContainsIdAsync(userId);
+        if (userExists)
+            return isAdding
+                ? await _db.AddUserPointsByIdAsync(userId, points)
+                : await _db.SetUserPointsByIdAsync(userId, points);
+        await _db.CreateUserAsync(username, userId);
+        return isAdding ?
+            await _db.AddUserPointsByIdAsync(userId, points) :
             await _db.SetUserPointsByIdAsync(userId, points);
     }
 
-    private async Task ModifyUserPointsById(string userId, long points, bool isAdding = true)
+    private async Task<bool> ModifyUserPointsById(string userId, long points, bool isAdding = true)
     {
-        if (string.IsNullOrWhiteSpace(userId)) return;
-        var needToCreate = ! await _db.ContainsIdAsync(userId);
-        if (needToCreate)
+        if (string.IsNullOrWhiteSpace(userId)) return false;
+        var userExists = await _db.ContainsIdAsync(userId);
+        if (userExists)
+            return isAdding
+                ? await _db.AddUserPointsByIdAsync(userId, points)
+                : await _db.SetUserPointsByIdAsync(userId, points);
+        var username = await GetUserLoginFromApi(userId);
+        if (username is null)
         {
-            var username = await GetUserLogin(userId);
-            if (username is null) return;
-            await _db.CreateUserAsync(username, userId);
+            Logger.Log(LogType.Warning, ServiceName, $"Cannot modify points for 'id: {userId}': Username not found.");
+            return false;
         }
+        await _db.CreateUserAsync(username, userId);
 
-        if (isAdding)
-            await _db.AddUserPointsByIdAsync(userId, points);
-        else 
+        return isAdding ?
+            await _db.AddUserPointsByIdAsync(userId, points) :
             await _db.SetUserPointsByIdAsync(userId, points);
     }
 
-    public async Task AddPointsToUserAsync(string username, long pointsToAdd)
-    {
-        await ModifyUserPoints(username, pointsToAdd);
-    }
-
-    public async Task SetPointsToUserAsync(string username, long pointsToSet)
-    {
-        await ModifyUserPoints(username, pointsToSet, false);
-    }
-
-    public async Task AddPointsToUserByIdAsync(string id, long pointsToAdd)
-    {
-        await ModifyUserPointsById(id, pointsToAdd);
-    }
-
-    public async Task SetPointsToUserByIdAsync(string id, long pointsToSet)
-    {
-        await ModifyUserPointsById(id, pointsToSet, false);
-    }
-
-    private async Task<string?> GetUserId(string username)
+    private async Task<string?> GetUserIdFromApi(string username)
     {
         var id = await _configuration.TwitchApi.InnerApi.Helix.Users.GetUsersAsync(logins: [username]);
         return id?.Users.First().Id;
     }
 
-    private async Task<string?> GetUserLogin(string id)
+    private async Task<string?> GetUserLoginFromApi(string id)
     {
         var users = await _configuration.TwitchApi.InnerApi.Helix.Users.GetUsersAsync([id]);
         return users?.Users.First().Login;
     }
 
-    public async Task<long> GetPointsFromUser(string username)
+    public async Task<bool> AddPointsAsync(string username, long points) => await ModifyUserPoints(username, points);
+
+    public async Task<bool> SetPointsAsync(string username, long points) =>
+        await ModifyUserPoints(username, points, false);
+
+
+    public async Task<long> GetPointsAsync(string username) => await _db.GetUserPointsAsync(username);
+
+    public async Task<Dictionary<string, long>> GetAllUsersPointsAsync() => await _db.GetAllUsersPointsAsync();
+
+    public async Task<string?> GetUserIdByNameAsync(string username)
     {
-        if (string.IsNullOrWhiteSpace(username)) return 0;
-        var userId = await GetUserId(username);
-        if (userId is null) return 0;
-        return await _db.GetUserPointsByIdAsync(userId);
+        var user = await _db.GetUserAsync(username);
+        return user?.UserId ?? null;
     }
 
-    public async Task<long> GetPointsFromUserById(string id)
+    public async Task<string?> GetUserNameByIdAsync(string userId)
     {
-        if (string.IsNullOrWhiteSpace(id)) return 0;
-        return await _db.GetUserPointsByIdAsync(id);
+        var user = await _db.GetUserByIdAsync(userId);
+        return user?.Username ?? null;
     }
 
+    public async Task<bool> AddPointsByIdAsync(string userId, long points) => await ModifyUserPointsById(userId, points);
+
+    public async Task<bool> SetPointsByIdAsync(string userId, long points) =>
+        await ModifyUserPointsById(userId, points, false);
+
+    public async Task<long> GetPointsByIdAsync(string userId) => await _db.GetUserPointsByIdAsync(userId); 
+    
     // --- Status Changed event backend --- 
     private void OnStatusChanged(bool isRunning, string? message = null)
     {
@@ -935,8 +945,8 @@ public class TwitchService : IService, IUpdatableConfiguration
             return false;
         }
     }
-
-    // --- TwitchLib Events Handler ---
+    
+#region --- TwitchLib Events Handler ---
 
     private void TwitchClient_OnChatCommandReceived(object? sender, OnChatCommandReceivedArgs args)
     {
@@ -1005,7 +1015,7 @@ public class TwitchService : IService, IUpdatableConfiguration
         var chatMessage = e.ChatMessage;
         if (chatMessage.Message.Length < 10 || chatMessage.Username == _configuration.Login) return;
         Logger.Log(LogType.Info, ServiceName, $"Awarding {chatMessage.Username} with {PointsPerMessage} for message");
-        _ = AddPointsToUserAsync(chatMessage.DisplayName, PointsPerMessage);
+        _ = AddPointsAsync(chatMessage.DisplayName, PointsPerMessage);
     }
 
     private async Task EventSubClient_WebsocketConnectedHandler(object? sender, WebsocketConnectedArgs args)
@@ -1058,6 +1068,7 @@ public class TwitchService : IService, IUpdatableConfiguration
         Logger.Log(LogType.Error, ServiceName, $"EventSub client error: {args.Message}", args.Exception);
         return Task.CompletedTask;
     }
+#endregion
 
     private Task EventSubClient_ChannelPointsCustomRewardRedemptionAddHandler(object? sender,
         ChannelPointsCustomRewardRedemptionArgs args)
@@ -1159,4 +1170,6 @@ public class TwitchService : IService, IUpdatableConfiguration
             }
         });
     }
+
+    
 }

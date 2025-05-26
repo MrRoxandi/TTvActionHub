@@ -82,12 +82,13 @@ public class PointsManager
         return user?.Points ?? 0;
     }
     
-    private async Task<PointsData?> GetUserAsync(string username) => 
+    public async Task<PointsData?> GetUserAsync(string username) => 
         await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
         
-    private async Task<PointsData?> GetUserByIdAsync(string id) => 
+    public async Task<PointsData?> GetUserByIdAsync(string id) => 
         await _context.Users.FirstOrDefaultAsync(u => u.UserId == id);
-    
+
+    public async Task<Dictionary<string, long>> GetAllUsersPointsAsync() => await _context.Users.ToDictionaryAsync(u => u.Username, u => u.Points);
     
     public bool ContainsUsername(string username) => ContainsUsernameAsync(username).GetAwaiter().GetResult();
     public bool ContainsId(string id) => ContainsIdAsync(id).GetAwaiter().GetResult();
@@ -98,4 +99,5 @@ public class PointsManager
     public bool AddUserPointsById(string id, long points) => AddUserPointsByIdAsync(id, points).GetAwaiter().GetResult();
     public long GetUserPoints(string username) => GetUserPointsAsync(username).GetAwaiter().GetResult();
     public long GetUserPointsById(string id) => GetUserPointsByIdAsync(id).GetAwaiter().GetResult();
+    public Dictionary<string, long> GetAllUsersPoints() => GetAllUsersPointsAsync().GetAwaiter().GetResult();
 }

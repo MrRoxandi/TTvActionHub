@@ -43,9 +43,9 @@ namespace TTvActionHub.BackEnds
                     _writer.Write(fileMessage);
                     _lastLogs.Add(consoleMessage);
 
-                    if (_lastLogs.Count > 200) 
+                    if (_lastLogs.Count > 350) 
                     {
-                        _lastLogs.RemoveRange(0, _lastLogs.Count - 200);
+                        _lastLogs.RemoveRange(0, _lastLogs.Count - 350);
                     }
                 }
                 await Task.CompletedTask; 

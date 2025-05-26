@@ -8,13 +8,8 @@ public class StopInnerCommand : IInnerCommand
 
     public bool Execute(Shell shell, string[] arguments)
     {
-        var target = arguments.Length > 1 ? arguments[0].Trim() : string.Empty;
-        if (string.IsNullOrEmpty(target))
-        {
-            shell.CmdOut($"Usage: stop [<service_name>|{string.Join('|', shell.ServiceStates.Keys)}]");
-            return false;
-        }
-        var properServiceName = shell.ServiceStates.Keys.FirstOrDefault(key => key.Equals(target, StringComparison.OrdinalIgnoreCase));
+        var target = arguments.Length > 0 ? arguments[0].Trim() : string.Empty;
+        var properServiceName = shell.GetProperServiceName(target);
         if (string.IsNullOrEmpty(properServiceName))
         {
             shell.CmdOut($"Unable to find: {target}");

@@ -9,16 +9,11 @@ public class StartInnerCommand : IInnerCommand
     public bool Execute(Shell shell, string[] arguments)
     {
         var target = arguments.Length > 0 ? arguments[0].Trim() : string.Empty;
-        if (string.IsNullOrEmpty(target))
-        {
-            shell.CmdOut($"Usage: start [<service_name>|{string.Join('|', shell.ServiceStates.Keys)}]");
-            return false;
-        }
-        var properServiceName = shell.ServiceStates.Keys.FirstOrDefault(key => key.Equals(target, StringComparison.OrdinalIgnoreCase));
+        var properServiceName = shell.GetProperServiceName(target);
         if (string.IsNullOrEmpty(properServiceName))
         {
             shell.CmdOut($"Unable to find: {target}");
-            shell.CmdOut($"Usage: start [<field>|{string.Join('|', shell.ServiceStates.Keys)}]");
+            shell.CmdOut($"Usage: stop [<field>|{string.Join('|', shell.ServiceStates.Keys)}]");
             return false;
         }
 
