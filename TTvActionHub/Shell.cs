@@ -165,7 +165,7 @@ public partial class Shell(
 
         _statusBar = new StatusBar([
             _modeStatusItem,
-            new StatusItem(Key.F1, "~F1~ Help", () => new HelpInnerCommand().Execute(this, [])), // TODO: Fix later
+            new StatusItem(Key.F1, "~F1~ Help", () => new HelpInnerCommand().Execute(this, [])),
             new StatusItem(Key.F2, "~F2~ Logs", () => ToggleLogView(true)),
             new StatusItem(Key.F3, "~F3~ Cmds", () => ToggleLogView(false))
         ])
