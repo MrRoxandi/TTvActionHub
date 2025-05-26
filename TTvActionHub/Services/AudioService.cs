@@ -1,8 +1,10 @@
-﻿using System.Collections.Concurrent;
-using LibVLCSharp.Shared;
-using TTvActionHub.Logs;
+﻿namespace TTvActionHub.Services;
 
-namespace TTvActionHub.Services.Interfaces;
+using System.Collections.Concurrent;
+using LibVLCSharp.Shared;
+using Interfaces;
+using Logs;
+
 
 internal enum PlaybackState
 {
