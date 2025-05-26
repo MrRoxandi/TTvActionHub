@@ -45,6 +45,12 @@ public static class Audio
         audio.SetVolume((float)(res < 0.0 ? 0.0 : res));
     }
 
+    public static void PlayText(string text)
+    {
+        if (audio == null) throw new Exception("Audio service was not provided");
+        audio.VoiceText(text);
+    }
+    
     public static void SkipSound()
     {
         if (audio == null) throw new Exception("Audio service was not provided");

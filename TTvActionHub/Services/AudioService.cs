@@ -1,6 +1,7 @@
 ﻿namespace TTvActionHub.Services;
 
 using System.Collections.Concurrent;
+using System.Speech.Synthesis;
 using LibVLCSharp.Shared;
 using Interfaces;
 using Logs;
@@ -20,10 +21,10 @@ public sealed partial class AudioService : IService, IDisposable
     private readonly ConcurrentQueue<Uri> _soundQueue = new();
     private PlaybackState _playbackState = PlaybackState.Stopped;
     private string _currentPlayingFile = string.Empty;
+    private string? _tempAudioDirectory;
     private MediaPlayer? _mediaPlayer;
     private Task? _workerTask;
     private LibVLC? _libVlc;
-
     public event EventHandler<ServiceStatusEventArgs>? StatusChanged;
 
     private void OnPlaybackEncounteredError(object? sender, EventArgs e)
@@ -55,7 +56,11 @@ public sealed partial class AudioService : IService, IDisposable
             OnStatusChanged(false, "Unable to initialize service due to error. Check logs");
             return;
         }
-
+        _tempAudioDirectory = Path.Combine(Directory.GetCurrentDirectory(), ".synth");
+        if (Directory.Exists(_tempAudioDirectory))
+        {
+            Directory.CreateDirectory(_tempAudioDirectory);
+        }
         _libVlc = new LibVLC();
         _mediaPlayer = new MediaPlayer(_libVlc);
         _mediaPlayer.EndReached += OnPlaybackEndReached;
@@ -84,6 +89,10 @@ public sealed partial class AudioService : IService, IDisposable
                     Logger.Log(LogType.Error, ServiceName, "Exception during sound processing:", innerEx);
         }
 
+        if (_tempAudioDirectory is not null && Directory.Exists(_tempAudioDirectory))
+        {
+            Directory.Delete(_tempAudioDirectory, true);
+        }
         _mediaPlayer!.EndReached -= OnPlaybackEndReached;
         _mediaPlayer!.EncounteredError -= OnPlaybackEncounteredError;
         _mediaPlayer?.Stop();
@@ -140,6 +149,73 @@ public sealed partial class AudioService : IService, IDisposable
         return Task.CompletedTask;
     }
 
+    public Task VoiceText(string text, string? voiceName = null, int rate = 3, int volume = 100)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            Logger.Log(LogType.Error, ServiceName, "No text provided");
+            return Task.CompletedTask;
+        }
+
+        if (IsRunning)
+            return Task.Run(() =>
+            {
+                try
+                {
+                    using var synthesizer = new SpeechSynthesizer();
+                    if (voiceName is not null && GetInstalledVoices().Any(e =>
+                            e.Equals(voiceName, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        try
+                        {
+                            synthesizer.SelectVoice(voiceName);
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log(LogType.Error, ServiceName,
+                                $"Error while selecting voice: {ex.Message}. Using default voice");
+                            synthesizer.SelectVoiceByHints(VoiceGender.Male, VoiceAge.Teen);
+                        }
+                    }
+                    else
+                    {
+                        Logger.Log(LogType.Error, ServiceName, "Using default voice");
+                        synthesizer.SelectVoiceByHints(VoiceGender.Male, VoiceAge.Teen);
+                    }
+
+                    synthesizer.Rate = Math.Clamp(rate, -10, 10);
+                    synthesizer.Volume = Math.Clamp(volume, -10, 10);
+                    var tempFile = Path.Combine(_tempAudioDirectory!, $"{Path.GetRandomFileName()}.mp3");
+                    synthesizer.SetOutputToWaveFile(tempFile);
+                    synthesizer.Speak(text);
+                    synthesizer.SetOutputToNull();
+                    Logger.Log(LogType.Info, ServiceName, $"Generated TTS audio to: {tempFile}");
+                    _soundQueue.Enqueue(new Uri(tempFile));
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log(LogType.Error, ServiceName, "Error during text-to-speech synthesis:", ex);
+                }
+            });
+        Logger.Log(LogType.Warning, ServiceName,
+            $"Service not running. Cannot speak text: {text[..Math.Min(text.Length, 20)]}");
+        return Task.FromException(new InvalidOperationException("Service not running."));
+    }
+
+    public static List<string> GetInstalledVoices()
+    {
+        try
+        {
+            using var synthesizer = new SpeechSynthesizer();
+            return synthesizer.GetInstalledVoices().Where(v => v.Enabled).Select(v => v.VoiceInfo.Name).ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.Error("Error getting installed voices:", ex);
+            return [];
+        }
+    }
+    
     private async Task ProcessSoundQueueAsync()
     {
         while (!_serviceCancellationToken!.IsCancellationRequested)
