@@ -31,7 +31,7 @@ public class LuaConfigManager
         const string fileName = "config.lua";
         var fileResult = ParseLuaFile(fileName);
         if (fileResult is null) throw new Exception($"File {fileName} is not a proper config. Check syntax.");
-        if (fileResult["force-reload"] is not bool forceRelog)
+        if (fileResult["force-relog"] is not bool forceRelog)
         {
             Logger.Log(LogType.Warning, ServiceName,
                 $"In file {fileName} ['force-relog'] is not presented. Will be used default value: [{false}]");
