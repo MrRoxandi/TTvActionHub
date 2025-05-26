@@ -1,9 +1,9 @@
 ﻿using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 
-namespace TTvActionHub.LuaTools.Services.ContainerItems;
+namespace TTvActionHub.BackEnds.ContainerItems;
 
-public partial class DataBaseContext : DbContext, IDataBaseContext
+public partial class JsonDbContext : DbContext
 {
     public DbSet<JsonTable> DataTable { get; set; }
 
@@ -15,7 +15,7 @@ public partial class DataBaseContext : DbContext, IDataBaseContext
 
     public async Task EnsureDeletedAsync() => await Database.EnsureDeletedAsync();
 
-    public async Task SaveChangesAsync() => await SaveChangesAsync();
+    /*public async Task SaveChangesAsync() => await base.SaveChangesAsync();*/
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -28,6 +28,4 @@ public partial class DataBaseContext : DbContext, IDataBaseContext
         };
         optionsBuilder.UseSqlite(a.ToString());
     }
-
-    void IDataBaseContext.SaveChanges() => SaveChanges();
 }

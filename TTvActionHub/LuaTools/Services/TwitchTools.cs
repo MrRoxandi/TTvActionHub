@@ -1,7 +1,7 @@
-﻿using TTvActionHub.Services;
-using TwitchLib.Client.Enums;
+﻿namespace TTvActionHub.LuaTools.Services;
 
-namespace TTvActionHub.LuaTools.Services;
+using TTvActionHub.Services;
+using TwitchLib.Client.Enums;
 
 public static class TwitchTools
 {
@@ -24,19 +24,19 @@ public static class TwitchTools
     public static void AddPoints(string name, int value)
     {
         if (Service is not { } client) throw new Exception("Unable to add points to the twitch user. Client is null");
-        client.AddPointsToUserAsync(name, value).GetAwaiter().GetResult();
+        client.AddPointsAsync(name, value).GetAwaiter().GetResult();
     }
 
     public static long GetPoints(string name)
     {
         if (Service is not { } client) throw new Exception("Unable to get points of the twitch user. Client is null");
-        return client.GetPointsFromUser(name).GetAwaiter().GetResult();
+        return client.GetPointsAsync(name).GetAwaiter().GetResult();
     }
 
     public static void SetPoints(string name, int value)
     {
         if (Service is not { } client) throw new Exception("Unable to set points to the twitch user. Client is null");
-        client.SetPointsToUserAsync(name, value).GetAwaiter().GetResult();
+        client.SetPointsAsync(name, value).GetAwaiter().GetResult();
     }
 
     public static long GetEventCost(string eventName)

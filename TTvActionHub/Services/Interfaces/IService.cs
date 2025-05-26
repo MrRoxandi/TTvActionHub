@@ -1,4 +1,4 @@
-﻿namespace TTvActionHub.Services
+﻿namespace TTvActionHub.Services.Interfaces
 {
     public class ServiceStatusEventArgs(string serviceName, bool isRunning, string? message) : EventArgs
     {

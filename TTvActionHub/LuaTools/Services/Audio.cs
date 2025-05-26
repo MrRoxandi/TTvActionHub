@@ -1,4 +1,4 @@
-﻿using TTvActionHub.Services;
+﻿using TTvActionHub.Services.Interfaces;
 
 namespace TTvActionHub.LuaTools.Services;
 
