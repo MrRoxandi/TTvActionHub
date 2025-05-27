@@ -28,11 +28,11 @@ namespace TTvActionHub.Logs
 
         public static void Log(LogType type, string name, string message, Exception? err = null)
         {
-            string res = type switch
+            var res = type switch
             {
-                LogType.Error => "ERR",
+                LogType.Error => "Err",
                 LogType.Info => "Info",
-                LogType.Warning => "WARN",
+                LogType.Warning => "Warn",
                 _ => "NULL"
             };
 

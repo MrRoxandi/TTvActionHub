@@ -7,7 +7,7 @@ namespace TTvActionHub.BackEnds;
 
 public sealed class DataContainer
 {
-    private const string ServiceName = "Container";
+    private const string BackEndName = "Container";
     private readonly JsonDbContext _db;
 
     public DataContainer()
@@ -48,7 +48,7 @@ public sealed class DataContainer
         }
         catch (Exception ex)
         {
-            Logger.Log(LogType.Error, ServiceName, $"Error deserializing item '{name}' to type {typeof(T).Name}.", ex);
+            Logger.Log(LogType.Error, BackEndName, $"Error deserializing item '{name}' to type {typeof(T).Name}.", ex);
             return default;
         }
     }
@@ -65,7 +65,7 @@ public sealed class DataContainer
                 }
                 catch (Exception ex)
                 {
-                    Logger.Log(LogType.Error, ServiceName,
+                    Logger.Log(LogType.Error, BackEndName,
                         $"Error deserializing item '{name}' to type {typeof(T).Name}.", ex);
                     return default;
                 }
@@ -79,7 +79,7 @@ public sealed class DataContainer
         if (dataTable == null) return false;
         _db.DataTable.Remove(dataTable);
         _db.SaveChanges();
-        Logger.Log(LogType.Info, ServiceName, $"Item '{name}' was removed successfully.");
+        Logger.Log(LogType.Info, BackEndName, $"Item '{name}' was removed successfully.");
         return true;
     }
 
@@ -89,7 +89,7 @@ public sealed class DataContainer
         if (dataTable == null) return true;
         _db.DataTable.Remove(dataTable);
         await _db.SaveChangesAsync();
-        Logger.Log(LogType.Info, ServiceName, $"Item '{name}' was removed successfully.");
+        Logger.Log(LogType.Info, BackEndName, $"Item '{name}' was removed successfully.");
         return true;
     }
 

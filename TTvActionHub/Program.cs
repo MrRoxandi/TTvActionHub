@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Terminal.Gui;
 using TTvActionHub.BackEnds;
+using TTvActionHub.BackEnds.Audio;
 using TTvActionHub.Logs;
 using TTvActionHub.LuaTools.Services;
 using TTvActionHub.Managers;
@@ -50,11 +51,11 @@ internal abstract class Program
         {
             ServiceCollection collection = new();
             collection.AddSingleton<DataContainer>();
+            collection.AddSingleton<AudioBackEnd>();
 
             collection.AddSingleton<LuaConfigManager>();
             collection.AddSingleton<IService, TwitchService>();
             collection.AddSingleton<IService, TimerActionsService>();
-            collection.AddSingleton<IService, AudioService>();
             collection.AddSingleton<IConfig, Configuration>(sp =>
             {
                 var lcm = sp.GetRequiredService<LuaConfigManager>();
@@ -82,6 +83,7 @@ internal abstract class Program
         _config = _provider.GetService<IConfig>();
         _shell = _provider.GetService<Shell>();
         Container.Storage = _provider.GetService<DataContainer>();
+        Audio.audio = _provider.GetService<AudioBackEnd>();
         if (_shell == null)
         {
             Application.Shutdown();
@@ -150,7 +152,7 @@ internal abstract class Program
             var serviceName = service.ServiceName;
             if (string.IsNullOrEmpty(serviceName))
             {
-                Logger.Warn($"Service of type {service.GetType().Name} has missing ServiceName. Skipping.");
+                Logger.Warn($"Service of type {service.GetType().Name} has missing BackEndName. Skipping.");
                 continue;
             }
 
@@ -443,9 +445,6 @@ internal abstract class Program
                     case TwitchService ttvServ:
                         TwitchTools.Service = ttvServ;
                         break;
-                    case AudioService audioServ:
-                        Audio.audio = audioServ;
-                        break;
                 }
         }
         catch (Exception ex)
@@ -464,9 +463,6 @@ internal abstract class Program
         {
             case TwitchService ttvServ:
                 TwitchTools.Service = ttvServ;
-                break;
-            case AudioService audioServ:
-                Audio.audio = audioServ;
                 break;
         }
 
