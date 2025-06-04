@@ -1,17 +1,9 @@
-# Документация для модуля Keyboard в `TTvActionHub.LuaTools.Hardware`
-
-## Подключение в файле конфигурации
-
-Пример подключение модуля:
-
-```lua
-local Keyboard = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Keyboard
-```
+# Документация для модуля 'Keyboard'
 
 Пример получения кода клавиши 'B' и разовое нажатие этой клавиши:
 
 ```lua
-local key = Keyboard.Key.B -- Получение кода клавиши 'B'
+local key = Keyboard.Key("B") -- Получение кода клавиши 'B'
 Keyboard.TypeKey(key)
 ```
 
@@ -52,7 +44,5 @@ Keyboard.TypeKey(key)
 Пример использования `TypeMessage` в файле конфигурации:
 
 ```lua
-local Keyboard = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Keyboard
-
-Keyboard.TypeMessage('Пример текста!') -- Имитация краткого нажатия клавиши 'B'
+Keyboard.TypeMessage('Пример текста!') -- Эмуляция физического набора текста 'Пример текста!'
 ```

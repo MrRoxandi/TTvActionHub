@@ -1,10 +1,4 @@
-# Документация для модуля 'TwitchTools' в `TTvActionHub.LuaTools.Services.TwitchTools`
-
-Пример подключение модуля:
-
-```lua
-local TwitchTools = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').TwitchTools
-```
+# Документация для модуля 'TwitchTools' 
 
 ## Доступные методы
 
@@ -45,7 +39,7 @@ twitchevents['ping']['action'] =
   function(sender, args)
     TwitchTools.SendMessage('@' .. sender .. ' -> pong')
   end
-twitchevents['ping']['perm'] = TwitchTools.PermissionLevel.VIEWIER
+twitchevents['ping']['perm'] = TwitchTools.PermissionLevel('Viewer')
 --...
 
 ```

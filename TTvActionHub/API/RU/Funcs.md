@@ -1,20 +1,10 @@
-# Документация для модуля 'Funcs' в `TTvActionHub.LuaTools.Stuff`
+# Документация для модуля 'Funcs'
 
 Этот модуль предоставляет набор общих вспомогательных функций, включая генерацию случайных чисел и строк, задержки выполнения, работу с коллекциями и генерацию случайных позиций.
-
-## Подключение в файле конфигурации
-
-Пример подключение модуля:
-
-```lua
-local Funcs = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Funcs
-```
 
 Пример использования `RandomNumber` для получения случайного числа и `Delay` для паузы:
 
 ```lua
-local Funcs = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Funcs
-
 -- Получить случайное число от 1 до 10 включительно
 local randomNumber = Funcs.RandomNumber(1, 10)
 print('Случайное число: ' .. randomNumber)
@@ -45,9 +35,6 @@ print('Пауза завершена.')
 Пример использования `RandomPosition` и `CollectionToString`:
 
 ```lua
-local Funcs = import('TTvActionHub', 'TTvActionHub.LuaTools.Stuff').Funcs
-local Mouse = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Mouse -- Предполагается, что модуль Mouse тоже подключен
-
 -- Получить случайную позицию в прямоугольнике от (100, 100) до (500, 500)
 local pos = Funcs.RandomPosition(100, 500, 100, 500)
 print('Случайная позиция: X=' .. pos.X .. ', Y=' .. pos.Y)

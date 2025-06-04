@@ -1,14 +1,6 @@
-# Документация для модуля 'Audio' в `TTvActionHub.LuaTools.Services.Audio`
+# Документация для модуля 'Audio'
 
 Этот модуль предоставляет функции для воспроизведения звуков из файлов на диске и по URL, а также для управления громкостью звука.
-
-## Подключение в файле конфигурации
-
-Пример подключение модуля:
-
-```lua
-local Audio = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Audio
-```
 
 ## Доступные методы
 
@@ -24,8 +16,6 @@ local Audio = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Audio
 Пример использования методов в файле конфигурации
 
 ```lua
-local Audio = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Audio
-
 -- Воспроизведение звука из файла на диске
 Audio.PlaySound("C:/Sounds/mysound.mp3")
 

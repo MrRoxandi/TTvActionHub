@@ -6,20 +6,14 @@
 
 Любой модуль подключается через `TTvActionHub.LuaTools.<модуль>`, ниже приведена таблица всех возможных подключений, а ниже таблицы пример подключения модуля работы со звуком.
 
-| Модуль                                       | Описание                                                                                                     | Документация                          |
-|----------------------------------------------|--------------------------------------------------------------------------------------------------------------|---------------------------------------|
-| `TTvActionHub.LuaTools.Hardware.Keyboard`    | Этот модуль отвечает за эмуляцию клавиатуры                                                                  | [Документация](API/RU/Keyboard.md)    |
-| `TTvActionHub.LuaTools.Hardware.Mouse`       | Этот модуль отвечает за эмуляцию мышки                                                                       | [Документация](API/RU/Mouse.md)       |
-| `TTvActionHub.LuaTools.Services.Audio`       | Этот модуль отвечает взаимодействие с сервисом звука (воспроизведение аудиофайлов) за воспроизведение музыки | [Документация](API/RU/Audio.md)       |
-| `TTvActionHub.LuaTools.Services.Container`   | Этот модуль отвечает за взаимодействие со специальным внутренним хранилищем                                  | [Документация](API/RU/Container.md)   |
-| `TTvActionHub.LuaTools.Services.TwitchTools` | Этот модуль отвечает за взаимодействие с твичом                                                              | [Документация](API/RU/TwitchTools.md) |
-| `TTvActionHub.LuaTools.Stuff.Funcs`          | В данном модуле содержатся полезные функции для написание конфигурации                                       | [Документация](API/RU/Funcs.md)       |
-
-## Пример подключения модуля воспроизведения музыки
-
-```lua
-local Audio = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Audio
-```
+| Модуль        | Описание                                                                                                     | Документация                          |
+|---------------|--------------------------------------------------------------------------------------------------------------|---------------------------------------|
+| `Keyboard`    | Этот модуль отвечает за эмуляцию клавиатуры                                                                  | [Документация](API/RU/Keyboard.md)    |
+| `Mouse`       | Этот модуль отвечает за эмуляцию мышки                                                                       | [Документация](API/RU/Mouse.md)       |
+| `Audio`       | Этот модуль отвечает взаимодействие с сервисом звука (воспроизведение аудиофайлов) за воспроизведение музыки | [Документация](API/RU/Audio.md)       |
+| `Container`   | Этот модуль отвечает за взаимодействие со специальным внутренним хранилищем                                  | [Документация](API/RU/Container.md)   |
+| `TwitchTools` | Этот модуль отвечает за взаимодействие с твичом                                                              | [Документация](API/RU/TwitchTools.md) |
+| `Funcs`       | В данном модуле содержатся полезные функции для написание конфигурации                                       | [Документация](API/RU/Funcs.md)       |
 
 ## Требования к файлам конфигурации
 
@@ -65,7 +59,7 @@ public enum TwitchEventKind : byte
 ```lua
 -- ...
 twitchevents['test'] = {}
-twitchevents['test']['kind'] = TwitchTools.TwitchEventKind.Command -- TwitchTools.TwitchEventKind.TwitchReward
+twitchevents['test']['kind'] = TwitchTools.TwitchEventKind("Command") -- TwitchTools.TwitchEventKind.TwitchReward
 -- ...
 ```
 
@@ -100,7 +94,7 @@ public enum PermissionLevel : int
 ```lua
 -- ...
 twitchevents['test'] = {}
-twitchevents['test']['perm'] = TwitchTools.PermissionLevel.Vip -- TwitchTools.PermissionLevel.Viewer
+twitchevents['test']['perm'] = TwitchTools.PermissionLevel("Vip") -- TwitchTools.PermissionLevel.Viewer
 -- ...
 ```
 
@@ -122,9 +116,9 @@ local tactions = {}
 -- Some other usefull code...
 local taction1 = {}
 taction1["action"] =
-    function()
-        Chat.SendMessageAsync("Test")
-    end
+  function(sender, args)
+    TwitchTools.SendMessage('@' .. sender .. ' -> test')
+  end
 taction1["timeout"] = 5000
 tactions["test"] = taction1
 

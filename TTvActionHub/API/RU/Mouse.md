@@ -1,19 +1,11 @@
-# Документация для модуля 'Mouse' в `TTvActionHub.LuaTools.Hardware`
+# Документация для модуля 'Mouse'
 
 Этот модуль предоставляет функции для эмуляции действий мыши, таких как перемещение курсора, клики и скроллинг.
-
-## Подключение в файле конфигурации
-
-Пример подключение модуля:
-
-```lua
-local Mouse = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Mouse
-```
 
 Пример получения левой клавиши мыши и разовое нажатие:
 
 ```lua
-local button = Mouse.Button.Left -- Получение кода левой клавиши мышки
+local button = Mouse.Button("Left") -- Получение кода левой клавиши мышки
 Mouse.Click(button)
 ```
 
@@ -65,6 +57,5 @@ Mouse.Click(button)
 Пример использования 'SetPosition' в файле конфигурации:
 
 ```lua
-local Mouse = import('TTvActionHub', 'TTvActionHub.LuaTools.Hardware').Mouse
 Mouse.SetPosition(560, 20)
 ```
