@@ -59,8 +59,18 @@ namespace TTvActionHub.Items
                     Logger.Log(LogType.Info, ItemName, $"Unable to execute event [{Name}]. Event still on cooldown");
                     return;
                 }
+                var argsTable = LuaValue.Nil;
+                if (args.Args is not null)
+                {
+                    var table = new LuaTable();
+                    foreach (var (value, index) in args.Args.Select((x, i) => (x, i + 1)))
+                    {
+                        table.Insert(index, value);
+                    }
+                    argsTable = table;
+                }
                 var action = args.Args != null ? 
-                    Function.InvokeAsync(args.State, [args.Sender, ..args.Args]) :
+                    Function.InvokeAsync(args.State, [args.Sender, argsTable]) :
                     Function.InvokeAsync(args.State, [args.Sender]);
                 _ = action.AsTask().GetAwaiter().GetResult();
                 _coolDownTimer?.Restart();
