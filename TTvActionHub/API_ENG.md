@@ -21,7 +21,7 @@ This document describes how to write `LUA` "code" to use the program's features 
 - Encoding: Use UTF-8 encoding for your scripts.
   If any of this is unclear, simply run the program without configuration files, and they will be generated automatically.
 
-## Main Configuration Table (file ../configs/Config.lua) [Example](example/Config.md)
+## Main Configuration Table (file ../configs/Config.lua) [Example](Example/Config.md)
 
 The configuration table contains several parameters:
 
@@ -31,7 +31,7 @@ The configuration table contains several parameters:
 | timeout     | `int`  | Number     | Default cooldown time for chat commands if they don't have their own specified.                                 | +        | `30000`       |
 | logs        | `bool` | true/false | If `true`, internal logs of services related to Twitch will be output.                                          | +        | `false`       |
 
-## Events (file ../configs/TwitchEvents.lua) [Example](example/TwitchEvents.md)
+## Events (file ../configs/TwitchEvents.lua) [Example](Example/TwitchEvents.md)
 
 The TwitchEvents table contains definitions for your custom events. Each key in this table represents an event name. The value associated with each event name is another table containing the following keys:
 
@@ -96,7 +96,7 @@ twitchevents['test']['perm'] = TwitchTools.PermissionLevel("Vip") -- TwitchTools
 -- ...
 ```
 
-## Timer Actions (File ../configs/TimerActions.lua) [Example](example/TimerActions.md)
+## Timer Actions (File ../configs/TimerActions.lua) [Example](Example/TimerActions.md)
 
 The tactions table contains definitions for your custom events. Each key in this table represents an event name (which you specified in the Twitch panel). The value associated with each event name is another table containing the following keys:
 
