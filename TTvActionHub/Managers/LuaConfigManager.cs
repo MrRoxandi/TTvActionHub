@@ -19,7 +19,7 @@ public class LuaConfigManager
         Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "configs")).FullName;
 
     private static string ServiceName => "LuaConfigManager";
-    private static IEnumerable<string> ConfigNames { get; } = ["config.lua", "twitchevents.lua", "timeractions.lua"];
+    private static IEnumerable<string> ConfigNames { get; } = ["Config.lua", "TwitchEvents.lua", "TimerActions.lua"];
 
     public bool ForceRelog { get; private set; }
     public bool MoreLogs { get; private set; }
@@ -29,7 +29,7 @@ public class LuaConfigManager
     public LuaConfigManager()
     {
         // --- Setuping lua engine ---
-        const string fileName = "config.lua";
+        const string fileName = "Config.lua";
         _lua = LuaState.Create();
         _lua.Environment["Funcs"] = new LuaFuncs();
         _lua.Environment["Audio"] = new LuaAudio();
@@ -91,7 +91,7 @@ public class LuaConfigManager
 
     public ConcurrentDictionary<(string, TwitchTools.TwitchEventKind), TwitchEvent>? LoadTwitchEvents()
     {
-        var fileName = "twitchevents.lua";
+        var fileName = "TwitchEvents.lua";
         var configTable = ParseLuaFile(fileName).GetAwaiter().GetResult() ??
                          throw new Exception($"File {fileName} is not a proper config. Check syntax.");
 
@@ -179,7 +179,7 @@ public class LuaConfigManager
 
     public ConcurrentDictionary<string, TimerAction>? LoadTActions()
     {
-        const string fileName = "timeractions.lua";
+        const string fileName = "TimerActions.lua";
         var fileResult = ParseLuaFile(fileName).GetAwaiter().GetResult();
         if (fileResult is null) return null;
         if (fileResult.HashMapCount == 0)
@@ -266,18 +266,55 @@ public class LuaConfigManager
 
     private static void GenerateTwitchEventsFile()
     {
-        
+        var filePath = Path.Combine(ConfigsPath, "TwitchEvents.lua");
+        if (File.Exists(filePath)) return;
+        Logger.Log(LogType.Info, ServiceName, "Generating twitch events file...");
+        var sb = new StringBuilder();
+        sb.AppendLine();
+        sb.AppendLine("local twitchevents = {}");
+        sb.AppendLine("twitchevents['ping'] = {}");
+        sb.AppendLine("twitchevents['ping']['kind'] = TwitchTools.TwitchEventKind('Command')");
+        sb.AppendLine("twitchevents['ping']['action'] =");
+        sb.AppendLine("    function(sender, args)");
+        sb.AppendLine("        TwitchTools.SendMessage('@' .. sender .. ' -> pong')");
+        sb.AppendLine("    end");
+        sb.AppendLine("twitchevents['ping']['timeout'] = 1000 -- 1000 ms");
+        sb.AppendLine("twitchevents['ping']['perm'] = TwitchTools.PermissionLevel('Viewer')");
+        sb.AppendLine();
+        sb.AppendLine("twitchevents['test'] = {}");
+        sb.AppendLine("twitchevents['test']['kind'] = TwitchTools.TwitchEventKind('Reward')");
+        sb.AppendLine("twitchevents['test']['action'] =");
+        sb.AppendLine("    function(sender, args)");
+        sb.AppendLine("        TwitchTools.SendMessage('@' .. sender .. ' -> test')");
+        sb.AppendLine("    end");
+        sb.AppendLine("return twitchevents");
+        File.WriteAllText(filePath, sb.ToString());
     }
 
     private static void GenerateTimerActionsFile()
     {
-        
+        var filePath = Path.Combine(ConfigsPath, "TimerActions.lua");
+        if (File.Exists(filePath)) return;
+        Logger.Log(LogType.Info, ServiceName, "Generating timer actions file...");
+        var sb = new StringBuilder();
+        sb.AppendLine("local timeractions = {}");
+        sb.AppendLine("");
+        sb.AppendLine("--timeractions['test'] = {}");
+        sb.AppendLine("--timeractions['test']['action'] =");
+        sb.AppendLine("    --function()");
+        sb.AppendLine("        --TwitchChat.SendMessage('Just a test -> test')");
+        sb.AppendLine("    --end");
+        sb.AppendLine("    --timeractions['test']['timeout'] = 10000 -- 10000 ms");
+        sb.AppendLine("");
+        sb.AppendLine("return timeractions");
+        File.WriteAllText(filePath, sb.ToString());
     }
 
     private static void GenerateMainConfig()
     {
         var filePath = Path.Combine(ConfigsPath, "config.lua");
         if (File.Exists(filePath)) return;
+        Logger.Log(LogType.Info, ServiceName, "Generating main config file...");
         StringBuilder builder = new();
         builder.AppendLine();
         builder.AppendLine("local configuration = {}");
