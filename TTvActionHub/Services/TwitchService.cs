@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using Lua;
 using TTvActionHub.Items;
 using TTvActionHub.Logs;
 using TTvActionHub.LuaTools.Services;
@@ -71,7 +72,9 @@ public class TwitchService : IService, IUpdatableConfiguration, IPointsService
     private volatile bool _stopRequested;
     private CancellationTokenSource? _serviceCts;
     private ConnectionCredentials? _credentials;
-
+    
+    // --- Lua --- 
+    private readonly LuaState _state;
     public TwitchService(IConfig configuration, LuaConfigManager configManager)
     {
         _configManager = configManager ?? throw new ArgumentNullException(nameof(configManager));
@@ -81,6 +84,7 @@ public class TwitchService : IService, IUpdatableConfiguration, IPointsService
         TwitchEvents = _configManager.LoadTwitchEvents()
                        ?? throw new InvalidOperationException(
                            $"Failed to load initial TwitchEvents configuration for {ServiceName}");
+        _state = LuaState.Create();
     }
 
     // --- Methods for LuaTools ---
@@ -976,7 +980,8 @@ public class TwitchService : IService, IUpdatableConfiguration, IPointsService
         {
             Sender = senderUsername,
             Args = cmdArgs,
-            Permission = userLevel
+            Permission = userLevel,
+            State = _state
         };
 
         EnqueueTwitchEvent(twitchEvent, eventArgs);

@@ -254,7 +254,7 @@ public sealed class AudioBackEnd
     private string FilterText(string text)
     {
         if (string.IsNullOrWhiteSpace(text) || _bannedWords.Count == 0) return text;
-        foreach (var pattern in _bannedWords.Select(bannedWord => $@"\b{System.Text.RegularExpressions.Regex.Escape(bannedWord)}\b").Where(pattern => System.Text.RegularExpressions.Regex.IsMatch(text, pattern,
+        foreach (var pattern in _bannedWords.Where(pattern => System.Text.RegularExpressions.Regex.IsMatch(text, pattern,
                      System.Text.RegularExpressions.RegexOptions.IgnoreCase)))
         {
             text = System.Text.RegularExpressions.Regex.Replace(text, pattern, CensoredPlaceholder, System.Text.RegularExpressions.RegexOptions.IgnoreCase);

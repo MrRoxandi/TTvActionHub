@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -28,11 +28,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="KeraLua" Version="1.4.3" />
     <PackageReference Include="LibVLCSharp" Version="3.9.2" />
+    <PackageReference Include="LuaCSharp" Version="0.4.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.4" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.4" />
-    <PackageReference Include="NLua" Version="1.7.4" />
     <PackageReference Include="System.Speech" Version="9.0.5" />
     <PackageReference Include="Terminal.Gui" Version="1.18.1" />
     <PackageReference Include="TwitchLib" Version="3.5.3" />

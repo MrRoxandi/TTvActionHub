@@ -49,7 +49,7 @@ public static class TwitchTools
         return c;
     }
 
-    public enum PermissionLevel : byte
+    public enum PermissionLevel : int
     {
         Viewer,
         Vip,
@@ -58,7 +58,7 @@ public static class TwitchTools
         Broadcaster
     }
 
-    public enum TwitchEventKind : byte
+    public enum TwitchEventKind : int
     {
         Command = 0,
         TwitchReward

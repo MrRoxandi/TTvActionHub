@@ -1,8 +1,10 @@
 ﻿using System.Collections.Concurrent;
+using Lua;
 using TTvActionHub.Items;
 using TTvActionHub.Logs;
 using TTvActionHub.Managers;
 using TTvActionHub.Services.Interfaces;
+using TwitchLib.Client.Interfaces;
 
 namespace TTvActionHub.Services;
 
@@ -12,13 +14,14 @@ public sealed class TimerActionsService : IService, IUpdatableConfiguration
     public event EventHandler<ServiceStatusEventArgs>? StatusChanged;
     private readonly LuaConfigManager _configManager;
     private readonly IConfig _config;
-
+    private readonly LuaState _state;
     public TimerActionsService(IConfig config, LuaConfigManager manager)
     {
         _config = config;
         _configManager = manager;
         var tActions = _configManager.LoadTActions() ?? throw new Exception($"Bad configuration for {ServiceName}");
         Actions = tActions;
+        _state = LuaState.Create();
     }
 
     public void Run()
@@ -39,7 +42,7 @@ public sealed class TimerActionsService : IService, IUpdatableConfiguration
         foreach (var (_, e) in Actions)
         {
             Logger.Log(LogType.Info, ServiceName, $"Running [{e.Name}] action");
-            e.Run();
+            e.Run(_state);
         }
 
         Logger.Log(LogType.Info, ServiceName, "All actions are running");
@@ -87,7 +90,7 @@ public sealed class TimerActionsService : IService, IUpdatableConfiguration
         foreach (var (_, e) in Actions)
         {
             Logger.Log(LogType.Info, ServiceName, $"Running [{e.Name}] action");
-            e.Run();
+            e.Run(_state);
         }
 
         return true;

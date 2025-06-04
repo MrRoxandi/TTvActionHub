@@ -98,7 +98,7 @@ internal abstract class Program
         {
             Console.WriteLine("Initializing Shell UI...");
             Logger.Info("Initializing Shell UI...");
-            _shell.InitializeUi();
+            Task.Run(_shell.InitializeUi);
 
             Console.WriteLine("Initializing services...");
             Logger.Info("Initializing services...");
