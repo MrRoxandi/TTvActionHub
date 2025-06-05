@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using TTvActionHub.BackEnds.ContainerItems;
 using TTvActionHub.Logs;
 
-namespace TTvActionHub.BackEnds;
+namespace TTvActionHub.BackEnds.Abstractions;
 
 public sealed class DataContainer
 {

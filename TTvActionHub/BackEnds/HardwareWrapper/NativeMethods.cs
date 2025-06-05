@@ -1,7 +1,7 @@
 ﻿using System.Runtime.InteropServices;
-using static TTvActionHub.BackEnds.Hardware.NativeInputs;
+using static TTvActionHub.BackEnds.HardwareWrapper.NativeInputs;
 
-namespace TTvActionHub.BackEnds.Hardware
+namespace TTvActionHub.BackEnds.HardwareWrapper
 {
     internal static class NativeMethods
     {

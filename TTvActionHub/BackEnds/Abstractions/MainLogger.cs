@@ -1,6 +1,6 @@
 ﻿using TTvActionHub.Logs;
 
-namespace TTvActionHub.BackEnds
+namespace TTvActionHub.BackEnds.Abstractions
 {
     internal partial class MainLogger : ILogger, IDisposable
     {

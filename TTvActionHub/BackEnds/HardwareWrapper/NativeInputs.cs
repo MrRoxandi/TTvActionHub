@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace TTvActionHub.BackEnds.Hardware
+namespace TTvActionHub.BackEnds.HardwareWrapper
 {
     internal static class NativeInputs
     {

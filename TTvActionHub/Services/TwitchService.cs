@@ -1,8 +1,8 @@
 ﻿using System.Collections.Concurrent;
 using Lua;
+using TTvActionHub.BackEnds.Abstractions;
 using TTvActionHub.Items;
 using TTvActionHub.Logs;
-using TTvActionHub.LuaTools.Services;
 using TTvActionHub.Managers;
 using TwitchLib.Api.Core.Enums;
 using TwitchLib.Api.Helix.Models.Chat.GetChatters;
@@ -87,7 +87,7 @@ public class TwitchService : IService, IUpdatableConfiguration, IPointsService
         _state = LuaState.Create();
     }
 
-    // --- Methods for LuaTools ---
+    // --- Methods for LuaWrappers ---
 
     public void SendMessage(string message)
     {

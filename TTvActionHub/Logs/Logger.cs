@@ -1,4 +1,5 @@
 ﻿using TTvActionHub.BackEnds;
+using MainLogger = TTvActionHub.BackEnds.Abstractions.MainLogger;
 
 namespace TTvActionHub.Logs
 {

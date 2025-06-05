@@ -1,13 +1,12 @@
-﻿using System.Collections.Concurrent;
+﻿using Lua;
 using System.Text;
-using System.Threading.Tasks;
-using Lua;
 using TTvActionHub.Items;
 using TTvActionHub.Logs;
-using TTvActionHub.LuaTools.Services;
-using TTvActionHub.LuaTools.Wrappers.Hardware;
-using TTvActionHub.LuaTools.Wrappers.Services;
-using TTvActionHub.LuaTools.Wrappers.Stuff;
+using System.Collections.Concurrent;
+using TTvActionHub.LuaWrappers.Stuff;
+using TTvActionHub.LuaWrappers.Hardware;
+using TTvActionHub.LuaWrappers.Services;
+using TTvActionHub.BackEnds.Abstractions;
 
 namespace TTvActionHub.Managers;
 
@@ -24,7 +23,7 @@ public class LuaConfigManager
     public bool ForceRelog { get; private set; }
     public bool MoreLogs { get; private set; }
 
-    private long _stdTimeOut;
+    private readonly long _stdTimeOut;
 
     public LuaConfigManager()
     {
@@ -40,7 +39,7 @@ public class LuaConfigManager
         // --- Reading config ---
         var fileResult = ParseLuaFile(fileName).GetAwaiter().GetResult() ??
                          throw new Exception($"File {fileName} is not a proper config. Check syntax.");
-        
+
         // --- Trying to get configs --- 
         if (fileResult["force-relog"].Type != LuaValueType.Boolean)
         {
@@ -93,7 +92,7 @@ public class LuaConfigManager
     {
         var fileName = "TwitchEvents.lua";
         var configTable = ParseLuaFile(fileName).GetAwaiter().GetResult() ??
-                         throw new Exception($"File {fileName} is not a proper config. Check syntax.");
+                          throw new Exception($"File {fileName} is not a proper config. Check syntax.");
 
         if (configTable.HashMapCount == 0)
         {

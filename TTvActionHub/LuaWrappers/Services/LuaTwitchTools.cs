@@ -1,7 +1,7 @@
 ﻿using Lua;
-using TTvActionHub.LuaTools.Services;
+using TTvActionHub.BackEnds.Abstractions;
 
-namespace TTvActionHub.LuaTools.Wrappers.Services;
+namespace TTvActionHub.LuaWrappers.Services;
 
 [LuaObject]
 public partial class LuaTwitchTools

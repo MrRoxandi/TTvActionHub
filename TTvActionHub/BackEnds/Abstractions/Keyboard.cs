@@ -1,6 +1,6 @@
-﻿using TTvActionHub.BackEnds.Hardware;
+﻿using TTvActionHub.BackEnds.HardwareWrapper;
 
-namespace TTvActionHub.LuaTools.Hardware
+namespace TTvActionHub.BackEnds.Abstractions
 {
     public static class Keyboard
     {

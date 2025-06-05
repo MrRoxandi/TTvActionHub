@@ -1,7 +1,7 @@
 ﻿using Lua;
-using TTvActionHub.LuaTools.Hardware;
+using TTvActionHub.BackEnds.Abstractions;
 
-namespace TTvActionHub.LuaTools.Wrappers.Hardware;
+namespace TTvActionHub.LuaWrappers.Hardware;
 
 [LuaObject]
 public partial class LuaMouse

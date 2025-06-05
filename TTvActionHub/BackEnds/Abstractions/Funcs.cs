@@ -1,4 +1,4 @@
-﻿namespace TTvActionHub.LuaTools.Stuff;
+﻿namespace TTvActionHub.BackEnds.Abstractions;
 
 public static class Funcs
 {

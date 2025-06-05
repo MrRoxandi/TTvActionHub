@@ -1,8 +1,8 @@
 ﻿using System.Text;
 using Lua;
-using TTvActionHub.LuaTools.Stuff;
+using TTvActionHub.BackEnds.Abstractions;
 
-namespace TTvActionHub.LuaTools.Wrappers.Stuff;
+namespace TTvActionHub.LuaWrappers.Stuff;
 
 [LuaObject]
 public partial class LuaFuncs

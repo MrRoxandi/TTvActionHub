@@ -1,7 +1,7 @@
-﻿namespace TTvActionHub.LuaTools.Services;
-
-using TTvActionHub.Services;
+﻿using TTvActionHub.Services;
 using TwitchLib.Client.Enums;
+
+namespace TTvActionHub.BackEnds.Abstractions;
 
 public static class TwitchTools
 {
