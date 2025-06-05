@@ -1,7 +1,7 @@
-﻿using NLua;
+﻿using Lua;
 using System.Diagnostics;
+using TTvActionHub.BackEnds.Abstractions;
 using TTvActionHub.Logs;
-using TTvActionHub.LuaTools.Services;
 
 namespace TTvActionHub.Items
 {
@@ -9,6 +9,7 @@ namespace TTvActionHub.Items
     {
         public string Sender;
         public string[]? Args;
+        public LuaState State;
         public TwitchTools.PermissionLevel Permission;
     }
 
@@ -58,7 +59,20 @@ namespace TTvActionHub.Items
                     Logger.Log(LogType.Info, ItemName, $"Unable to execute event [{Name}]. Event still on cooldown");
                     return;
                 }
-                Function.Call(args.Sender, args.Args);
+                var argsTable = LuaValue.Nil;
+                if (args.Args is not null)
+                {
+                    var table = new LuaTable();
+                    foreach (var (value, index) in args.Args.Select((x, i) => (x, i + 1)))
+                    {
+                        table.Insert(index, value);
+                    }
+                    argsTable = table;
+                }
+                var action = args.Args != null ? 
+                    Function.InvokeAsync(args.State, [args.Sender, argsTable]) :
+                    Function.InvokeAsync(args.State, [args.Sender]);
+                _ = action.AsTask().GetAwaiter().GetResult();
                 _coolDownTimer?.Restart();
                 Logger.Log(LogType.Info, ItemName, $"Event [{Name}] was executed successfully");
             }
@@ -71,7 +85,7 @@ namespace TTvActionHub.Items
         private bool IsExecutable()
         {
             if (_timeOut == null) return true;
-            else return !_coolDownTimer!.IsRunning || _coolDownTimer!.ElapsedMilliseconds > _timeOut;
+            return !_coolDownTimer!.IsRunning || _coolDownTimer!.ElapsedMilliseconds > _timeOut;
         }
         
     }

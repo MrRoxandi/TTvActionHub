@@ -1,5 +1,6 @@
-﻿using NLua;
+﻿using Lua;
 using TTvActionHub.Logs;
+using Timer = System.Timers.Timer;
 
 namespace TTvActionHub.Items
 {
@@ -7,16 +8,17 @@ namespace TTvActionHub.Items
     {
         public required LuaFunction Function { get; set; }
         public bool IsRunning => _timer != null;
-        private System.Timers.Timer? _timer;
-        public required string Name;
         public required long TimeOut;
-
-        public void Run()
+        public required string Name;
+        private LuaState State;
+        private Timer? _timer;
+        public void Run(LuaState state)
         {
             
-            _timer = new(TimeOut);
+            _timer = new Timer(TimeOut);
             _timer.Elapsed += TimerElapsed;
             _timer.Start();
+            State = state;
         }
 
         public void Stop()
@@ -35,7 +37,7 @@ namespace TTvActionHub.Items
             {
                 try
                 {
-                    Function.Call();
+                    _ = Function.InvokeAsync(State, []).AsTask().GetAwaiter().GetResult();
                     Logger.Info($"Timer event [{Name}] was executed at [{e.SignalTime}]");
                 }
                 catch (Exception ex)

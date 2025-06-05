@@ -1,14 +1,6 @@
-# Документация для модуля 'Container' в `TTvActionHub.LuaTools.Services.Container`
+# Документация для модуля 'Container'
 
 Этот модуль предоставляет интерфейс для простого хранилища данных типа "ключ-значение" внутри приложения. Он позволяет сохранять, извлекать, проверять наличие и удалять данные по строковому ключу (имени). Данные, как правило, хранятся в течение текущей сессии приложения, но после остановки сервиса данные будут сохранены на диск.
-
-## Подключение в файле конфигурации
-
-Пример подключение модуля:
-
-```lua
-local Container = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Container
-```
 
 ## Доступные методы
 
@@ -45,8 +37,6 @@ local Container = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Conta
 ## Пример использования
 
 ```lua
-local Container = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Container
-
 -- Сохранить имя пользователя (строка)
 Container.InsertString('username', 'CoolUser123')
 

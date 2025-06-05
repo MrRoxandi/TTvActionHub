@@ -1,59 +1,51 @@
-# Configuration Scripting Documentation
+# Documentation for Scripts in Configuration
 
 This document describes how to write `LUA` "code" to use the program's features on your Twitch channel.
 
-## Available Modules in `TTvActionHub.LuaTools`
+## Available Modules in `TTvActionHub`
 
-Any module is imported via `TTvActionHub.LuaTools.<module_name>`. The table below lists all available modules, and following the table is an example of importing the audio module.
-
-| Module                                       | Description                                                                                   | Documentation                           |
-|----------------------------------------------|-----------------------------------------------------------------------------------------------|-----------------------------------------|
-| `TTvActionHub.LuaTools.Hardware.Keyboard`    | This module is responsible for keyboard emulation.                                            | [Documentation](API/ENG/Keyboard.md)    |
-| `TTvActionHub.LuaTools.Hardware.Mouse`       | This module is responsible for mouse emulation.                                               | [Documentation](API/ENG/Mouse.md)       |
-| `TTvActionHub.LuaTools.Services.Audio`       | This module handles interaction with the audio service (playing audio files, music playback). | [Documentation](API/ENG/Audio.md)       |
-| `TTvActionHub.LuaTools.Services.Container`   | This module is responsible for interacting with a special internal storage.                   | [Documentation](API/ENG/Container.md)   |
-| `TTvActionHub.LuaTools.Services.TwitchTools` | This module is responsible for interacting with Twitch.                                       | [Documentation](API/ENG/TwitchTools.md) |
-| `TTvActionHub.LuaTools.Stuff.Funcs`          | This module contains useful functions for writing configurations.                             | [Documentation](API/ENG/Funcs.md)       |
-
-## Example of importing the music playback module
-
-```lua
-local Audio = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Audio
-```
+| Module        | Description                                                                                                    | Documentation                           |
+|---------------|----------------------------------------------------------------------------------------------------------------|-----------------------------------------|
+| `Keyboard`    | This module is responsible for keyboard emulation                                                              | [Documentation](API/ENG/Keyboard.md)    |
+| `Mouse`       | This module is responsible for mouse emulation                                                                 | [Documentation](API/ENG/Mouse.md)       |
+| `Audio`       | This module is responsible for interacting with the sound service (playing audio files) and for music playback | [Documentation](API/ENG/Audio.md)       |
+| `Container`   | This module is responsible for interacting with a special internal storage                                     | [Documentation](API/ENG/Container.md)   |
+| `TwitchTools` | This module is responsible for interacting with Twitch                                                         | [Documentation](API/ENG/TwitchTools.md) |
+| `Funcs`       | This module contains useful functions for writing configurations                                               | [Documentation](API/ENG/Funcs.md)       |
 
 ## Configuration File Requirements
 
 - File format: The configuration must be a `lua` file.
 - Location: The configuration must be located in the `..\configs\` directory.
-- Return value: The configuration **must** return a Lua table containing configuration information.
+- Return value: The configuration **must** return a lua table containing configuration information.
 - Encoding: Use UTF-8 encoding for your scripts.
-  If any of this is unclear, simply run the program without configuration files; they will be generated automatically.
+  If any of this is unclear, simply run the program without configuration files, and they will be generated automatically.
 
-## Main Configuration Table (file ../configs/config.lua) [Example](example/config.md)
+## Main Configuration Table (file ../configs/Config.lua) [Example](Example/Config.md)
 
 The configuration table contains several parameters:
 
-| Parameter   | Type   | Values     | Description                                                                                               | Optional | Default Value |
-|-------------|--------|------------|-----------------------------------------------------------------------------------------------------------|----------|---------------|
-| force-relog | `bool` | true/false | If `true`, authorization via browser will be forcibly requested without attempting to update information. | +        | `false`       |
-| timeout     | `int`  | Number     | Default cooldown time (in ms) for chat commands if they don't have their own specified.                   | +        | `30000`       |
-| logs        | `bool` | true/false | If `true`, internal logs of services related to Twitch will be output.                                    | +        | `false`       |
+| Parameter   | Type   | Values     | Description                                                                                                     | Optional | Default value |
+|-------------|--------|------------|-----------------------------------------------------------------------------------------------------------------|----------|---------------|
+| force-relog | `bool` | true/false | If `true`, authorization through the browser will be forcibly requested without attempts to update information. | +        | `false`       |
+| timeout     | `int`  | Number     | Default cooldown time for chat commands if they don't have their own specified.                                 | +        | `30000`       |
+| logs        | `bool` | true/false | If `true`, internal logs of services related to Twitch will be output.                                          | +        | `false`       |
 
-## Events (file ../configs/twitchevents.lua) [Example](example/twitchevents.md)
+## Events (file ../configs/TwitchEvents.lua) [Example](Example/TwitchEvents.md)
 
-The `twitchevents` table contains definitions for your custom events. Each key in this table represents an event name. The value associated with each event name is another table containing the following keys:
+The TwitchEvents table contains definitions for your custom events. Each key in this table represents an event name. The value associated with each event name is another table containing the following keys:
 
-| Key     | Type       | Description                                                                                                | Optional | Default Value           |
+| Key     | Type       | Description                                                                                                | Optional | Default value           |
 |---------|------------|------------------------------------------------------------------------------------------------------------|----------|-------------------------|
-| kind    | Event Type | Defines the event type: Command, Channel Points Reward, or other.                                          | -        | -                       |
-| action  | Function   | The function that will be executed when the event triggers. It accepts two arguments: `sender` and `args`. | -        | -                       |
-| timeout | int        | Cooldown time for the event. Measured in ms. Three possible values: -1, 0, > 0.                            | +        | timeout from config.lua |
+| kind    | Event Type | Defines the event type: Command, channel point reward, or other.                                           | -        | -                       |
+| action  | Function   | Function that will be executed when the command is triggered. It takes two arguments: `sender` and `args`. | -        | -                       |
+| timeout | int        | Cooldown time for the command. Measured in ms. Three possible values: -1, 0, > 0                           | +        | timeout from config.lua |
 | perm    | enum(int)  | Access level for the event.                                                                                | +        | Viewer                  |
 | cost    | long       | Defines the cost to trigger the event.                                                                     | +        | 0                       |
 
-The `kind` parameter is of type `TwitchEventKind` and can take one of two values. The structure of the `kind` parameter is shown below.
+The `kind` parameter is `TwitchEventKind` and can take only two values. The structure of the `kind` parameter is shown below.
 
-```csharp
+```cs
 public enum TwitchEventKind : byte
 {
     Command = 0, TwitchReward
@@ -65,11 +57,11 @@ Below is an example of usage.
 ```lua
 -- ...
 twitchevents['test'] = {}
-twitchevents['test']['kind'] = TwitchTools.TwitchEventKind.Command -- or TwitchTools.TwitchEventKind.TwitchReward
+twitchevents['test']['kind'] = TwitchTools.TwitchEventKind("Command") -- TwitchTools.TwitchEventKind.TwitchReward
 -- ...
 ```
 
-The `action` parameter is a `lua-function`. An example of writing it and using other modules is shown below.
+The `action` parameter is a `lua-function`. An example of writing and using other modules is shown below.
 
 ```lua
 -- ...
@@ -81,14 +73,14 @@ twitchevents['test']['action'] =
 -- ...
 ```
 
-The `sender` and `args` parameters accepted by the function:
+The parameters `sender` and `args` accepted by the function:
 
-- `sender` - A string containing the Twitch username of the user who sent this command.
-- `args` - An array of strings containing all the words the user wrote when sending this command, split by spaces.
+- `sender` - a string containing the Twitch username of the user who sent this command.
+- `args` - an array of strings, containing all the words written by the user who sent this command, split by spaces.
 
-The `perm` parameter is of type `PermissionLevel` and can take one of five values. The structure of the `perm` parameter is shown below.
+The `perm` parameter is `PermissionLevel` and can take only five values. The structure of the `perm` parameter is shown below.
 
-```csharp
+```cs
 public enum PermissionLevel : int
 {
     Viewer, Vip, Subscriber, Moderator, Broadcaster
@@ -100,31 +92,33 @@ Below is an example of usage.
 ```lua
 -- ...
 twitchevents['test'] = {}
-twitchevents['test']['perm'] = TwitchTools.PermissionLevel.Vip -- or TwitchTools.PermissionLevel.Viewer, etc.
+twitchevents['test']['perm'] = TwitchTools.PermissionLevel("Vip") -- TwitchTools.PermissionLevel.Viewer
 -- ...
 ```
 
-## Timer Actions (File ../configs/timeractions.lua) [Example](example/timeractions.md)
+## Timer Actions (File ../configs/TimerActions.lua) [Example](Example/TimerActions.md)
 
-The `tactions` table contains definitions for your custom timer actions. Each key in this table represents an action name (which you specified in the Twitch panel). The value associated with each action name is another table containing the following keys:
+The tactions table contains definitions for your custom events. Each key in this table represents an event name (which you specified in the Twitch panel). The value associated with each event name is another table containing the following keys:
 
-| Key     | Type     | Description                                                                                     | Optional |
-|---------|----------|-------------------------------------------------------------------------------------------------|----------|
-| action  | Function | The function that will be executed when the action is triggered. It takes no arguments.         | -        |
-| timeout | integer  | The time interval (in ms) after which this action will be triggered. Any value >= 1 is allowed. | -        |
+| Key     | Type     | Description                                                                                  | Optional |
+|---------|----------|----------------------------------------------------------------------------------------------|----------|
+| action  | Function | Function that will be executed when the reward is activated. It does not take any arguments. | -        |
+| timeout | integer  | Time interval after which this event will be triggered. Any values >= 1 are available.       | -        |
 
-Since the function accepted by the `action` field is simple, it does not take any arguments.
+Since the function that the `action` field accepts is simple, the function does not accept any arguments.
 
-Example of creating a timer action:
+Example of creating a reward:
 
 ```lua
 local tactions = {}
 -- Some other useful code...
 local taction1 = {}
 taction1["action"] =
-    function()
-        Chat.SendMessageAsync("Test")
-    end
-taction1["timeout"] = 5000 -- This is 5 seconds
+  function(sender, args)
+    TwitchTools.SendMessage('@' .. sender .. ' -> test')
+  end
+taction1["timeout"] = 5000
 tactions["test"] = taction1
 ```
+
+--- END OF FILE API_EN.md ---

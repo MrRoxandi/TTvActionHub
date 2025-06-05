@@ -2,11 +2,12 @@
 using Microsoft.Extensions.DependencyInjection;
 using Terminal.Gui;
 using TTvActionHub.BackEnds;
+using TTvActionHub.BackEnds.Abstractions;
+using TTvActionHub.BackEnds.Audio;
 using TTvActionHub.Logs;
-using TTvActionHub.LuaTools.Services;
-using TTvActionHub.LuaTools.Services.ContainerItems;
 using TTvActionHub.Managers;
 using TTvActionHub.Services;
+using TTvActionHub.Services.Interfaces;
 
 namespace TTvActionHub;
 
@@ -16,13 +17,11 @@ internal abstract class Program
     private static ServiceProvider? _provider;
 
     private static readonly ConcurrentDictionary<string, IService> RunningServices = [];
-
+    private static IConfig? _config;
     private static Shell? _shell;
 
-    private static void Main( /*string[] args*/)
+    private static void Main()
     {
-        //Application.Init();
-
         Logger.Info("Application starting...");
         if (!LuaConfigManager.CheckConfiguration())
         {
@@ -51,30 +50,23 @@ internal abstract class Program
         try
         {
             ServiceCollection collection = new();
-            collection.AddSingleton<IDataBaseContext, DataBaseContext>();
             collection.AddSingleton<DataContainer>();
+            collection.AddSingleton<AudioBackEnd>();
 
             collection.AddSingleton<LuaConfigManager>();
+            collection.AddSingleton<IService, TwitchService>();
+            collection.AddSingleton<IService, TimerActionsService>();
             collection.AddSingleton<IConfig, Configuration>(sp =>
             {
                 var lcm = sp.GetRequiredService<LuaConfigManager>();
                 return new Configuration(lcm);
             });
-
-            collection.AddSingleton<IService, TwitchService>();
-            collection.AddSingleton<IService, TimerActionsService>();
-            collection.AddSingleton<IService, AudioService>();
             // ---------------------------------------------------------
 
             // Registration Shell
 
-            collection.AddSingleton<Shell>(sp =>
-            {
-                var config = sp.GetRequiredService<IConfig>();
-                return new Shell(config,
-                    StartServiceByName, StopServiceByName, ReloadServiceConfigurationByName,
-                    GetServiceInfoByName);
-            });
+            collection.AddSingleton<Shell>(_ => new Shell(StartServiceByName, StopServiceByName, 
+                ReloadServiceConfigurationByName, GetServiceByName, GetServiceInfoByName));
 
             _provider = collection.BuildServiceProvider();
             Logger.Info("Dependency Injection configured.");
@@ -88,9 +80,10 @@ internal abstract class Program
             _ = Console.ReadLine();
             return;
         }
-
+        _config = _provider.GetService<IConfig>();
         _shell = _provider.GetService<Shell>();
         Container.Storage = _provider.GetService<DataContainer>();
+        Audio.audio = _provider.GetService<AudioBackEnd>();
         if (_shell == null)
         {
             Application.Shutdown();
@@ -105,7 +98,7 @@ internal abstract class Program
         {
             Console.WriteLine("Initializing Shell UI...");
             Logger.Info("Initializing Shell UI...");
-            _shell.InitializeUi();
+            Task.Run(_shell.InitializeUi);
 
             Console.WriteLine("Initializing services...");
             Logger.Info("Initializing services...");
@@ -120,8 +113,7 @@ internal abstract class Program
             // --- Main loop (Terminal.Gui) ---
             Logger.Info("Starting interactive shell UI...");
             _shell.Run();
-            //Task.Run(shell.Run);
-
+            
             Logger.Info("Shell UI exited.");
         }
         catch (Exception ex)
@@ -160,7 +152,7 @@ internal abstract class Program
             var serviceName = service.ServiceName;
             if (string.IsNullOrEmpty(serviceName))
             {
-                Logger.Warn($"Service of type {service.GetType().Name} has missing ServiceName. Skipping.");
+                Logger.Warn($"Service of type {service.GetType().Name} has missing BackEndName. Skipping.");
                 continue;
             }
 
@@ -170,7 +162,8 @@ internal abstract class Program
             try
             {
                 service.StatusChanged += OnServiceStatusChangedHandler;
-                service.Run();
+                /*service.Run();*/
+                Task.Run(service.Run);
                 var state = service.IsRunning;
                 _shell.UpdateServicesStates(serviceName, state);
                 if (state)
@@ -326,6 +319,19 @@ internal abstract class Program
         }
     }
 
+    private static IService? GetServiceByName(string name)
+    {
+        if (_shell == null || _provider == null)
+        {
+            Logger.Warn("Cannot get service with name: Provider or Shell is not initialized.");
+            return null;
+        }
+        var finded = RunningServices.TryGetValue(name, out var service);
+        if (finded && service != null) return service;
+        _shell.CmdOut($"Cannot get service with name: {name}");
+        Logger.Warn($"Unable to get service with name: {name}");
+        return null;
+    }
     private static void StartServiceByName(string name)
     {
         if (_shell == null || _provider == null)
@@ -358,7 +364,7 @@ internal abstract class Program
         }
 
         _shell.CmdOut($"Attempting to start service: {name}...");
-        Logger.Warn($"Unable to start service: {name}...");
+        Logger.Info($"Attempting to start service: {name}...");
         try
         {
             service.StatusChanged += OnServiceStatusChangedHandler;
@@ -439,9 +445,6 @@ internal abstract class Program
                     case TwitchService ttvServ:
                         TwitchTools.Service = ttvServ;
                         break;
-                    case AudioService audioServ:
-                        Audio.audio = audioServ;
-                        break;
                 }
         }
         catch (Exception ex)
@@ -460,9 +463,6 @@ internal abstract class Program
         {
             case TwitchService ttvServ:
                 TwitchTools.Service = ttvServ;
-                break;
-            case AudioService audioServ:
-                Audio.audio = audioServ;
                 break;
         }
 

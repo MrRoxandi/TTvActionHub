@@ -1,32 +1,24 @@
-# Documentation for the 'Audio' module in `TTvActionHub.LuaTools.Services.Audio`
+--- START OF FILE Audio.md ---
 
-This module provides functions for playing sounds from local files and via URL, as well as for managing sound volume.
+# Documentation for the 'Audio' Module
 
-## Importing into the configuration file
-
-Example of importing the module:
-
-```lua
-local Audio = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Audio
-```
+This module provides functions for playing sounds from files on disk and via URL, as well as for managing sound volume.
 
 ## Available Methods
 
 | Function                       | Description                                                                                                |
 |--------------------------------|------------------------------------------------------------------------------------------------------------|
-| `PlaySound(string uri)`        | Asynchronously plays a sound from the specified URL or local file path given by `uri`.                     |
+| `PlaySound(string uri)`        | Asynchronously plays a sound from the specified URL or local file obtained from `uri`.                     |
 | `SetVolume(float volume)`      | Sets the sound volume. The `volume` value must be in the range from 0.0 (silence) to 1.0 (maximum volume). |
 | `GetVolume()`                  | Returns the current sound volume. The value is in the range from 0.0 to 1.0.                               |
-| `IncreaseVolume(float volume)` | Increases the sound volume by the specified `volume` value. The volume cannot exceed 1.0.                  |
-| `DecreaseVolume(float volume)` | Decreases the sound volume by the specified `volume` value. The volume cannot be less than 0.0.            |
-| `SkipSound()`                  | Interrupts the current sound playback.                                                                     |
+| `IncreaseVolume(float volume)` | Increases the sound volume by the specified `volume` amount. The volume cannot exceed 1.0.                 |
+| `DecreaseVolume(float volume)` | Decreases the sound volume by the specified `volume` amount. The volume cannot be less than 0.0.           |
+| `SkipSound()`                  | Stops the currently playing sound.                                                                         |
 
-Example of using methods in the configuration file:
+Example of using methods in the configuration file
 
 ```lua
-local Audio = import('TTvActionHub', 'TTvActionHub.LuaTools.Services').Audio
-
--- Play sound from a local file
+-- Play sound from a file on disk
 Audio.PlaySound("C:/Sounds/mysound.mp3")
 
 -- Play sound from a URL
@@ -45,6 +37,6 @@ Audio.IncreaseVolume(0.1)
 -- Decrease volume by 20%
 Audio.DecreaseVolume(0.2)
 
--- Skip sound playback
+-- Stop sound playback
 Audio.SkipSound()
 ```

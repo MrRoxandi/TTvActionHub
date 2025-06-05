@@ -1,9 +1,12 @@
-﻿using System.Collections.Concurrent;
+﻿using Lua;
 using System.Text;
-using NLua;
 using TTvActionHub.Items;
 using TTvActionHub.Logs;
-using TTvActionHub.LuaTools.Services;
+using System.Collections.Concurrent;
+using TTvActionHub.LuaWrappers.Stuff;
+using TTvActionHub.LuaWrappers.Hardware;
+using TTvActionHub.LuaWrappers.Services;
+using TTvActionHub.BackEnds.Abstractions;
 
 namespace TTvActionHub.Managers;
 
@@ -15,23 +18,30 @@ public class LuaConfigManager
         Directory.CreateDirectory(Path.Combine(Directory.GetCurrentDirectory(), "configs")).FullName;
 
     private static string ServiceName => "LuaConfigManager";
-    private static IEnumerable<string> ConfigNames { get; } = ["config.lua", "twitchevents.lua", "timeractions.lua"];
+    private static IEnumerable<string> ConfigNames { get; } = ["Config.lua", "TwitchEvents.lua", "TimerActions.lua"];
 
-    public bool ForceRelog { get; }
-
-    public bool MoreLogs { get; }
+    public bool ForceRelog { get; private set; }
+    public bool MoreLogs { get; private set; }
 
     private readonly long _stdTimeOut;
 
     public LuaConfigManager()
     {
-        _lua = new Lua();
-        _lua.LoadCLRPackage();
-        _lua.State.Encoding = Encoding.UTF8;
-        const string fileName = "config.lua";
-        var fileResult = ParseLuaFile(fileName);
-        if (fileResult is null) throw new Exception($"File {fileName} is not a proper config. Check syntax.");
-        if (fileResult["force-reload"] is not bool forceRelog)
+        // --- Setuping lua engine ---
+        const string fileName = "Config.lua";
+        _lua = LuaState.Create();
+        _lua.Environment["Funcs"] = new LuaFuncs();
+        _lua.Environment["Audio"] = new LuaAudio();
+        _lua.Environment["Container"] = new LuaContainer();
+        _lua.Environment["TwitchTools"] = new LuaTwitchTools();
+        _lua.Environment["Keyboard"] = new LuaKeyboard();
+        _lua.Environment["Mouse"] = new LuaMouse();
+        // --- Reading config ---
+        var fileResult = ParseLuaFile(fileName).GetAwaiter().GetResult() ??
+                         throw new Exception($"File {fileName} is not a proper config. Check syntax.");
+
+        // --- Trying to get configs --- 
+        if (fileResult["force-relog"].Type != LuaValueType.Boolean)
         {
             Logger.Log(LogType.Warning, ServiceName,
                 $"In file {fileName} ['force-relog'] is not presented. Will be used default value: [{false}]");
@@ -39,10 +49,10 @@ public class LuaConfigManager
         }
         else
         {
-            ForceRelog = forceRelog;
+            ForceRelog = fileResult["force-relog"].Read<bool>();
         }
 
-        if (fileResult["logs"] is not bool moreLogs)
+        if (fileResult["logs"].Type != LuaValueType.Boolean)
         {
             Logger.Log(LogType.Warning, ServiceName,
                 $"In file {fileName} ['logs'] is not presented. Will be used default value: [{false}]");
@@ -50,93 +60,117 @@ public class LuaConfigManager
         }
         else
         {
-            MoreLogs = moreLogs;
+            MoreLogs = fileResult["logs"].Read<bool>();
+            ;
         }
 
-        if (fileResult["timeout"] is not long stdTimeOut)
+        if (fileResult["timeout"].Type != LuaValueType.Number)
         {
             Logger.Log(LogType.Warning, ServiceName,
                 $"In file {fileName} ['timeout'] is not presented. Will be used default value: [{30000}] ms");
             _stdTimeOut = 30000;
         }
-        else if (stdTimeOut < 0)
-        {
-            Logger.Log(LogType.Warning, ServiceName,
-                $"In file {fileName} ['timeout'] have [{stdTimeOut}] value. But valid value must be > 0. Will be used default value: [{30000}] ms");
-            _stdTimeOut = 30000;
-        }
         else
         {
-            _stdTimeOut = stdTimeOut;
+            var timeout = fileResult["timeout"].Read<int>();
+            if (timeout < 0)
+            {
+                Logger.Log(LogType.Warning, ServiceName,
+                    $"In file {fileName} ['timeout'] have [{_stdTimeOut}] value. But valid value must be > 0. Will be used default value: [{30000}] ms");
+                _stdTimeOut = 30000;
+            }
+            else
+            {
+                _stdTimeOut = timeout;
+            }
         }
 
-        Logger.Log(LogType.Info, ServiceName, "Configuration loaded successfully");
+        Logger.Log(LogType.Info, ServiceName, "Main configuration loaded successfully");
     }
 
     public ConcurrentDictionary<(string, TwitchTools.TwitchEventKind), TwitchEvent>? LoadTwitchEvents()
     {
-        const string fileName = "twitchevents.lua";
-        var fileResult = ParseLuaFile(fileName);
-        if (fileResult is null) return null;
+        var fileName = "TwitchEvents.lua";
+        var configTable = ParseLuaFile(fileName).GetAwaiter().GetResult() ??
+                          throw new Exception($"File {fileName} is not a proper config. Check syntax.");
 
-        if (fileResult.Keys.Count == 0)
+        if (configTable.HashMapCount == 0)
         {
             Logger.Log(LogType.Warning, ServiceName, $"Table from file {fileName} is empty. Ignoring...");
             return [];
         }
 
         var result = new ConcurrentDictionary<(string, TwitchTools.TwitchEventKind), TwitchEvent>();
-        foreach (var key in fileResult.Keys)
+        var previosKey = LuaValue.Nil;
+        while (configTable.TryGetNext(previosKey, out var kvp))
         {
-            if (fileResult[key] is not LuaTable twEventTable)
+            var currentKey = kvp.Key;
+            if (kvp.Value.Type != LuaValueType.Table)
             {
                 Logger.Log(LogType.Error, ServiceName,
-                    $"In file {fileName} ['{key}'] is not a TwitchEvent. Check syntax. Aborting loading process ...");
+                    $"In file {fileName} ['{currentKey}'] is not a TwitchEvent. Check syntax. Aborting loading process ...");
                 return null;
             }
 
-            if (twEventTable["kind"] is not TwitchTools.TwitchEventKind kind)
+            var twEventTable = kvp.Value.Read<LuaTable>();
+            if (twEventTable["kind"].Type != LuaValueType.Number)
             {
                 Logger.Log(LogType.Error, ServiceName,
-                    $"In file {fileName} ['{key}']['kind'] is not a TwitchEventKind. Check syntax. Aborting loading process ...");
+                    $"In file {fileName} ['{currentKey}']['kind'] is not a TwitchEventKind. Check syntax. Aborting loading process ...");
                 return null;
             }
 
-            if (twEventTable["action"] is not LuaFunction action)
+            var kind = (TwitchTools.TwitchEventKind)twEventTable["kind"].Read<int>();
+            if (twEventTable["action"].Type != LuaValueType.Function)
             {
                 Logger.Log(LogType.Error, ServiceName,
-                    $"In file {fileName} ['{key}']['action'] is not an action. Check syntax. Aborting loading process ...");
+                    $"In file {fileName} ['{currentKey}']['action'] is not an action. Check syntax. Aborting loading process ...");
                 return null;
             }
 
-            long? timeOut = null;
+            var action = twEventTable["action"].Read<LuaFunction>();
+            long? timeout = null;
             long cmdCost = 0;
             var perm = TwitchTools.PermissionLevel.Viewer;
             if (kind != TwitchTools.TwitchEventKind.TwitchReward)
             {
-                if (twEventTable["timeout"] is not long time)
+                if (twEventTable["timeout"].Type != LuaValueType.Number)
                 {
                     Logger.Log(LogType.Warning, ServiceName,
-                        $"In file {fileName} ['{key}']['timeout'] is not a timeout. Will be used default value: {_stdTimeOut} ms");
-                    time = _stdTimeOut;
+                        $"In file {fileName} ['{currentKey}']['timeout'] is not a timeout. Will be used default value: {_stdTimeOut} ms");
+                    timeout = _stdTimeOut;
+                }
+                else
+                {
+                    timeout = twEventTable["timeout"].Read<long>();
                 }
 
-                timeOut = time;
-
-                if (twEventTable["perm"] is not TwitchTools.PermissionLevel userLevel)
+                if (timeout < 0 && timeout != -1)
                 {
                     Logger.Log(LogType.Warning, ServiceName,
-                        $"In file {fileName} ['{key}']['perm'] is not a permission level. Will be used default value: Viewer");
-                    userLevel = TwitchTools.PermissionLevel.Viewer;
+                        $"In file {fileName} ['{currentKey}']['timeout'] is not a valid timeout. Will be used default value: {_stdTimeOut} ms");
+                    timeout = _stdTimeOut;
                 }
 
-                if (twEventTable["cost"] is not long cost) cost = 0;
-                cmdCost = cost;
-                perm = userLevel;
+                if (twEventTable["perm"].Type != LuaValueType.Number)
+                {
+                    Logger.Log(LogType.Warning, ServiceName,
+                        $"In file {fileName} ['{currentKey}']['perm'] is not a permission level. Will be used default value: Viewer");
+                    perm = TwitchTools.PermissionLevel.Viewer;
+                }
+                else
+                {
+                    perm = (TwitchTools.PermissionLevel)twEventTable["perm"].Read<int>();
+                }
+
+                cmdCost = twEventTable["cmdCost"].Type != LuaValueType.Number
+                    ? 0
+                    : twEventTable["cmdCost"].Read<long>();
             }
 
-            result.TryAdd((key.ToString()!, kind),
-                new TwitchEvent(kind, action, key.ToString()!, perm, timeOut, cmdCost));
+            result.TryAdd((currentKey.ToString(), kind),
+                new TwitchEvent(kind, action, currentKey.ToString(), perm, timeout, cmdCost));
+            previosKey = kvp.Key;
         }
 
         return result;
@@ -144,53 +178,60 @@ public class LuaConfigManager
 
     public ConcurrentDictionary<string, TimerAction>? LoadTActions()
     {
-        const string fileName = "timeractions.lua";
-        var fileResult = ParseLuaFile(fileName);
+        const string fileName = "TimerActions.lua";
+        var fileResult = ParseLuaFile(fileName).GetAwaiter().GetResult();
         if (fileResult is null) return null;
-        if (fileResult.Keys.Count == 0)
+        if (fileResult.HashMapCount == 0)
         {
             Logger.Log(LogType.Warning, ServiceName, $"Table from file {fileName} is empty. Ignoring...");
             return [];
         }
 
         var actions = new ConcurrentDictionary<string, TimerAction>();
-        foreach (var keyTAction in fileResult.Keys)
+        var previosKey = LuaValue.Nil;
+
+        while (fileResult.TryGetNext(previosKey, out var kvp))
         {
-            if (fileResult[keyTAction] is not LuaTable tActionTable)
+            var currentKey = kvp.Key;
+            if (kvp.Value.Type != LuaValueType.Table)
             {
                 Logger.Log(LogType.Error, ServiceName,
-                    $"In file {fileName} [{keyTAction}] is not a TimerAction. Check syntax. Aborting loading process ...");
+                    $"In file {fileName} ['{currentKey}'] is not a TimerAction (expected table). Check syntax. Aborting loading process ...");
                 return null;
             }
 
-            if (tActionTable["action"] is not LuaFunction action)
+            var tActionTable = kvp.Value.Read<LuaTable>();
+
+            var actionLua = tActionTable["action"];
+            if (actionLua.Type != LuaValueType.Function)
             {
                 Logger.Log(LogType.Error, ServiceName,
-                    $"In file {fileName} [{keyTAction}]['action'] is not an action. Check syntax. Aborting loading process...");
+                    $"In file {fileName} ['{currentKey}']['action'] is not an action (LuaFunction). Check syntax. Aborting loading process...");
                 return null;
             }
 
-            if (tActionTable["timeout"] is not long timeOut)
+            var action = actionLua.Read<LuaFunction>();
+
+            var timeoutLua = tActionTable["timeout"];
+            if (timeoutLua.Type != LuaValueType.Number)
             {
                 Logger.Log(LogType.Error, ServiceName,
-                    $"In file {fileName} [{keyTAction}]['timeout'] is not valid value. Check syntax. Aborting loading process...");
+                    $"In file {fileName} ['{currentKey}']['timeout'] is not a valid number. Check syntax. Aborting loading process...");
                 return null;
             }
+
+            var timeOut = timeoutLua.Read<long>();
 
             if (timeOut <= 0)
             {
                 Logger.Log(LogType.Error, ServiceName,
-                    $"In file {fileName} [{keyTAction}]['timeout'] is not in valid range. Allowed range [1, inf). Aborting loading process...");
+                    $"In file {fileName} ['{currentKey}']['timeout'] ({timeOut}) is not in valid range. Allowed range (0, inf). Aborting loading process...");
                 return null;
             }
 
-            if (!actions.TryAdd(keyTAction.ToString()!,
-                    new TimerAction { Function = action, Name = keyTAction.ToString()!, TimeOut = timeOut }))
-            {
-                Logger.Log(LogType.Warning, ServiceName,
-                    $"For some reason [{keyTAction}] wasn't added to collection. Aborting loading process...");
-                return null;
-            }
+            actions.TryAdd(currentKey.ToString(),
+                new TimerAction { Function = action, Name = currentKey.ToString(), TimeOut = timeOut });
+            previosKey = kvp.Key;
         }
 
         return actions;
@@ -205,16 +246,15 @@ public class LuaConfigManager
 
     // --- Private block ---
 
-    private LuaTable? ParseLuaFile(string configName)
+    private async Task<LuaTable?> ParseLuaFile(string configName)
     {
         var fullPath = Path.Combine(ConfigsPath, configName);
         try
         {
-            var result = _lua.DoFile(fullPath);
-            var state = result[0];
-            if (state is not LuaTable table)
+            var result = await _lua.DoFileAsync(fullPath);
+            if (result is not { Length: > 0 } || result[0].Type != LuaValueType.Table)
                 throw new Exception($"Returned result form {configName} was not a valid table. Check syntax");
-            return table;
+            return result[0].Read<LuaTable>();
         }
         catch (Exception ex)
         {
@@ -223,69 +263,57 @@ public class LuaConfigManager
         }
     }
 
-    // All available static bridges for lua
-    private static List<string> Bridges =>
-    [
-        "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Hardware\").Keyboard",
-        "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Hardware\").Mouse",
-        "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Services\").Audio",
-        "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Services\").Container",
-        "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Services\").TwitchTools",
-        "(\"TTvActionHub\", \"TTvActionHub.LuaTools.Stuff\").Funcs"
-    ];
-
     private static void GenerateTwitchEventsFile()
     {
-        var filePath = Path.Combine(ConfigsPath, "twitchevents.lua");
+        var filePath = Path.Combine(ConfigsPath, "TwitchEvents.lua");
         if (File.Exists(filePath)) return;
-        StringBuilder builder = new();
-        Bridges.ForEach(bridge => builder.AppendLine($"local {bridge.Split(").").Last()} = import {bridge}"));
-        builder.AppendLine();
-        builder.AppendLine("local twitchevents = {}");
-        builder.AppendLine();
-        builder.AppendLine("twitchevents['ping'] = {}");
-        builder.AppendLine("twitchevents['ping']['kind'] = TwitchTools.TwitchEventKind.Command");
-        builder.AppendLine("twitchevents['ping']['action'] = ");
-        builder.AppendLine("\tfunction(sender, args)");
-        builder.AppendLine("\t\tTwitchTools.SendMessage('@'..sender..' -> pong')");
-        builder.AppendLine("\tend");
-        builder.AppendLine("twitchevents['ping']['timeout'] = 1000 -- 1000 ms");
-        builder.AppendLine("twitchevents['ping']['perm'] = TwitchTools.PermissionLevel.Viewer");
-        builder.AppendLine();
-        builder.AppendLine("twitchevents['test'] = {}");
-        builder.AppendLine("twitchevents['test']['kind'] = TwitchTools.TwitchEventKind.TwitchReward");
-        builder.AppendLine("twitchevents['test']['action'] = ");
-        builder.AppendLine("\tfunction(sender, args)");
-        builder.AppendLine("\t\tTwitchTools.SendMessage('@'..sender..' -> test')");
-        builder.AppendLine("\tend");
-        builder.AppendLine("return twitchevents");
-        File.WriteAllText(filePath, builder.ToString());
+        Logger.Log(LogType.Info, ServiceName, "Generating twitch events file...");
+        var sb = new StringBuilder();
+        sb.AppendLine();
+        sb.AppendLine("local twitchevents = {}");
+        sb.AppendLine("twitchevents['ping'] = {}");
+        sb.AppendLine("twitchevents['ping']['kind'] = TwitchTools.TwitchEventKind('Command')");
+        sb.AppendLine("twitchevents['ping']['action'] =");
+        sb.AppendLine("    function(sender, args)");
+        sb.AppendLine("        TwitchTools.SendMessage('@' .. sender .. ' -> pong')");
+        sb.AppendLine("    end");
+        sb.AppendLine("twitchevents['ping']['timeout'] = 1000 -- 1000 ms");
+        sb.AppendLine("twitchevents['ping']['perm'] = TwitchTools.PermissionLevel('Viewer')");
+        sb.AppendLine();
+        sb.AppendLine("twitchevents['test'] = {}");
+        sb.AppendLine("twitchevents['test']['kind'] = TwitchTools.TwitchEventKind('Reward')");
+        sb.AppendLine("twitchevents['test']['action'] =");
+        sb.AppendLine("    function(sender, args)");
+        sb.AppendLine("        TwitchTools.SendMessage('@' .. sender .. ' -> test')");
+        sb.AppendLine("    end");
+        sb.AppendLine("return twitchevents");
+        File.WriteAllText(filePath, sb.ToString());
     }
 
     private static void GenerateTimerActionsFile()
     {
-        var filePath = Path.Combine(ConfigsPath, "timeractions.lua");
+        var filePath = Path.Combine(ConfigsPath, "TimerActions.lua");
         if (File.Exists(filePath)) return;
-        StringBuilder builder = new();
-        Bridges.ForEach(bridge => builder.AppendLine($"local {bridge.Split(").").Last()} = import {bridge}"));
-        builder.AppendLine();
-        builder.AppendLine("local timeractions = {}");
-        builder.AppendLine();
-        builder.AppendLine("--timeractions['test'] = {}");
-        builder.AppendLine("--timeractions['test']['action'] =");
-        builder.AppendLine("\t--function()");
-        builder.AppendLine("\t\t--TwitchChat.SendMessage('Just a test -> test')");
-        builder.AppendLine("\t--end");
-        builder.AppendLine("--timeractions['test']['timeout'] = 10000 -- 10000 ms");
-        builder.AppendLine();
-        builder.AppendLine("return timeractions");
-        File.WriteAllText(filePath, builder.ToString());
+        Logger.Log(LogType.Info, ServiceName, "Generating timer actions file...");
+        var sb = new StringBuilder();
+        sb.AppendLine("local timeractions = {}");
+        sb.AppendLine("");
+        sb.AppendLine("--timeractions['test'] = {}");
+        sb.AppendLine("--timeractions['test']['action'] =");
+        sb.AppendLine("    --function()");
+        sb.AppendLine("        --TwitchChat.SendMessage('Just a test -> test')");
+        sb.AppendLine("    --end");
+        sb.AppendLine("    --timeractions['test']['timeout'] = 10000 -- 10000 ms");
+        sb.AppendLine("");
+        sb.AppendLine("return timeractions");
+        File.WriteAllText(filePath, sb.ToString());
     }
 
     private static void GenerateMainConfig()
     {
         var filePath = Path.Combine(ConfigsPath, "config.lua");
         if (File.Exists(filePath)) return;
+        Logger.Log(LogType.Info, ServiceName, "Generating main config file...");
         StringBuilder builder = new();
         builder.AppendLine();
         builder.AppendLine("local configuration = {}");
@@ -306,5 +334,5 @@ public class LuaConfigManager
     }
 
     // --- Private fields ---
-    private readonly Lua _lua;
+    private readonly LuaState _lua;
 }
