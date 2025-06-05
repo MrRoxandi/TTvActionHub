@@ -40,7 +40,7 @@ namespace TTvActionHub.Items
                 perm = TwitchTools.PermissionLevel.Viewer;
             _permissionLevel = perm;
             if (timeOut is not { } time) return;
-            _coolDownTimer = new();
+            _coolDownTimer = new Stopwatch();
             _timeOut = time;
             Cost = cost;
         }
@@ -59,19 +59,17 @@ namespace TTvActionHub.Items
                     Logger.Log(LogType.Info, ItemName, $"Unable to execute event [{Name}]. Event still on cooldown");
                     return;
                 }
-                var argsTable = LuaValue.Nil;
+
+                var argsTable = new LuaTable();
                 if (args.Args is not null)
                 {
-                    var table = new LuaTable();
                     foreach (var (value, index) in args.Args.Select((x, i) => (x, i + 1)))
                     {
-                        table.Insert(index, value);
+                        argsTable.Insert(index, value);
                     }
-                    argsTable = table;
                 }
-                var action = args.Args != null ? 
-                    Function.InvokeAsync(args.State, [args.Sender, argsTable]) :
-                    Function.InvokeAsync(args.State, [args.Sender]);
+
+                var action = Function.InvokeAsync(args.State, [args.Sender, (LuaValue)argsTable]);
                 _ = action.AsTask().GetAwaiter().GetResult();
                 _coolDownTimer?.Restart();
                 Logger.Log(LogType.Info, ItemName, $"Event [{Name}] was executed successfully");

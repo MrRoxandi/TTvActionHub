@@ -8,17 +8,16 @@ namespace TTvActionHub.Items
     {
         public required LuaFunction Function { get; set; }
         public bool IsRunning => _timer != null;
+        public required LuaState State;
         public required long TimeOut;
         public required string Name;
-        private LuaState State;
         private Timer? _timer;
-        public void Run(LuaState state)
+        public void Run()
         {
             
             _timer = new Timer(TimeOut);
             _timer.Elapsed += TimerElapsed;
             _timer.Start();
-            State = state;
         }
 
         public void Stop()

@@ -30,7 +30,7 @@ public class LuaConfigManager
         // --- Setuping lua engine ---
         const string fileName = "Config.lua";
         _lua = LuaState.Create();
-        _lua.Environment["Funcs"] = new LuaFuncs();
+        _lua.Environment["Funcs"] = new LuaFunctions();
         _lua.Environment["Audio"] = new LuaAudio();
         _lua.Environment["Container"] = new LuaContainer();
         _lua.Environment["TwitchTools"] = new LuaTwitchTools();
@@ -72,7 +72,7 @@ public class LuaConfigManager
         }
         else
         {
-            var timeout = fileResult["timeout"].Read<int>();
+            var timeout = fileResult["timeout"].Read<long>();
             if (timeout < 0)
             {
                 Logger.Log(LogType.Warning, ServiceName,
@@ -90,7 +90,7 @@ public class LuaConfigManager
 
     public ConcurrentDictionary<(string, TwitchTools.TwitchEventKind), TwitchEvent>? LoadTwitchEvents()
     {
-        var fileName = "TwitchEvents.lua";
+        const string fileName = "TwitchEvents.lua";
         var configTable = ParseLuaFile(fileName).GetAwaiter().GetResult() ??
                           throw new Exception($"File {fileName} is not a proper config. Check syntax.");
 
@@ -230,7 +230,7 @@ public class LuaConfigManager
             }
 
             actions.TryAdd(currentKey.ToString(),
-                new TimerAction { Function = action, Name = currentKey.ToString(), TimeOut = timeOut });
+                new TimerAction { Function = action, Name = currentKey.ToString(), TimeOut = timeOut, State = _lua });
             previosKey = kvp.Key;
         }
 

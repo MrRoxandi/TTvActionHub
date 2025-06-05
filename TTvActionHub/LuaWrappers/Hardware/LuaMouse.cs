@@ -1,5 +1,6 @@
 ﻿using Lua;
 using TTvActionHub.BackEnds.Abstractions;
+using TTvActionHub.BackEnds.HardwareWrapper;
 
 namespace TTvActionHub.LuaWrappers.Hardware;
 
@@ -9,79 +10,113 @@ public partial class LuaMouse
     [LuaMember]
     public static void PressButton(int button)
     {
-        Mouse.Press((Mouse.Button)button);
+        var input = InputWrapper.ConstructMouseButtonDown((NativeInputs.MouseButton)button);
+        InputWrapper.DispatchInput([input]);
     }
 
     [LuaMember]
     public static void ReleaseButton(int button)
     {
-        Mouse.Release((Mouse.Button)button);
+        var input = InputWrapper.ConstructMouseButtonUp((NativeInputs.MouseButton)button);
+        InputWrapper.DispatchInput([input]);
     }
 
     [LuaMember]
     public static void XPressButton(int xid)
     {
-        Mouse.XPress(xid);
+        var input = InputWrapper.ConstructXMouseButtonDown(xid);
+        InputWrapper.DispatchInput([input]);
     }
 
     [LuaMember]
     public static void XReleaseButton(int xid)
     {
-        Mouse.XRelease(xid);
+        var input = InputWrapper.ConstructXMouseButtonUp(xid);
+        InputWrapper.DispatchInput([input]);
     }
 
     [LuaMember]
     public static void HoldButton(int button, int duration = 1000)
     {
-        Mouse.Hold((Mouse.Button)button, duration);
+        if (duration < 200)
+        {
+            ClickButton(button);
+            return;
+        }
+        var durStep = duration / 100;
+        for (var totalDuration = 0; totalDuration < duration; totalDuration += durStep)
+        {
+            PressButton(button);
+            Thread.Sleep(durStep);
+            PressButton(button);
+        }
     }
 
     [LuaMember]
     public static void XHoldButton(int button, int duration = 1000)
     {
-        Mouse.Hold((Mouse.Button)button, duration);
+        if (duration < 200)
+        {
+            XClickButton(button);
+            return;
+        }
+        var durStep = duration / 100;
+        for (var totalDuration = 0; totalDuration < duration; totalDuration += durStep)
+        {
+            XPressButton(button);
+            Thread.Sleep(durStep);
+            XPressButton(button);
+        }
     }
 
     [LuaMember]
     public static void ClickButton(int button)
     {
-        Mouse.Click((Mouse.Button)button);
+        PressButton(button);
+        Thread.Sleep(100);
+        ReleaseButton(button);
     }
 
     [LuaMember]
     public static void XClickButton(int button)
     {
-        Mouse.XClick(button);
+        XPressButton(button);
+        Thread.Sleep(100);
+        XReleaseButton(button);
     }
 
     [LuaMember]
     public static void HScroll(int distance)
     {
-        Mouse.HScroll(distance);
+        var input = InputWrapper.ConstructHWheelScroll(distance);
+        InputWrapper.DispatchInput([input]);
     }
 
     [LuaMember]
     public static void VScroll(int distance)
     {
-        Mouse.VScroll(distance);
+        var input = InputWrapper.ConstructVWheelScroll(distance);
+        InputWrapper.DispatchInput([input]);
     }
 
     [LuaMember]
     public static void SetPosition(int x, int y)
     {
-        Mouse.SetPosition(x, y);
+        var input = InputWrapper.ConstructAbsoluteMouseMove(x, y);
+        InputWrapper.DispatchInput([input]);
     }
 
     [LuaMember]
     public static void Move(int dx, int dy)
     {
-        Mouse.Move(dx, dy);
+        var input = InputWrapper.ConstructRelativeMouseMove(dx, dy);
+        InputWrapper.DispatchInput([input]);
     }
 
     [LuaMember]
     public static int Button(string button) =>  button switch
     {
         "Left" => 0, "Middle" => 1, "Right" => 2,
-        _ => throw new NotImplementedException(),
+        _ => throw new ArgumentException("Unknown button"),
     };
 }

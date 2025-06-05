@@ -1,5 +1,5 @@
 ﻿using Lua;
-using TTvActionHub.BackEnds.Abstractions;
+using TTvActionHub.BackEnds.HardwareWrapper;
 
 namespace TTvActionHub.LuaWrappers.Hardware;
 
@@ -7,17 +7,56 @@ namespace TTvActionHub.LuaWrappers.Hardware;
 public partial class LuaKeyboard
 {
     [LuaMember]
-    public static void PressKey(int key) => Keyboard.PressKey((Keyboard.Key)key);
-    
-    [LuaMember]
-    public static void ReleaseKey(int key) => Keyboard.ReleaseKey((Keyboard.Key)key);
-    
-    [LuaMember]
-    public static void TypeKey(int key) => Keyboard.TypeKey((Keyboard.Key)key);
-    
-    [LuaMember]
-    public static void HoldKey(int key, int duration = 1000) => Keyboard.HoldKey((Keyboard.Key)key, duration);
+    public static void PressKey(int key)
+    {
+        var input = InputWrapper.ConstructKeyDown((NativeInputs.KeyCode)key);
+        InputWrapper.DispatchInput([input]);
+    }
 
+    [LuaMember]
+    public static void ReleaseKey(int key)
+    {
+        var input = InputWrapper.ConstructKeyUp((NativeInputs.KeyCode)key);
+        InputWrapper.DispatchInput([input]);
+    }
+
+    [LuaMember]
+    public static void TypeKey(int key)
+    {
+        PressKey(key);
+        Thread.Sleep(50);
+        ReleaseKey(key);
+    }
+
+    [LuaMember]
+    public static void TypeMessage(string message)
+    {
+        List<NativeInputs.Input> inputs = [];
+        foreach(var c in message)
+        {
+            inputs.Add(InputWrapper.ConstructCharDown(c));
+            inputs.Add(InputWrapper.ConstructCharUp(c));
+        }
+        InputWrapper.DispatchInput(inputs);
+    }
+    
+    [LuaMember]
+    public static void HoldKey(int k, int duration = 1000) 
+    {
+        if(duration < 200)
+        {
+            TypeKey(k);
+            return;
+        }
+        var durStep = duration / 100;
+        for(var totalDuration = 0; totalDuration < duration; totalDuration += durStep)
+        {
+            PressKey(k);
+            Thread.Sleep(durStep);
+            ReleaseKey(k);
+        }
+    }
+    
     [LuaMember]
     public static LuaValue Key(string key) => key switch
     {
@@ -73,6 +112,6 @@ public partial class LuaKeyboard
         "End" => 0x23, "Home" => 0x24,
         "PrintScreen" => 0x2C, "Insert" => 0x2D, "Delete" => 0x2E,
         "ScrollLock" => 0x91, "Sleep" => 0x5F,
-        _ => throw new NotImplementedException()
+        _ => throw new ArgumentException("Undefined key")
     };
 }
