@@ -1,5 +1,5 @@
 ﻿using TTvActionHub.BackEnds;
-using MainLogger = TTvActionHub.BackEnds.Abstractions.MainLogger;
+using MainLogger = TTvActionHub.BackEnds.MainLogger;
 
 namespace TTvActionHub.Logs
 {
@@ -10,21 +10,21 @@ namespace TTvActionHub.Logs
 
     internal static class Logger
     {
-        private static readonly ILogger _logger = new MainLogger();
+        public static ILogger InnerLogger = new MainLogger();
 
         public static void Error(string message, Exception? err = null)
         {
-            _logger.Error(message, err);
+            InnerLogger.Error(message, err);
         }
 
         public static void Info(string message)
         {
-            _logger.Info(message);
+            InnerLogger.Info(message);
         }
 
         public static void Warn(string message)
         {
-            _logger.Warn(message); 
+            InnerLogger.Warn(message); 
         }
 
         public static void Log(LogType type, string name, string message, Exception? err = null)
@@ -37,10 +37,10 @@ namespace TTvActionHub.Logs
                 _ => "NULL"
             };
 
-            _logger.Log(res, name, message, err);
+            InnerLogger.Log(res, name, message, err);
         }
 
-        public static IEnumerable<string> LastLogs() => _logger.GetLastLogs();
+        public static IEnumerable<string> LastLogs() => InnerLogger.GetLastLogs();
 
     }
 }

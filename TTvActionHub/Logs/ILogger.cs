@@ -1,6 +1,6 @@
 ﻿namespace TTvActionHub.Logs
 {
-    internal interface ILogger
+    internal interface ILogger : IDisposable
     {
         public Task Error(string message, Exception? err = null);
 

@@ -130,6 +130,7 @@ internal abstract class Program
             Application.Shutdown();
 
             Logger.Info("Program finished.");
+            Logger.InnerLogger.Dispose();
         }
     }
 
