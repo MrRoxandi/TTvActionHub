@@ -7,8 +7,8 @@ namespace TTvActionHub
 {
     public class Configuration : IConfig
     {
-        private static string ClientId { get => "--"; }
-        private static string ClientSecret { get => "--"; }
+        private static string ClientId => "--";
+        private static string ClientSecret => "--";
         
         private const string RedirectUrl = @"http://localhost:6969/"; // 6969 just for fun
 

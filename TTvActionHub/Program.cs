@@ -56,11 +56,8 @@ internal abstract class Program
             collection.AddSingleton<LuaConfigManager>();
             collection.AddSingleton<IService, TwitchService>();
             collection.AddSingleton<IService, TimerActionsService>();
-            collection.AddSingleton<IConfig, Configuration>(sp =>
-            {
-                var lcm = sp.GetRequiredService<LuaConfigManager>();
-                return new Configuration(lcm);
-            });
+            collection.AddSingleton<IConfig, Configuration>();
+
             // ---------------------------------------------------------
 
             // Registration Shell
