@@ -3,6 +3,7 @@ using System.Text;
 using TTvActionHub.Items;
 using TTvActionHub.Logs;
 using System.Collections.Concurrent;
+using Lua.Standard;
 using TTvActionHub.LuaWrappers.Stuff;
 using TTvActionHub.LuaWrappers.Hardware;
 using TTvActionHub.LuaWrappers.Services;
@@ -30,6 +31,7 @@ public class LuaConfigManager
         // --- Setuping lua engine ---
         const string fileName = "Config.lua";
         _lua = LuaState.Create();
+        _lua.OpenStandardLibraries();
         _lua.Environment["Funcs"] = new LuaFunctions();
         _lua.Environment["Audio"] = new LuaAudio();
         _lua.Environment["Container"] = new LuaContainer();

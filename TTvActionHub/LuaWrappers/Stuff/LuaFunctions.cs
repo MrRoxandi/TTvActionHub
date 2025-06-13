@@ -22,25 +22,21 @@ public partial class LuaFunctions
     }
     
     [LuaMember]
-    public static LuaValue RandomElement(LuaTable elements)
-    {
-        if (elements.ArrayLength == 0) return LuaValue.Nil;
-        var enumerable = elements.GetArraySpan().ToArray();
-        return enumerable.ElementAt(Random.Shared.Next(enumerable.Length));
-    }
+    public static LuaValue RandomElement(LuaTable elements) => elements.ArrayLength == 0 ? LuaValue.Nil : elements[Random.Shared.Next(elements.ArrayLength) + 1];
     
     [LuaMember]
     public static LuaValue Shuffle(LuaTable elements)
     {
         if (elements.ArrayLength == 0) return LuaValue.Nil;
-        var span = elements.GetArraySpan();
-        Random.Shared.Shuffle(span);
+        var indexedAndShuffled = elements.GetArraySpan()
+            .ToArray().Take(elements.ArrayLength)
+            .OrderBy(_ => Random.Shared.Next())
+            .ToArray();
         var table = new LuaTable();
-        foreach (var (value, index) in span.ToArray().Select((v, i) => (v, i + 1)))
+        for(var i = 0; i < indexedAndShuffled.Length; i++)
         {
-            table.Insert(index, value);
+            table.Insert(i + 1, indexedAndShuffled[i]);
         }
-
         return table;
     }
 

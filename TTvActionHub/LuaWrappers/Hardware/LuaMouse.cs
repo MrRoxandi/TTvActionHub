@@ -117,6 +117,6 @@ public partial class LuaMouse
     public static int Button(string button) =>  button switch
     {
         "Left" => 0, "Middle" => 1, "Right" => 2,
-        _ => throw new ArgumentException("Unknown button"),
+        _ => throw new ArgumentException("Undefined button"),
     };
 }
