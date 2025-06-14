@@ -15,8 +15,8 @@
     <RunPostBuildEvent>OnOutputUpdated</RunPostBuildEvent>
 
     <PublishSingleFile>false</PublishSingleFile>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier> <!-- Укажите целевую ОС и архитектуру -->
-    <PublishTrimmed>false</PublishTrimmed> <!-- Опционально: для уменьшения размера, но может потребовать тестирования -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier> 
+    <PublishTrimmed>false</PublishTrimmed> 
     <ReadyToRun>true</ReadyToRun>
 	  <UseRidGraph>true</UseRidGraph>
 	  <Platforms>x64</Platforms>
