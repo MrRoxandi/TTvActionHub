@@ -15,8 +15,6 @@ public partial class JsonDbContext : DbContext
 
     public async Task EnsureDeletedAsync() => await Database.EnsureDeletedAsync();
 
-    /*public async Task SaveChangesAsync() => await base.SaveChangesAsync();*/
-
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "container");
