@@ -1,38 +1,50 @@
 ﻿using Lua;
+using WIWrapper;
+using WIWrapper.BackEnd.NativeInputs.Mouse;
 using TTvActionHub.BackEnds.Abstractions;
-using TTvActionHub.BackEnds.HardwareWrapper;
 
 namespace TTvActionHub.LuaWrappers.Hardware;
 
 [LuaObject]
 public partial class LuaMouse
 {
+    private static readonly InputWrapper wrapper = new();
+    private static readonly object _inputLock = new();
+
     [LuaMember]
     public static void PressButton(int button)
     {
-        var input = InputWrapper.ConstructMouseButtonDown((NativeInputs.MouseButton)button);
-        InputWrapper.DispatchInput([input]);
+        lock (_inputLock)
+        {
+            wrapper.MouseButton((MouseButton)button).SendInputs();
+        }
     }
 
     [LuaMember]
     public static void ReleaseButton(int button)
     {
-        var input = InputWrapper.ConstructMouseButtonUp((NativeInputs.MouseButton)button);
-        InputWrapper.DispatchInput([input]);
+        lock (_inputLock)
+        {
+            wrapper.MouseButton((MouseButton)button, false).SendInputs();
+        }
     }
 
     [LuaMember]
     public static void XPressButton(int xid)
     {
-        var input = InputWrapper.ConstructXMouseButtonDown(xid);
-        InputWrapper.DispatchInput([input]);
+        lock (_inputLock)
+        {
+            wrapper.MouseXButton(xid).SendInputs();
+        }
     }
 
     [LuaMember]
     public static void XReleaseButton(int xid)
     {
-        var input = InputWrapper.ConstructXMouseButtonUp(xid);
-        InputWrapper.DispatchInput([input]);
+        lock (_inputLock)
+        {
+            wrapper.MouseXButton(xid, false).SendInputs();
+        }
     }
 
     [LuaMember]
@@ -86,35 +98,43 @@ public partial class LuaMouse
     }
 
     [LuaMember]
-    public static void HScroll(int distance)
+    public static void HScroll(uint distance)
     {
-        var input = InputWrapper.ConstructHWheelScroll(distance);
-        InputWrapper.DispatchInput([input]);
+        lock (_inputLock)
+        {
+            wrapper.WheelScroll(distance).SendInputs();
+        }
     }
 
     [LuaMember]
-    public static void VScroll(int distance)
+    public static void VScroll(uint distance)
     {
-        var input = InputWrapper.ConstructVWheelScroll(distance);
-        InputWrapper.DispatchInput([input]);
+        lock (_inputLock)
+        {
+            wrapper.WheelScroll(distance, true).SendInputs();
+        }
     }
 
     [LuaMember]
     public static void SetPosition(int x, int y)
     {
-        var input = InputWrapper.ConstructAbsoluteMouseMove(x, y);
-        InputWrapper.DispatchInput([input]);
+        lock (_inputLock)
+        {
+            wrapper.MouseSet(x, y).SendInputs();
+        }
     }
 
     [LuaMember]
     public static void Move(int dx, int dy)
     {
-        var input = InputWrapper.ConstructRelativeMouseMove(dx, dy);
-        InputWrapper.DispatchInput([input]);
+        lock (_inputLock)
+        {
+            wrapper.MouseMove(dx, dy).SendInputs();
+        }
     }
 
     [LuaMember]
-    public static int Button(string button) =>  button switch
+    public static uint Button(string button) =>  button switch
     {
         "Left" => 0, "Middle" => 1, "Right" => 2,
         _ => throw new ArgumentException("Undefined button"),
