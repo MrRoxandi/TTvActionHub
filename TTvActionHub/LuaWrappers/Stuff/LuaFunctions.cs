@@ -1,4 +1,5 @@
 ﻿using Lua;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using System.Text;
 namespace TTvActionHub.LuaWrappers.Stuff;
 
@@ -6,7 +7,10 @@ namespace TTvActionHub.LuaWrappers.Stuff;
 public partial class LuaFunctions
 {
     public static string Chars => "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    
+
+    [LuaMember]
+    public static bool IsLuaArray(LuaTable table) => table.ArrayLength > 0 && table.HashMapCount == 0;
+
     [LuaMember]
     public static int RandomNumber(int min, int max) => Random.Shared.Next(min, max);
 
@@ -16,13 +20,27 @@ public partial class LuaFunctions
     [LuaMember]
     public static bool Contains(LuaTable table, LuaValue value)
     {
-        if (table.ArrayLength != 0)
-            return table.GetArraySpan().Contains(value);
-        return table[value].Type != LuaValueType.Nil;
+        if (IsLuaArray(table)) return table.GetArraySpan().Contains(value);
+        var previosKey = LuaValue.Nil;
+        while (table.TryGetNext(previosKey, out var kvp))
+        {
+            if (kvp.Value.Equals(value)) return true;
+        }
+        return false;
     }
-    
+
     [LuaMember]
-    public static LuaValue RandomElement(LuaTable elements) => elements.ArrayLength == 0 ? LuaValue.Nil : elements[Random.Shared.Next(elements.ArrayLength) + 1];
+    public static LuaValue RandomElement(LuaTable elements)
+    {
+        if (IsLuaArray(elements)) return elements[RandomNumber(1, elements.ArrayLength + 1)];
+        var collected = new List<LuaValue>();
+        var previosKey = LuaValue.Nil;
+        while (elements.TryGetNext(previosKey, out var kvp))
+        {
+            collected.Add(kvp.Value);
+        }
+        return collected.ElementAt(RandomNumber(0, collected.Count));
+    }
     
     [LuaMember]
     public static LuaValue Shuffle(LuaTable elements)
